@@ -1,0 +1,3 @@
+selfdrive/tinygrad_modeld/models/supercombo_tinygrad.pkl filter=lfs diff=lfs merge=lfs -text
+selfdrive/tinygrad_modeld/models/supercombo.pkl filter=lfs diff=lfs merge=lfs -text
+selfdrive/ui/ui filter=lfs diff=lfs merge=lfs -text
