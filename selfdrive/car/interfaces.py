@@ -9,7 +9,7 @@ from typing import Any, NamedTuple
 from collections.abc import Callable
 from functools import cache
 
-from cereal import car, custom
+from cereal import car, custom, log # added log ###NIZ###  Dynamic Personality
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.simple_kalman import KF1D, get_kalman_gain
