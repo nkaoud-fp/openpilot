@@ -681,6 +681,8 @@ class FrogPilotVariables:
     toggle.traffic_mode_via_lkas = openpilot_longitudinal and lkas_button_control == self.button_functions["TRAFFIC_MODE"]
 
     toggle.lock_doors_timer = params.get_int("LockDoorsTimer") if car_make == "toyota" and tuning_level >= level["LockDoorsTimer"] else default.get_int("LockDoorsTimer")
+    toggle.Fold_Mirrors = params.get_int("FoldMirrors") if car_make == "toyota" and tuning_level >= level["FoldMirrors"] else default.get_int("FoldMirrors")
+    toggle.Close_Windows = params.get_int("CloseWindows") if car_make == "toyota" and tuning_level >= level["CloseWindows"] else default.get_int("CloseWindows")
 
     toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and (params.get_bool("LongPitch") if tuning_level >= level["LongPitch"] else default.get_bool("LongPitch"))
 
