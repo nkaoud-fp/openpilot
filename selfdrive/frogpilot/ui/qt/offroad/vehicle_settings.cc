@@ -167,8 +167,8 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"ClusterOffset", tr("Cluster Speed Offset"), tr("The cluster speed offset used by openpilot to match the speed displayed on the dash."), ""},
     {"FrogsGoMoosTweak", tr("FrogsGoMoo's Personal Tweaks"), tr("<b>FrogsGoMoo's</b> personal tweaks for quicker acceleration and smoother braking."), ""},
     {"LockDoorsTimer", tr("Lock Doors On Ignition Off After"), tr("Automatically lock the doors after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
-    {"FoldMirrors", tr("Fold Mirrows When Locking Doors"), tr("Automatically Fold Mirrors after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
-    {"CloseWindows", tr("Close Widows When Locking Doors"), tr("Automatically Close Windows after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
+    {"FoldMirrors", tr("Fold Mirrows When Locking Doors"), tr("Automatically Fold Mirrors after the car's ignition has been turned off, Doors Locked and no one is detected in either of the front seats."), ""},
+    {"CloseWindows", tr("Close Widows When Locking Doors"), tr("Automatically Close Windows after the car's ignition has been turned off, Doors Locked and no one is detected in either of the front seats."), ""},
     {"SNGHack", tr("Stop and Go Hack"), tr("Force stop and go on <b>Toyota</b>/<b>Lexus</b> vehicles without stock stop and go functionality."), ""}
   };
 
