@@ -682,7 +682,7 @@ class FrogPilotVariables:
 
     toggle.lock_doors_timer = params.get_int("LockDoorsTimer") if car_make == "toyota" and tuning_level >= level["LockDoorsTimer"] else default.get_int("LockDoorsTimer")
     toggle.fold_mirrors = params.get_int("FoldMirrors") if car_make == "toyota" and tuning_level >= level["FoldMirrors"] else default.get_int("FoldMirrors")
-    toggle.Close_windows = params.get_int("CloseWindows") if car_make == "toyota" and tuning_level >= level["CloseWindows"] else default.get_int("CloseWindows")
+    toggle.close_windows = params.get_int("CloseWindows") if car_make == "toyota" and tuning_level >= level["CloseWindows"] else default.get_int("CloseWindows")
 
     
     toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and (params.get_bool("LongPitch") if tuning_level >= level["LongPitch"] else default.get_bool("LongPitch"))
