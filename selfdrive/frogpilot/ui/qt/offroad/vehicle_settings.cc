@@ -323,14 +323,6 @@ void FrogPilotVehiclesPanel::updateToggles() {
       setVisible &= !isC3;
     }
 
-    if (key == "FoldMirrors") {
-      setVisible &= !isC3;
-    }
-
-    if (key == "CloseWindows") {
-      setVisible &= !isC3;
-    }
-
     if (key == "SNGHack") {
       setVisible &= !hasSNG;
     }
