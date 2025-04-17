@@ -38,7 +38,6 @@ private:
   std::set<QString> gmKeys = {"ExperimentalGMTune", "LongPitch", "VoltSNG"};
   std::set<QString> hkgKeys = {"NewLongAPI"};
   std::set<QString> longitudinalKeys = {"ExperimentalGMTune", "FrogsGoMoosTweak", "LongPitch", "NewLongAPI", "SNGHack", "VoltSNG"};
-  //std::set<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "LockDoorsTimer", "SNGHack", "ToyotaDoors"};
   std::set<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "LockDoorsTimer", "FoldMirrors", "CloseWindows", "SNGHack", "ToyotaDoors"};
 
   FrogPilotSettingsWindow *parent;
