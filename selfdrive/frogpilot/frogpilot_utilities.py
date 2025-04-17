@@ -150,10 +150,54 @@ def lock_doors(lock_doors_timer, sm):
   wait_for_no_driver(sm, lock_doors_timer)
 
   if not any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):
+    #panda = Panda()
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    #panda.can_send(0x750, LOCK_CMD, 0)
+    #panda.send_heartbeat()
     panda = Panda()
-    panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
     panda.can_send(0x750, LOCK_CMD, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
     panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+
+    #if fold_mirror :
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, MIRR_FOLD_R, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+    
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, MIRR_FOLD_L, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+
+    #if close_window :
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, WINDOW_CLOSE_RR, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+    
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, WINDOW_CLOSE_RL, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+    
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, WINDOW_CLOSE_FL, 0)
+    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    time.sleep(0.15)  # 150 millisecond delay
+    
+    panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+    panda.can_send(0x750, WINDOW_CLOSE_FR, 0)
+    panda.set_safety_mode(panda.SAFETY_TOYOTA)
+    panda.send_heartbeat()
+    #time.sleep(0.15)  # 150 millisecond delay
 
 def restart_processes(sm):
   while running_threads.get("lock_doors", threading.Thread()).is_alive():
