@@ -27,6 +27,7 @@ from panda import Panda
 
 from openpilot.selfdrive.frogpilot.frogpilot_variables import EARTH_RADIUS, MAPD_PATH, MAPS_PATH, params, params_memory
 
+
 running_threads = {}
 
 locks = {
