@@ -162,7 +162,7 @@ def lock_doors(lock_doors_timer, sm):
     time.sleep(0.15)  # 150 millisecond delay
 
     #if fold_mirror :
-    if not params.get_bool("FoldMirrors"):
+    if params.get_bool("FoldMirrors"):
       panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
       panda.can_send(0x750, MIRR_FOLD_R, 0)
       #panda.set_safety_mode(panda.SAFETY_TOYOTA)
@@ -176,7 +176,7 @@ def lock_doors(lock_doors_timer, sm):
       time.sleep(0.15)  # 150 millisecond delay
 
     #if close_window :
-    if not params.get_bool("CloseWindows"):
+    if params.get_bool("CloseWindows"):
       panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
       panda.can_send(0x750, WINDOW_CLOSE_RR, 0)
       #panda.set_safety_mode(panda.SAFETY_TOYOTA)
