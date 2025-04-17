@@ -27,9 +27,9 @@ from panda import Panda
 
 from openpilot.selfdrive.frogpilot.frogpilot_variables import EARTH_RADIUS, MAPD_PATH, MAPS_PATH, params, params_memory
 
-from openpilot.common.params import Params
+//from openpilot.common.params import Params
 
-self.params = Params()
+//self.params = Params()
 self.fold_mirror = self.params.get_bool("FoldMirrors")
 self.close_window = self.params.get_bool("CloseWindows")
 
