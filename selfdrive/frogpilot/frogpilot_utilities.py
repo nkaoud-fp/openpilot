@@ -157,49 +157,22 @@ def lock_doors(lock_doors_timer, sm):
     panda = Panda()
     panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
     panda.can_send(0x750, LOCK_CMD, 0)
-    #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-    panda.send_heartbeat()
-    time.sleep(0.15)  # 150 millisecond delay
+    time.sleep(0.125)  # 150 millisecond delay
 
-    #if fold_mirror :
     if params.get_bool("FoldMirrors"):
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
       panda.can_send(0x750, MIRR_FOLD_R, 0)
-      #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-      panda.send_heartbeat()
-      time.sleep(0.15)  # 150 millisecond delay
-    
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+      time.sleep(0.125)  # 150 millisecond delay      
       panda.can_send(0x750, MIRR_FOLD_L, 0)
-      #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-      panda.send_heartbeat()
-      time.sleep(0.15)  # 150 millisecond delay
-
-    #if close_window :
+      time.sleep(0.125)  # 150 millisecond delay
     if params.get_bool("CloseWindows"):
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
       panda.can_send(0x750, WINDOW_CLOSE_RR, 0)
-      #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-      panda.send_heartbeat()
-      time.sleep(0.15)  # 150 millisecond delay
-    
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+      time.sleep(0.125)  # 150 millisecond delay
       panda.can_send(0x750, WINDOW_CLOSE_RL, 0)
-      #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-      panda.send_heartbeat()
-      time.sleep(0.15)  # 150 millisecond delay
-    
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+      time.sleep(0.125)  # 150 millisecond delay
       panda.can_send(0x750, WINDOW_CLOSE_FL, 0)
-      #panda.set_safety_mode(panda.SAFETY_TOYOTA)
-      panda.send_heartbeat()
-      time.sleep(0.15)  # 150 millisecond delay
-    
-      panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+      time.sleep(0.125)  # 150 millisecond delay
       panda.can_send(0x750, WINDOW_CLOSE_FR, 0)
     panda.set_safety_mode(panda.SAFETY_TOYOTA)
-    panda.send_heartbeat()
-    #time.sleep(0.15)  # 150 millisecond delay
 
 def restart_processes(sm):
   while running_threads.get("lock_doors", threading.Thread()).is_alive():
