@@ -181,9 +181,9 @@ def lock_doors(lock_doors_timer, sm):
   #panda.send_heartbeat()
   panda = Panda()
   panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
-  panda.can_send(0x750, MIRR_FOLD_R, 0)
-  #panda.can_send(0x750, LOCK_CMD, 0)
-  #time.sleep(0.125)  # 150 millisecond delay
+  panda.can_send(0x750, LOCK_CMD, 0)
+  time.sleep(0.125)  # 150 millisecond delay
+  panda.can_send(0x750, MIRR_FOLD_L, 0)
 
   if params.get_bool("FoldMirrors"):
     panda.can_send(0x750, MIRR_FOLD_R, 0)
