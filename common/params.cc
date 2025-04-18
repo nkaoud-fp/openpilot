@@ -237,6 +237,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"ApiCache_DriveStats", PERSISTENT},
     {"AutomaticallyDownloadModels", PERSISTENT},
     {"AutomaticUpdates", PERSISTENT},
+    {"AutoPersonalityProfile", PERSISTENT},
     {"AvailableModelNames", PERSISTENT},
     {"AvailableModels", PERSISTENT},
     {"BigMap", PERSISTENT},
