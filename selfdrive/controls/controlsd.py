@@ -568,7 +568,39 @@ class Controls:
 
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
+    
+ #AutoPersonality
+    if not self.personality_timer > 0:
+      self.personality_timer = 100
+      stn_personality = log.LongitudinalPersonality.standard
+      agr_personality = log.LongitudinalPersonality.aggressive
+      rlx_personality = log.LongitudinalPersonality.relaxed
+      speed_kph = CS.vEgo * 3.6
+      crnt_personality = params.get("LongitudinalPersonality", encoding="utf8")
+      if crnt_personality is None:
+        crnt_personality = str(stn_personality)
+      if speed_kph < 3 and not self.traffic_mode_active:
+        self.traffic_mode_active = True
+        self.traffic_mode_changed = True
+      elif speed_kph > 50 and crnt_personality != str(agr_personality):
+        if self.traffic_mode_active:
+          self.traffic_mode_active = False
+          self.traffic_mode_changed = True
+          params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
+      elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
+        if self.traffic_mode_active:
+          self.traffic_mode_active = False
+          self.traffic_mode_changed = True
+          params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
+      elif speed_kph > 115 and crnt_personality != str(rlx_personality):
+        if self.traffic_mode_active:
+          self.traffic_mode_active = False
+          self.traffic_mode_changed = True
+          params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+    self.personality_timer -= 1
 
+
+    
     # Update VehicleModel
     lp = self.sm['liveParameters']
     x = max(lp.stiffnessFactor, 0.1)
