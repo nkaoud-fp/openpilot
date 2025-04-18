@@ -578,7 +578,7 @@ class Controls:
       agr_personality = log.LongitudinalPersonality.aggressive
       rlx_personality = log.LongitudinalPersonality.relaxed
       speed_kph = CS.vEgo * 3.6
-      crnt_personality = params.get("LongitudinalPersonality", encoding="utf8")
+      crnt_personality = self.params.get("LongitudinalPersonality", encoding="utf8")
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
       if speed_kph < 3 and not self.traffic_mode_active:
