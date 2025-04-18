@@ -66,6 +66,7 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
+    self.personality_timer = 0  ###NIZ### Dynamic personality
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -570,7 +571,8 @@ class Controls:
     """Given the state, this function returns a CarControl packet"""
     
  #AutoPersonality
-    if not self.personality_timer > 0:
+    Auto_per = params.get_bool("AutoPersonalityProfile") ###NIZ###  Dynamic Personality
+    if Auto_per and not self.personality_timer > 0:
       self.personality_timer = 100
       stn_personality = log.LongitudinalPersonality.standard
       agr_personality = log.LongitudinalPersonality.aggressive
