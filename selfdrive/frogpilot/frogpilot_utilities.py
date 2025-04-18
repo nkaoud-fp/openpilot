@@ -146,34 +146,8 @@ def is_url_pingable(url, timeout=10):
     print(f"Unexpected error while pinging {url}: {error}")
   return False
 
-#def lock_doors(lock_doors_timer, sm):
-  #wait_for_no_driver(sm, lock_doors_timer)
 def lock_doors(lock_doors_timer, sm):
-  while any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
-    time.sleep(DT_HW)
-    sm.update()
-
-  params.put_bool("IsDriverViewEnabled", True)
-
-  while not any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
-    time.sleep(DT_HW)
-    sm.update()
-
-  start_time = time.monotonic()
-  while True:
-    elapsed_time = time.monotonic() - start_time
-    if elapsed_time >= lock_doors_timer:
-      break
-
-    if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):
-      params.remove("IsDriverViewEnabled")
-      return
-
-    if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
-      start_time = time.monotonic()
-
-    time.sleep(DT_DMON)
-    sm.update()
+  wait_for_no_driver(sm, lock_doors_timer)
 
   #panda = Panda()
   #panda.set_safety_mode(panda.SAFETY_TOYOTA)
