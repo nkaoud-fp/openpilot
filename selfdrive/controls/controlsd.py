@@ -571,7 +571,7 @@ class Controls:
     """Given the state, this function returns a CarControl packet"""
     
  #AutoPersonality
-    Auto_per = self.params.get_bool("AutoPersonalityProfile") ###NIZ###  Dynamic Personality
+    Auto_per = self.params.get_bool("HideMapIcon") ###NIZ###  Dynamic Personality   HideMapIcon  AutoPersonalityProfile
     if Auto_per and not self.personality_timer > 0:
       self.personality_timer = 100
       stn_personality = log.LongitudinalPersonality.standard
@@ -581,24 +581,12 @@ class Controls:
       crnt_personality = self.params.get("LongitudinalPersonality", encoding="utf8")
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
-      if speed_kph < 3 and not self.traffic_mode_active:
-        self.traffic_mode_active = True
-        self.traffic_mode_changed = True
-      elif speed_kph > 50 and crnt_personality != str(agr_personality):
-        if self.traffic_mode_active:
-          self.traffic_mode_active = False
-          self.traffic_mode_changed = True
-          params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
+      if speed_kph > 0 and crnt_personality != str(agr_personality):
+        params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
-        if self.traffic_mode_active:
-          self.traffic_mode_active = False
-          self.traffic_mode_changed = True
-          params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
+        params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
-        if self.traffic_mode_active:
-          self.traffic_mode_active = False
-          self.traffic_mode_changed = True
-          params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
 
 
