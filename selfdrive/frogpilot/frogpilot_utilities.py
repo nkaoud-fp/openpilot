@@ -147,8 +147,8 @@ def is_url_pingable(url, timeout=10):
   return False
 
 def lock_doors(lock_doors_timer, sm):
-  wait_for_no_driver(sm, lock_doors_timer)
-  #wait_for_no_driver_Q(sm, lock_doors_timer)
+  #wait_for_no_driver(sm, lock_doors_timer)
+  wait_for_no_driver_Q(sm, lock_doors_timer)
 
   #panda = Panda()
   #panda.set_safety_mode(panda.SAFETY_TOYOTA)
