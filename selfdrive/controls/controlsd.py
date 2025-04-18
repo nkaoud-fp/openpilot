@@ -571,7 +571,7 @@ class Controls:
     """Given the state, this function returns a CarControl packet"""
     
  #AutoPersonality
-    Auto_per = params.get_bool("AutoPersonalityProfile") ###NIZ###  Dynamic Personality
+    Auto_per = self.params.get_bool("AutoPersonalityProfile") ###NIZ###  Dynamic Personality
     if Auto_per and not self.personality_timer > 0:
       self.personality_timer = 100
       stn_personality = log.LongitudinalPersonality.standard
