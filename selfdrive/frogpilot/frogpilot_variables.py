@@ -93,6 +93,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("AMapKey2", "", 0),
   ("AutomaticallyDownloadModels", "1", 1),
   ("AutomaticUpdates", "1", 0),
+  ("AutoPersonalityProfile", "1", 2),
   ("AvailableModelNames", "", 1),
   ("AvailableModels", "", 1),
   ("BigMap", "0", 2),
