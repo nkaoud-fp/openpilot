@@ -147,7 +147,8 @@ def is_url_pingable(url, timeout=10):
   return False
 
 def lock_doors(lock_doors_timer, sm):
-  wait_for_no_driver(sm, lock_doors_timer)
+  #wait_for_no_driver(sm, lock_doors_timer)
+  wait_for_no_driver_Q(sm, lock_doors_timer)
 
   #panda = Panda()
   #panda.set_safety_mode(panda.SAFETY_TOYOTA)
@@ -160,8 +161,8 @@ def lock_doors(lock_doors_timer, sm):
   panda.can_send(0x750, MIRR_FOLD_L, 0)
 
   if params.get_bool("FoldMirrors"):
-    panda.can_send(0x750, MIRR_FOLD_R, 0)
-    time.sleep(0.125)  # 150 millisecond delay      
+    #panda.can_send(0x750, MIRR_FOLD_R, 0)
+    #time.sleep(0.125)  # 150 millisecond delay      
     panda.can_send(0x750, MIRR_FOLD_L, 0)
     time.sleep(0.125)  # 150 millisecond delay
   if params.get_bool("CloseWindows"):
@@ -295,4 +296,29 @@ def wait_for_no_driver(sm, time_threshold=60):
 
     sm.update()
 
+  params.remove("IsDriverViewEnabled")
+
+def wait_for_no_driver_Q(sm, time_threshold=60):
+  while any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+  #while sm["deviceState"].screenBrightnessPercent != 0 or any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+    #if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):
+      #return
+    time.sleep(DT_HW)
+    sm.update()
+  params.put_bool("IsDriverViewEnabled", True)
+  while not any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+    time.sleep(DT_HW)
+    sm.update()
+  start_time = time.monotonic()
+  while True:
+    elapsed_time = time.monotonic() - start_time
+    if elapsed_time >= time_threshold:
+      break
+    if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):
+      params.remove("IsDriverViewEnabled")
+      return
+    if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
+      start_time = time.monotonic()
+    time.sleep(DT_DMON)
+    sm.update()
   params.remove("IsDriverViewEnabled")
