@@ -126,7 +126,8 @@ class FrogPilotCard:
 
     ##############dynamic traffic Mode ####################
     hide_map = params.get_bool("HideMapIcon")
-    if hide_map: # and not self.personality_timer > 0:  # HideMapIcon is TRUE
+    auto_pers_profile = params.get_bool("AutoPersonalityProfile")
+    if auto_pers_profile: # and not self.personality_timer > 0:  # HideMapIcon is TRUE
       change_traffic_mode_req = params.get_bool("ChangTrafficModeReq")
       if change_traffic_mode_req:
         params.put_bool("ChangTrafficModeReq", False)
