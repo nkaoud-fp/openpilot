@@ -580,27 +580,24 @@ class Controls:
       rlx_personality = log.LongitudinalPersonality.relaxed
       speed_kph = CS.vEgo * 3.6
       crnt_personality = self.params.get("LongitudinalPersonality", encoding="utf8")
-      TrafficModeStatus = self.params.get('ChangTrafficModeStat')
+      #TrafficModeStatus = self.params.get('ChangTrafficModeStat')
       
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
-      if speed_kph < 3 and not TrafficModeStatus:  # turn on at 11 kph
+      if speed_kph < 3 : #and not TrafficModeStatus:  # turn on at 11 kph
         self.params.put_bool("ChangTrafficModeStat", True)
         self.params.put_bool("ChangTrafficModeReq", True)
       elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
-        if TrafficModeStatus :
-          self.params.put_bool("ChangTrafficModeStat", False)
-          self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
-        if TrafficModeStatus :
-          self.params.put_bool("ChangTrafficModeStat", False)
-          self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
-        if TrafficModeStatus :
-          self.params.put_bool("ChangTrafficModeStat", False)
-          self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
 
