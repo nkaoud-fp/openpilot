@@ -585,22 +585,22 @@ class Controls:
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
       if speed_kph < 3 and not TrafficModeStatus:  # turn on at 11 kph
-        params.put_bool("ChangTrafficModeStat", True)
-        params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_bool("ChangTrafficModeStat", True)
+        self.params.put_bool("ChangTrafficModeReq", True)
       elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
         if TrafficModeStatus :
-          params.put_bool("ChangTrafficModeStat", False)
-          params.put_bool("ChangTrafficModeReq", True)
+          self.params.put_bool("ChangTrafficModeStat", False)
+          self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
         if TrafficModeStatus :
-          params.put_bool("ChangTrafficModeStat", False)
-          params.put_bool("ChangTrafficModeReq", True)
+          self.params.put_bool("ChangTrafficModeStat", False)
+          self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
         if TrafficModeStatus :
-          params.put_bool("ChangTrafficModeStat", False)
-          params.put_bool("ChangTrafficModeReq", True)
+          self.params.put_bool("ChangTrafficModeStat", False)
+          self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
 
