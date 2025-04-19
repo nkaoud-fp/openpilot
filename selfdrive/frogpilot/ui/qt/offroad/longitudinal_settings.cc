@@ -107,6 +107,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"RelaxedJerkSpeedDecrease", tr("Speed Decrease Response"), tr("How quickly openpilot decreases speed while using the <b>Relaxed</b> personality profile. Higher values ensure smoother, more gradual speed changes when slowing down, while lower values allow for quicker, more responsive changes that may feel abrupt."), ""},
     {"ResetRelaxedPersonality", tr("Reset Settings"), tr("Reset the <b>Relaxed</b> personality profile settings to default values."), ""},
 
+    {"AutoPersonalityProfile", tr("Auto Personality"), tr("Automatically switch between personality profiles based on your speed."), "../frogpilot/assets/stock_theme/distance_icons/standard.png"},
+ 
     {"LongitudinalTune", tr("Longitudinal Tuning"), tr("Settings that control how openpilot manages speed and acceleration."), "../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
     {"AccelerationProfile", tr("Acceleration Profile"), tr("Enable either a sporty or eco-friendly acceleration profile. <b>Sport+</b> aims to make openpilot accelerate as fast as possible!"), ""},
     {"DecelerationProfile", tr("Deceleration Profile"), tr("Enable either a sporty or eco-friendly deceleration profile."), ""},
@@ -792,6 +794,8 @@ void FrogPilotLongitudinalPanel::updateToggles() {
         toggles["QOLLongitudinal"]->setVisible(true);
       } else if (relaxedPersonalityKeys.find(key) != relaxedPersonalityKeys.end()) {
         toggles["RelaxedPersonalityProfile"]->setVisible(true);
+      } else if (customDrivingPersonalityKeys.find(key) != customDrivingPersonalityKeys.end()) {
+        toggles["AutoPersonalityProfile"]->setVisible(true);
       } else if (speedLimitControllerKeys.find(key) != speedLimitControllerKeys.end()) {
         toggles["SpeedLimitController"]->setVisible(true);
       } else if (speedLimitControllerOffsetsKeys.find(key) != speedLimitControllerOffsetsKeys.end()) {
