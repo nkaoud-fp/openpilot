@@ -130,13 +130,14 @@ class FrogPilotCard:
       #self.personality_timer = 0
     hide_map = params.get_bool("HideMapIcon")
     if hide_map: # and not self.personality_timer > 0:  # HideMapIcon is TRUE
-      #self.personality_timer = 100
       change_traffic_mode_req = params.get_bool("ChangTrafficModeReq")
-      change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
-      if change_traffic_mode_req and self.traffic_mode != change_traffic_mode_state :
+      if change_traffic_mode_req:
         params.put_bool("ChangTrafficModeReq", False)
-        self.traffic_mode = change_traffic_mode_state
-        frogpilotCarState.trafficMode = params.get_bool("ChangTrafficModeStat")
+        #self.personality_timer = 100
+        change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
+        if self.traffic_mode != change_traffic_mode_state :
+          self.traffic_mode = change_traffic_mode_state
+          frogpilotCarState.trafficMode = self.traffic_mode
     #self.personality_timer -= 1
     ##############dynamic traffic Mode ####################
 
