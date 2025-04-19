@@ -582,7 +582,7 @@ class Controls:
       crnt_personality = self.params.get("LongitudinalPersonality", encoding="utf8")
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
-      if speed_kph > 0 and crnt_personality != str(agr_personality):
+      if  0 <= speed_kph < 60 and crnt_personality != str(agr_personality):
         self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
         self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
