@@ -135,9 +135,9 @@ class FrogPilotCard:
         params.put_bool("ChangTrafficModeReq", False)
         #self.personality_timer = 100
         change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
-        #if self.traffic_mode != change_traffic_mode_state :
-        self.traffic_mode = change_traffic_mode_state
-        frogpilotCarState.trafficMode = self.traffic_mode
+        if self.traffic_mode != change_traffic_mode_state :
+          self.traffic_mode = change_traffic_mode_state
+          frogpilotCarState.trafficMode = self.traffic_mode
     #self.personality_timer -= 1
     ##############dynamic traffic Mode ####################
 
