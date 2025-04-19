@@ -572,8 +572,10 @@ class Controls:
    
 ###############################
  #AutoPersonality
-    Auto_per = self.params.get_bool("HideMapIcon") ###NIZ###  Dynamic Personality   HideMapIcon  AutoPersonalityProfile
-    if Auto_per and not self.personality_timer > 0:
+    #Auto_per = self.params.get_bool("HideMapIcon") ###NIZ###  Dynamic Personality   HideMapIcon  AutoPersonalityProfile
+    auto_pers_profile = params.get_bool("AutoPersonalityProfile")
+
+    if auto_pers_profile and not self.personality_timer > 0:
       self.personality_timer = 100
       stn_personality = log.LongitudinalPersonality.standard
       agr_personality = log.LongitudinalPersonality.aggressive
