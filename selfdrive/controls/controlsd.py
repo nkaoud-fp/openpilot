@@ -587,6 +587,7 @@ class Controls:
       if speed_kph < 3 : #and not TrafficModeStatus:  # turn on at 11 kph
         self.params.put_bool("ChangTrafficModeStat", True)
         self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
       elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
         self.params.put_bool("ChangTrafficModeStat", False)
         self.params.put_bool("ChangTrafficModeReq", True)
