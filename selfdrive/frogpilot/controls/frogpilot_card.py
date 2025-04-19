@@ -125,12 +125,16 @@ class FrogPilotCard:
 
 
     ##############dynamic traffic Mode ####################
+    hide_map = params.get_bool("HideMapIcon")
+    if hide_map and not self.personality_timer > 0:  # HideMapIcon is TRUE
+      self.personality_timer = 100
     #change_traffic_mode_req = params.get_bool("ChangTrafficModeReq")
     #change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
-    if params.get_bool("ChangTrafficModeReq") and self.traffic_mode != params.get_bool("ChangTrafficModeStat") :
-      params.put_bool("ChangTrafficModeReq", False)
+      if params.get_bool("ChangTrafficModeReq") and self.traffic_mode != params.get_bool("ChangTrafficModeStat") :
+        params.put_bool("ChangTrafficModeReq", False)
       #self.traffic_mode = params.get_bool("ChangTrafficModeStat")
-      frogpilotCarState.trafficMode = params.get_bool("ChangTrafficModeStat")
+        frogpilotCarState.trafficMode = params.get_bool("ChangTrafficModeStat")
+    self.personality_timer -= 1
     ##############dynamic traffic Mode ####################
 
     if lkas_button:
@@ -145,6 +149,6 @@ class FrogPilotCard:
     frogpilotCarState.pauseLateral = self.pause_lateral
     frogpilotCarState.pauseLongitudinal = self.pause_longitudinal
     frogpilotCarState.trafficMode = self.traffic_mode
-    params.put_bool("ChangTrafficModeStat", self.traffic_mode)
+    #params.put_bool("ChangTrafficModeStat", self.traffic_mode)
 
     return frogpilotCarState
