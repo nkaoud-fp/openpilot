@@ -569,7 +569,8 @@ class Controls:
 
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
-    
+   
+###############################
  #AutoPersonality
     Auto_per = self.params.get_bool("HideMapIcon") ###NIZ###  Dynamic Personality   HideMapIcon  AutoPersonalityProfile
     if Auto_per and not self.personality_timer > 0:
@@ -582,11 +583,11 @@ class Controls:
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
       if speed_kph > 0 and crnt_personality != str(agr_personality):
-        params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
+        self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
-        params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
+        self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
-        params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
 
 
