@@ -588,16 +588,16 @@ class Controls:
         self.params.put_bool("ChangTrafficModeStat", True)
         self.params.put_bool("ChangTrafficModeReq", True)
       elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
-        self.params.put_bool("ChangTrafficModeStat", False)
-        self.params.put_bool("ChangTrafficModeReq", True)
+        #self.params.put_bool("ChangTrafficModeStat", False)
+        #self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
-        self.params.put_bool("ChangTrafficModeStat", False)
-        self.params.put_bool("ChangTrafficModeReq", True)
+        #self.params.put_bool("ChangTrafficModeStat", False)
+        #self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
-        self.params.put_bool("ChangTrafficModeStat", False)
-        self.params.put_bool("ChangTrafficModeReq", True)
+        #self.params.put_bool("ChangTrafficModeStat", False)
+        #self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
 
