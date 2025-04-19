@@ -32,6 +32,7 @@ class FrogPilotCard:
     self.pause_longitudinal = False
     self.prev_distance_button = False
     self.traffic_mode = False
+    self.personality_timer = 0  ###NIZ###
 
     self.gap_counter = 0
 
