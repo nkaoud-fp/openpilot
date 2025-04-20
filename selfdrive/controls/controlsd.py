@@ -66,7 +66,7 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
-    self.personality_timer = 0  ###NIZ### Dynamic personality
+    self.personality_timer = 0  ###Dynamic personality
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -570,9 +570,7 @@ class Controls:
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
    
-###############################
- #AutoPersonality
-    #Auto_per = self.params.get_bool("HideMapIcon") ###NIZ###  Dynamic Personality   HideMapIcon  AutoPersonalityProfile
+############################### #AutoPersonality
     auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
 
     if auto_pers_profile and not self.personality_timer > 0:
@@ -603,6 +601,7 @@ class Controls:
         self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
     self.personality_timer -= 1
+    ############################### #AutoPersonality
 
 
     
