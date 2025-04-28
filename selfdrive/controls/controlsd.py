@@ -67,6 +67,7 @@ class Controls:
   def __init__(self, CI=None):
     self.params = Params()
     self.personality_timer = 0  ###Dynamic personality
+    self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -584,22 +585,26 @@ class Controls:
       
       if crnt_personality is None:
         crnt_personality = str(stn_personality)
-      if speed_kph < 3 : #and not TrafficModeStatus:  # turn on at 11 kph
+      if speed_kph < 3 and self.traffic_mode_request_sent: #and not TrafficModeStatus:  # turn on at 11 kph
         self.params.put_bool("ChangTrafficModeStat", True)
         self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        self.traffic_mode_request_sent = False
       elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
         self.params.put_bool("ChangTrafficModeStat", False)
         self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
+        self.traffic_mode_request_sent = True
       elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
         self.params.put_bool("ChangTrafficModeStat", False)
         self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
+        self.traffic_mode_request_sent = True
       elif speed_kph > 115 and crnt_personality != str(rlx_personality):
         self.params.put_bool("ChangTrafficModeStat", False)
         self.params.put_bool("ChangTrafficModeReq", True)
         self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        self.traffic_mode_request_sent = True
     self.personality_timer -= 1
     ############################### #AutoPersonality
 
