@@ -215,8 +215,14 @@ class Controls:
 
     self.events.clear()
 
+    ### auto Long
     auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
     if auto_pers_profile:
+      current_speed_kph = ( CS.vEgo + 10 ) * CV.MS_TO_KPH  
+      #default_speed = max(V_CRUISE_INITIAL, int(round(current_speed_kph)))  
+      #self.v_cruise_helper.v_cruise_kph = min(default_speed, V_CRUISE_MAX)  
+      self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
+      self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
       self.params.put_bool("AutoPersonalityProfile", False)
       self.events.add(EventName.pcmEnable)
 
