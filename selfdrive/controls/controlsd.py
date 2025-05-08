@@ -215,6 +215,11 @@ class Controls:
 
     self.events.clear()
 
+    auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
+    if auto_pers_profile:
+      self.params.put_bool("AutoPersonalityProfile", False)
+      self.events.add(EventName.enable)
+
     # Add joystick event, static on cars, dynamic on nonCars
     if self.joystick_mode:
       self.events.add(EventName.joystickDebug)
