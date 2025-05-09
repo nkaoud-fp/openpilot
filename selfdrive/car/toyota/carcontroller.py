@@ -18,6 +18,11 @@ from opendbc.can.packer import CANPacker
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 
+### AOLNG ###
+from openpilot.selfdrive.frogpilot.auto_resume_variables import get_resume_button, reset_resume_button  
+from openpilot.selfdrive.car.toyota import toyotacan  # Make sure this import exists  
+### AOLNG ###  
+
 LongCtrlState = car.CarControl.Actuators.LongControlState
 SteerControlType = car.CarParams.SteerControlType
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -205,6 +210,16 @@ class CarController(CarControllerBase):
         self.secoc_lta_message_counter += 1
         can_sends.append(lta_steer_2)
 
+
+
+    # Check for resume button flag  
+    if CC.cruiseControl.resume or get_resume_button():  
+      # Send resume button press CAN message  
+      can_sends.append(toyotacan.create_resume_button_cmd(self.packer, self.bus))  
+      # Reset the global variable after sending  
+      reset_resume_button()  
+
+    
     # *** gas and brake ***
     if self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint not in STOP_AND_GO_CAR:
       MAX_INTERCEPTOR_GAS = 0.5
