@@ -211,13 +211,14 @@ class CarController(CarControllerBase):
         can_sends.append(lta_steer_2)
 
 
-
+    ### AOLNG ###
     # Check for resume button flag  
     if CC.cruiseControl.resume or get_resume_button():  
       # Send resume button press CAN message  
       can_sends.append(toyotacan.create_resume_button_cmd(self.packer, self.bus))  
       # Reset the global variable after sending  
       reset_resume_button()  
+    ### AOLNG ###
 
     
     # *** gas and brake ***
