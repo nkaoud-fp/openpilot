@@ -90,6 +90,17 @@ def create_acc_cancel_command(packer):
   }
   return packer.make_can_msg("PCM_CRUISE", 0, values)
 
+### AOLNG ###
+def create_resume_button_cmd(packer, bus):  
+  values = {  
+    "RES_BTN": 1,  # Set to 1 to simulate resume button press  
+    "SET_BTN": 0,  
+    "CANCEL_BTN": 0,  
+    "MAIN_ON": 1,  # Assuming cruise control main switch is on  
+    # Other required fields would need to be set appropriately  
+  }  
+  return packer.make_can_msg("DSU_CRUISE", bus, values)
+### AOLNG ###
 
 def create_fcw_command(packer, fcw):
   values = {
