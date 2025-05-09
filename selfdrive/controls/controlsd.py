@@ -592,6 +592,11 @@ class Controls:
         #self.v_cruise_helper.v_cruise_kph = min(default_speed, V_CRUISE_MAX) 
         self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
         self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
+      
+      current_speed_kph = 17 * CV.MS_TO_KPH  
+      self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
+      self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
+
       set_resume_button(True) 
       self.params.put_bool("AutoPersonalityProfile", False)
     ### AOLNG ###
