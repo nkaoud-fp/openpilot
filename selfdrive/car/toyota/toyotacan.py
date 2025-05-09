@@ -101,7 +101,11 @@ def create_resume_button_cmd(packer, bus):
     # Other required fields would need to be set appropriately  
   }  
   return packer.make_can_msg("DSU_CRUISE", bus, values)
-
+  
+def create_special_resume_signal(packer, bus):  
+  # Create a CAN message that the car controller will recognize as a special signal  
+  return packer.make_can_msg("SPECIAL_SIGNAL", bus, {"RESUME_SIGNAL": 1})
+### AOLNG ###
 
 def create_fcw_command(packer, fcw):
   values = {
