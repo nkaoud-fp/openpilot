@@ -253,7 +253,9 @@ class Controls:
             self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, 0, self.frogpilot_toggles)  
               
           # Set flag to send resume button press via CAN  
-          self.send_resume_button = True
+          # self.send_resume_button = True
+          # Set the cruiseControl.resume flag  
+          self.CC.cruiseControl.resume = True
     
 
     # Add joystick event, static on cars, dynamic on nonCars
