@@ -245,11 +245,11 @@ class CarController(CarControllerBase):
 
     ### AOLNG ###
     # In the update method of ToyotaCarController  
-    if CC.cruiseControl.resume or CC.send_resume_button:  
-      # Send resume button press CAN message  
+    #if CC.cruiseControl.resume or CC.send_resume_button:  
+      ## Send resume button press CAN message  
       # can_sends.append(toyotacan.create_resume_button_cmd(self.packer, self.bus))  
-      # Reset the flag after sending  
-      CC.send_resume_button = False
+      ## Reset the flag after sending  
+      # CC.send_resume_button = False
     
     if self.CP.openpilotLongitudinalControl:
       if self.frame % 3 == 0:
