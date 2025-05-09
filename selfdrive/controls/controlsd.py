@@ -434,20 +434,6 @@ class Controls:
 
       if self.sm['modelV2'].frameDropPerc > 20:
         self.events.add(EventName.modeldLagging)
-
-
-    ### AOLNG ###
-    auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
-    if auto_pers_profile:
-      if not self.v_cruise_helper.v_cruise_initialized:  
-        current_speed_kph = ( CS.vEgo + 10 ) * CV.MS_TO_KPH  
-        #default_speed = max(V_CRUISE_INITIAL, int(round(current_speed_kph)))  
-        #self.v_cruise_helper.v_cruise_kph = min(default_speed, V_CRUISE_MAX) 
-        self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
-        self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
-      set_resume_button(True) 
-      self.params.put_bool("AutoPersonalityProfile", False)
-    ### AOLNG ###
     
     # Add FrogPilot events
     self.events.add_from_msg(self.sm['frogpilotPlan'].frogpilotEvents)
@@ -595,6 +581,20 @@ class Controls:
 
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
+
+
+    ### AOLNG ###
+    auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
+    if auto_pers_profile:
+      if not self.v_cruise_helper.v_cruise_initialized:  
+        current_speed_kph = ( CS.vEgo + 10 ) * CV.MS_TO_KPH  
+        #default_speed = max(V_CRUISE_INITIAL, int(round(current_speed_kph)))  
+        #self.v_cruise_helper.v_cruise_kph = min(default_speed, V_CRUISE_MAX) 
+        self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
+        self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
+      set_resume_button(True) 
+      self.params.put_bool("AutoPersonalityProfile", False)
+    ### AOLNG ###
    
 ############################### #AutoPersonality
     auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
