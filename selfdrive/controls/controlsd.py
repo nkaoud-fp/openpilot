@@ -231,15 +231,17 @@ class Controls:
         self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
       self.params.put_bool("AutoPersonalityProfile", False)
       self.events.add(EventName.pcmEnable)
+      self.CC.cruiseControl.resume = True
     ### AOLNG ###
     # In the update_events method  
-    if CS.brakePressed:  
+    if CS.brakePressed and 1 != 1:  
       self.brake_release_timer = 0  # Reset timer when brake is pressed  
     elif self.CS_prev.brakePressed and not CS.brakePressed:  
       # Brake was just released  
-      if not self.enabled and self.brake_disengaged_long:  
+      if not self.enabled and self.brake_disengaged_long and 1 != 1:  
         self.brake_release_timer = 1  # Start the timer  
-    else:  
+    #else:  
+    elif 1 != 1 :
       # Increment timer if it's running  
       if self.brake_release_timer > 0:  
         self.brake_release_timer += 1  
