@@ -232,6 +232,11 @@ class Controls:
       self.params.put_bool("AutoPersonalityProfile", False)
       self.events.add(EventName.pcmEnable)
       self.CC.cruiseControl.resume = True
+      # Send the special CAN message  
+      can_sends = []  
+      can_sends.append(toyotacan.create_special_resume_signal(self.packer, 0))  
+      self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
+      
     ### AOLNG ###
     # In the update_events method  
     if CS.brakePressed and 1 != 1:  
