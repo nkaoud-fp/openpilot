@@ -35,6 +35,9 @@ from openpilot.system.hardware import HARDWARE
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
 from openpilot.selfdrive.frogpilot.frogpilot_variables import ERROR_LOGS_PATH, get_frogpilot_toggles, params_memory
 
+### AOLNG ###
+from selfdrive.car.toyota import toyotacan  
+
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
 LANE_DEPARTURE_THRESHOLD = 0.1
