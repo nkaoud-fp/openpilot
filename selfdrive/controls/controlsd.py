@@ -230,8 +230,8 @@ class Controls:
         self.v_cruise_helper.v_cruise_kph = int(round(current_speed_kph))
         self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
       self.params.put_bool("AutoPersonalityProfile", False)
-      self.events.add(EventName.pcmEnable)
-      self.CC.cruiseControl.resume = True
+      #self.events.add(EventName.pcmEnable)
+      #self.CC.cruiseControl.resume = True
       # Send the special CAN message  
       can_sends = []  
       can_sends.append(toyotacan.create_special_resume_signal(self.packer, 0))  
