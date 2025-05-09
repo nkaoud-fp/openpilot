@@ -74,6 +74,12 @@ class Controls:
     self.personality_timer = 0  ###Dynamic personality
     self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
 
+    ### AOLNG ###
+    # Add these variables to track brake disengagement and re-engagement  
+    self.brake_disengaged_long = False  
+    self.brake_release_timer = 0
+    ### AOLNG ###
+
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
       with car.CarParams.from_bytes(self.params.get("CarParams", block=True)) as msg:
@@ -429,6 +435,14 @@ class Controls:
       if self.sm['modelV2'].frameDropPerc > 20:
         self.events.add(EventName.modeldLagging)
 
+
+    ### AOLNG ###
+    auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
+    if auto_pers_profile:
+      set_resume_button(True) 
+      self.params.put_bool("AutoPersonalityProfile", False)
+    ### AOLNG ###
+    
     # Add FrogPilot events
     self.events.add_from_msg(self.sm['frogpilotPlan'].frogpilotEvents)
 
