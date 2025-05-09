@@ -252,7 +252,8 @@ class CarController(CarControllerBase):
       ## Send resume button press CAN message  
       can_sends.append(toyotacan.create_resume_button_cmd(self.packer, self.bus))  
       ## Reset the flag after sending  
-      CC.send_resume_button = False
+      self.send_resume_button = False  # Reset the flag after sending
+      #CC.send_resume_button = False
     
     if self.CP.openpilotLongitudinalControl:
       if self.frame % 3 == 0:
