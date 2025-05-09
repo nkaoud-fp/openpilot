@@ -107,6 +107,9 @@ class CarController(CarControllerBase):
     self.cruise_timer = 0
     self.previous_set_speed = 0
 
+    ### AOLNG ###
+    self.send_resume_button = False  # Add this line
+
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     if frogpilot_toggles.sport_plus:
       self.params.ACCEL_MAX = min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo))
