@@ -68,6 +68,10 @@ class Controls:
     self.params = Params()
     self.personality_timer = 0  ###Dynamic personality
     self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
+    self.send_resume_button = False  ### AOLNG # For direct CAN message approach
+    self.brake_disengaged_long = False  ### AOLNG 
+    self.brake_release_timer = 0  ### AOLNG 
+
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -215,6 +219,7 @@ class Controls:
 
     self.events.clear()
 
+    ### AOLNG ###
     ### auto Long
     auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
     if auto_pers_profile:
@@ -226,6 +231,30 @@ class Controls:
         self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph 
       self.params.put_bool("AutoPersonalityProfile", False)
       self.events.add(EventName.pcmEnable)
+    ### AOLNG ###
+    # In the update_events method  
+    if CS.brakePressed:  
+      self.brake_release_timer = 0  # Reset timer when brake is pressed  
+    elif self.CS_prev.brakePressed and not CS.brakePressed:  
+      # Brake was just released  
+      if not self.enabled and self.brake_disengaged_long:  
+        self.brake_release_timer = 1  # Start the timer  
+    else:  
+      # Increment timer if it's running  
+      if self.brake_release_timer > 0:  
+        self.brake_release_timer += 1  
+        # Convert to seconds (100Hz control loop)  
+        if self.brake_release_timer >= 300:  # 3 seconds at 100Hz  
+          self.brake_release_timer = 0  
+          
+          # Check if cruise speed is set  
+          if not self.v_cruise_helper.v_cruise_initialized:  
+            # Use existing method to initialize cruise speed  
+            self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, 0, self.frogpilot_toggles)  
+              
+          # Set flag to send resume button press via CAN  
+          self.send_resume_button = True
+    
 
     # Add joystick event, static on cars, dynamic on nonCars
     if self.joystick_mode:
@@ -505,6 +534,13 @@ class Controls:
 
     self.current_alert_types = [ET.PERMANENT]
 
+    ### AOLNG ###
+    # In the state_transition method  
+    if self.state != State.disabled and self.events.contains(EventName.pedalPressed) and CS.brakePressed:  
+      self.brake_disengaged_long = True  
+    elif self.state == State.enabled:  
+      self.brake_disengaged_long = False  # Reset when fully engaged
+
     # ENABLED, SOFT DISABLING, PRE ENABLING, OVERRIDING
     if self.state != State.disabled:
       # user and immediate disable always have priority in a non-disabled state
@@ -620,7 +656,12 @@ class Controls:
     self.personality_timer -= 1
     ############################### #AutoPersonality
 
-
+    ### AOLNG ###
+    # Reset brake timer when user manually re-engages  
+    if self.enabled:  
+      self.brake_disengaged_long = False  
+      self.brake_release_timer = 0  
+      self.send_resume_button = False
     
     # Update VehicleModel
     lp = self.sm['liveParameters']
