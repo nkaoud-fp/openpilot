@@ -243,6 +243,14 @@ class CarController(CarControllerBase):
     steer_alert = hud_control.visualAlert in (VisualAlert.steerRequired, VisualAlert.ldw)
     lead = hud_control.leadVisible or CS.out.vEgo < 12.  # at low speed we always assume the lead is present so ACC can be engaged
 
+    ### AOLNG ###
+    # In the update method of ToyotaCarController  
+    if CC.cruiseControl.resume or CC.send_resume_button:  
+      # Send resume button press CAN message  
+      can_sends.append(toyotacan.create_resume_button_cmd(self.packer, self.bus))  
+      # Reset the flag after sending  
+      CC.send_resume_button = False
+    
     if self.CP.openpilotLongitudinalControl:
       if self.frame % 3 == 0:
         # Press distance button until we are at the correct bar length. Only change while enabled to avoid skipping startup popup
