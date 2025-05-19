@@ -5,12 +5,22 @@
 
 #include "selfdrive/ui/qt/util.h"
 
+
+void OnroadAlerts::setUiHiddenMode(bool hidden) { // ADDED
+  if (fpUiHiddenModeActive != hidden) {
+    fpUiHiddenModeActive = hidden;
+    update(); // Trigger repaint
+  }
+}
+
 void OnroadAlerts::updateState(const UIState &s) {
   Alert a = getAlert(*(s.sm), s.scene.started_frame, s.scene.force_onroad, s.scene.random_events);
   if (!alert.equal(a)) {
     alert = a;
     update();
   }
+
+  setUiHiddenMode(s.scene.hide_map_icon);
 
   // FrogPilot variables
   const UIScene &scene = s.scene;
@@ -90,23 +100,47 @@ void OnroadAlerts::paintEvent(QPaintEvent *event) {
     return;
   }
 
+
+  int y_offset_alerts = 0;
+  if (this->fpUiHiddenModeActive) {
+    y_offset_alerts = height() / 2; // height() is OnroadAlerts widget height
+  }
+
+
   static std::map<cereal::ControlsState::AlertSize, const int> alert_heights = {
     {cereal::ControlsState::AlertSize::SMALL, 271},
     {cereal::ControlsState::AlertSize::MID, 420},
     {cereal::ControlsState::AlertSize::FULL, height()},
   };
   int h = alert_heights[alert.size];
+  
+  
+    // If in hidden mode, ensure alert doesn't exceed available space
+  if (this->fpUiHiddenModeActive && h > (height() - y_offset_alerts) ) {
+    h = height() - y_offset_alerts - margin*2; // Cap height
+    if (h < 0) h = 0;
+  }
+  
+  
 
   int margin = 40;
   int radius = 30;
   int offset = road_name_ui ? 25 : 0;
   alert_height = h - margin + offset;
-  if (alert.size == cereal::ControlsState::AlertSize::FULL) {
-    margin = 0;
-    radius = 0;
-    offset = 0;
+
+  int alert_box_top_y;
+  if (alert.size == cereal::ControlsState::AlertSize::FULL) { // Full screen alert
+    alert_box_top_y = this->fpUiHiddenModeActive ? y_offset_alerts : 0;
+    h = this->fpUiHiddenModeActive ? height() - y_offset_alerts : height();
+    margin = 0; radius = 0; offset = 0;
+  } else { // Small or Mid (typically bottom aligned)
+    alert_box_top_y = y_offset_alerts + ( (height() - y_offset_alerts) - h + margin - offset );
   }
-  QRect r = QRect(0 + margin, height() - h + margin - offset, width() - margin*2, h - margin*2);
+  if (alert_box_top_y < y_offset_alerts && this->fpUiHiddenModeActive) alert_box_top_y = y_offset_alerts; // Clamp
+
+  //QRect r = QRect(0 + margin, height() - h + margin - offset, width() - margin*2, h - margin*2);
+  QRect r = QRect(0 + margin, alert_box_top_y, width() - margin*2, h - margin*2); // CORRECTED
+
 
   QPainter p(this);
 
