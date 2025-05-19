@@ -113,20 +113,17 @@ void OnroadAlerts::paintEvent(QPaintEvent *event) {
     {cereal::ControlsState::AlertSize::FULL, height()},
   };
   int h = alert_heights[alert.size];
+  int margin = 40;
+  int radius = 30;
+  int offset = road_name_ui ? 25 : 0;
+  alert_height = h - margin + offset;
   
-  
-    // If in hidden mode, ensure alert doesn't exceed available space
+  // If in hidden mode, ensure alert doesn't exceed available space
   if (this->fpUiHiddenModeActive && h > (height() - y_offset_alerts) ) {
     h = height() - y_offset_alerts - margin*2; // Cap height
     if (h < 0) h = 0;
   }
   
-  
-
-  int margin = 40;
-  int radius = 30;
-  int offset = road_name_ui ? 25 : 0;
-  alert_height = h - margin + offset;
 
   int alert_box_top_y;
   if (alert.size == cereal::ControlsState::AlertSize::FULL) { // Full screen alert
