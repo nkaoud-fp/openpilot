@@ -11,31 +11,40 @@
 
 // Window that shows camera view and variety of info drawn on top
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
+  fpHideMapIconActive = false; // Initialize
+  fpPreviousHideMapIconActiveState = false; // Initialize
+
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
 
   main_layout = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
   main_layout->setSpacing(0);
 
-  QHBoxLayout *buttons_layout = new QHBoxLayout();
-  buttons_layout->setSpacing(0);
+  // Create a spacer item that will be at the top of main_layout
+  top_layout_spacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Fixed);
+  main_layout->addSpacerItem(top_layout_spacer); // Add spacer at the top
 
-  // Neokii screen recorder
+  // Layout for buttons on the top right
+  buttons_layout_internal = new QHBoxLayout(); // Store pointer
+  buttons_layout_internal->setSpacing(0);
+
   screenRecorder = new ScreenRecorder(this);
-  buttons_layout->addWidget(screenRecorder);
+  buttons_layout_internal->addWidget(screenRecorder);
 
   experimental_btn = new ExperimentalButton(this);
-  buttons_layout->addWidget(experimental_btn);
+  buttons_layout_internal->addWidget(experimental_btn);
 
-  QVBoxLayout *top_right_layout = new QVBoxLayout();
-  top_right_layout->setSpacing(0);
-  top_right_layout->addLayout(buttons_layout);
+  top_right_layout_internal = new QVBoxLayout(); // Store pointer
+  top_right_layout_internal->setSpacing(0);
+  top_right_layout_internal->addLayout(buttons_layout_internal);
 
   pedal_icons = new PedalIcons(this);
-  top_right_layout->addWidget(pedal_icons, 0, Qt::AlignRight);
+  top_right_layout_internal->addWidget(pedal_icons, 0, Qt::AlignRight);
 
-  main_layout->addLayout(top_right_layout, 0);
-  main_layout->setAlignment(top_right_layout, Qt::AlignTop | Qt::AlignRight);
+  // Add the top_right_layout to the main_layout AFTER the spacer
+  main_layout->addLayout(top_right_layout_internal, 0); // weight 0 so it doesn't expand past spacer
+  main_layout->setAlignment(top_right_layout_internal, Qt::AlignTop | Qt::AlignRight);
+
 
   map_settings_btn = new MapSettingsButton(this);
   main_layout->addWidget(map_settings_btn, 0, Qt::AlignBottom | Qt::AlignRight);
@@ -44,6 +53,15 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
 
   // Initialize FrogPilot widgets
   initializeFrogPilotWidgets();
+}
+
+// Call this from OnroadWindow's updateState or make AnnotatedCameraWidget observe UIState directly
+void AnnotatedCameraWidget::setUiHiddenMode(bool hidden) {
+  if (fpHideMapIconActive != hidden) {
+    fpHideMapIconActive = hidden;
+    updateFrogPilotWidgetsLayout(); // Update layout based on new mode
+    update(); // Trigger repaint
+  }
 }
 
 void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
@@ -55,11 +73,20 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   const auto cs = sm["controlsState"].getControlsState();
   const auto car_state = sm["carState"].getCarState();
   const auto nav_instruction = sm["navInstruction"].getNavInstruction();
+  const bool newHideMapIconState = s.scene.hide_map_icon;
 
   // Handle older routes where vCruiseCluster is not set
   float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
   setSpeed = cs_alive ? v_cruise : SET_SPEED_NA;
   is_cruise_set = setSpeed > 0 && (int)setSpeed != SET_SPEED_NA;
+  
+  if (newHideMapIconState != fpPreviousHideMapIconActiveState) {
+    fpHideMapIconActive = newHideMapIconState;
+    fpPreviousHideMapIconActiveState = newHideMapIconState;
+    updateFrogPilotWidgetsLayout(); // Update layout when state changes
+  }
+
+  
   if (is_cruise_set && !s.scene.is_metric) {
     setSpeed *= KM_TO_MILE;
   }
@@ -102,7 +129,8 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
 
   // hide map settings button for alerts and flip for right hand DM
   if (map_settings_btn->isEnabled()) {
-    map_settings_btn->setVisible(!hideBottomIcons && !hideMapIcon);
+    //map_settings_btn->setVisible(!hideBottomIcons && !hideMapIcon);
+    map_settings_btn->setVisible(!hideBottomIcons && !hideMapIcon && !fpHideMapIconActive); // Also hide if UI is hidden
     main_layout->setAlignment(map_settings_btn, (rightHandDM ? Qt::AlignLeft : Qt::AlignRight) | Qt::AlignBottom);
   }
 
@@ -110,8 +138,50 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   updateFrogPilotVariables(alert_height, s.scene);
 }
 
+void AnnotatedCameraWidget::updateFrogPilotWidgetsLayout() {
+  if (fpHideMapIconActive) {
+    top_layout_spacer->changeSize(0, height() / 2, QSizePolicy::Minimum, QSizePolicy::Fixed);
+  } else {
+    top_layout_spacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Fixed);
+  }
+    // For widgets not in main_layout or needing manual adjustment:
+    // e.g., distance_btn if it's manually positioned relative to bottom.
+    // Its parent is AnnotatedCameraWidget.
+  if (distance_btn) {
+        // Original might be Qt::AlignBottom | Qt::AlignLeft
+        // If fpUIHiddenMode, it means bottom of lower half.
+        // This requires knowing the original intended Y or using alignments carefully with a container
+        // that itself is resized/repositioned.
+        // The main_layout's spacer should push map_settings_btn down.
+        // Distance button might need more specific handling if its QLayout is separate
+        // For now, assume main_layout handles its children.
+        // If DistanceButton is added directly to AnnotatedCameraWidget's main_layout:
+        // main_layout->addWidget(distance_btn, 0, Qt::AlignBottom | Qt::AlignLeft);
+        // The spacer should push it down to the bottom of the *widget*, which is now effectively the lower half.
+  }
+
+  if (main_layout) {
+    main_layout->invalidate(); // Force layout recalculation
+    main_layout->activate();
+  }
+  update(); // Trigger repaint
+  
+}
+
 void AnnotatedCameraWidget::drawHud(QPainter &p) {
+  if (this->fpHideMapIconActive && !s->scene.world_objects_visible) { // Example condition to draw SOME hud even if hidden
+   // Maybe draw minimal speed if needed, but for now, skip if camera is meant to be fully black
+   // However, if paintEvent already filled black and returned, this won't be called.
+   // This assumes paintEvent draws black for camera, but HUD is still processed.
+  }
+
+
   p.save();
+  int y_offset_hud = 0;
+  if (this->fpHideMapIconActive) {
+    y_offset_hud = height() / 2;
+  }
+  
 
   static QElapsedTimer pendingLimitTimer;
   if (speedLimitChanged) {
@@ -124,11 +194,12 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   QPen pendingLimitPenColor = pendingLimitTimer.isValid() && pendingLimitTimer.elapsed() % 1000 <= 500 ? QPen(redColor(), 6) : QPen(blackColor(), 6);
 
   // Header gradient
-  QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
-  bg.setColorAt(0, QColor::fromRgbF(0, 0, 0, 0.45));
-  bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
-  p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
-
+  if (!this->fpHideMapIconActive) {
+    QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
+    bg.setColorAt(0, QColor::fromRgbF(0, 0, 0, 0.45));
+    bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
+    p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
+  }
   QString mtscSpeedStr = (mtscSpeed > 1) ? QString::number(std::nearbyint(fmin(speed, mtscSpeed))) + speedUnit : "–";
   QString newSpeedLimitStr = (unconfirmedSpeedLimit > 1) ? QString::number(std::nearbyint(unconfirmedSpeedLimit)) : "–";
   QString speedLimitStr = (speedLimit > 1) ? QString::number(std::nearbyint(speedLimit)) : "–";
@@ -153,7 +224,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int top_radius = 32;
   int bottom_radius = has_eu_speed_limit ? 100 : 32;
 
-  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
+  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, y_offset_hud + 45), set_speed_size);
   if (!hideMaxSpeed) {
     if (trafficMode) {
       p.setPen(QPen(redColor(), 10));
@@ -191,7 +262,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);
   }
 
-  if (!speedLimitChanged && cscStatus) {
+  if (!speedLimitChanged && cscStatus && !this->fpHideMapIconActive) { // Don't draw if hidden
     std::function<void(const QRect&, const QString&, bool)> drawCurveSpeedControl = [&](const QRect &rect, const QString &speedStr, bool isMtsc) {
       if (isMtsc && !vtscControllingCurve) {
         p.setPen(QPen(greenColor(), 10));
@@ -397,14 +468,14 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       int seconds = standstillDuration % 60;
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, rect().center().x(), 210, minutes == 1 ? "1 minute" : QString("%1 minutes").arg(minutes), 255, true);
+      drawText(p, rect().center().x(), y_offset_hud + 210, speedStr); // y_offset_hud added
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), 290, QString("%1 seconds").arg(seconds));
+      drawText(p, rect().center().x(), y_offset_hud + 290, QString("%1 seconds").arg(seconds));
     } else {
       p.setFont(InterFont(176, QFont::Bold));
       drawText(p, rect().center().x(), 210, speedStr);
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), 290, speedUnit, 200);
+      drawText(p, rect().center().x(), y_offset_hud + 290, speedUnit, 200); // y_offset_hud added
     }
   }
 
@@ -451,6 +522,10 @@ void AnnotatedCameraWidget::updateFrameMat() {
 }
 
 void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, float v_ego) {
+  if (this->fpHideMapIconActive) {
+    return; // Skip drawing if hidden
+  }
+  
   painter.save();
 
   const UIScene &scene = s->scene;
@@ -786,6 +861,13 @@ void AnnotatedCameraWidget::drawLead(QPainter &painter, const cereal::RadarState
 }
 
 void AnnotatedCameraWidget::paintGL() {
+  if (this->fpHideMapIconActive) {
+    // Optionally clear to black here if CameraWidget doesn't do it when not rendering
+    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    //glClear(GL_COLOR_BUFFER_BIT);
+    return;
+  }
+  CameraWidget::paintGL(); // Call base class to render camera
 }
 
 void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
@@ -796,6 +878,20 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
+
+
+  if (this->fpHideMapIconActive) {
+    painter.fillRect(rect(), Qt::black); // Fill camera area black
+
+    // Option: If FrogPilot widgets (like CEM status, road name) should still be drawn
+    // but repositioned in the lower half:
+    // painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing); // Set hints if not already set
+    // paintFrogPilotWidgets(painter); // Ensure this function and its children use y_offset correctly
+    // And ensure any direct drawing in paintFrogPilotWidgets (if any) uses an y_offset.
+
+    return; // This skips drawing camera frame, lane lines, leads, HUD from AnnotatedCameraWidget
+  }
+
 
   // draw camera frame
   {
