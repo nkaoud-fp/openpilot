@@ -4,6 +4,9 @@
 #include <QPainter>
 #include <QStackedLayout>
 
+#include <QVBoxLayout> // Ensure QVBoxLayout is included for main_layout manipulation
+
+
 #ifdef ENABLE_MAPS
 #include "selfdrive/ui/qt/maps/map_helpers.h"
 #include "selfdrive/ui/qt/maps/map_panel.h"
@@ -12,6 +15,9 @@
 #include "selfdrive/ui/qt/util.h"
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
+  // Initialize fpPreviousUiHiddenModeState, perhaps to a value that ensures first update.
+  fpPreviousUiHiddenModeState = !params_memory.getBool("HideMapIcon"); // Or some default
+
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
   QStackedLayout *stacked_layout = new QStackedLayout;
@@ -56,6 +62,18 @@ void OnroadWindow::updateState(const UIState &s) {
     return;
   }
 
+  // Update fpUiHiddenModeActive from s.scene
+  fpUiHiddenModeActive = s.scene.hide_map_icon; // Assuming hide_map_icon is the toggle state
+
+  if (fpUiHiddenModeActive != fpPreviousUiHiddenModeState) {
+    updateFrogPilotLayout(); // Call layout update if state changed
+    fpPreviousUiHiddenModeState = fpUiHiddenModeActive;
+  }
+  // Pass the state to nvg (AnnotatedCameraWidget)
+  // nvg might need direct access or pass it in its own updateState.
+  // For simplicity, let's assume nvg->updateState also gets 's' and handles its internal state.
+
+
   if (s.scene.map_on_left || s.scene.full_map) {
     split->setDirection(QBoxLayout::LeftToRight);
   } else {
@@ -99,7 +117,8 @@ void OnroadWindow::updateState(const UIState &s) {
   turnSignalLeft = scene.turn_signal_left;
   turnSignalRight = scene.turn_signal_right;
 
-  if (showBlindspot || showFPS || showJerk || showSignal || showSteering || showTuning) {
+
+  if (showBlindspot || showFPS || showJerk || showSignal || showSteering || showTuning || fpUiHiddenModeActive != fpPreviousUiHiddenModeState) { // ensure update if mode changes
     shouldUpdate = true;
   }
 
@@ -107,6 +126,27 @@ void OnroadWindow::updateState(const UIState &s) {
     update();
   }
 }
+
+
+
+// New method to handle layout changes
+void OnroadWindow::updateFrogPilotLayout() {
+  if (nvg) {
+    // This tells AnnotatedCameraWidget to update its internal layout if needed
+    // A more direct way might be nvg->setUiHiddenMode(fpUiHiddenModeActive);
+    // and nvg handles its own internal adjustments.
+    nvg->update(); // Trigger a repaint which can use the new state.
+    // Layout changes in nvg might need specific calls.
+  }
+  if (alerts) {
+    // alerts->setUiHiddenMode(fpUiHiddenModeActive); // if alerts needs a similar flag
+    alerts->update(); // Trigger repaint for alerts
+  }
+  // This function might need to do more if OnroadWindow itself has complex layouts
+  // affected by this mode, beyond what child widgets handle.
+}
+
+
 
 void OnroadWindow::mousePressEvent(QMouseEvent* e) {
   // FrogPilot variables
@@ -178,15 +218,32 @@ void OnroadWindow::primeChanged(bool prime) {
 void OnroadWindow::paintEvent(QPaintEvent *event) {
   QPainter p(this);
 
+  int y_offset = 0;
+  if (this->fpUiHiddenModeActive) {
+    y_offset = height() / 2;
+    // Optionally, draw a black background for the top half if nvg is not doing it
+    // p.fillRect(0, 0, width(), y_offset, Qt::black);
+  }
+
+
   // FrogPilot variables
   UIState *s = uiState();
   SubMaster &sm = *(s->sm);
 
   QRect rect = this->rect();
-  QColor bgColor(bg.red(), bg.green(), bg.blue(), 255);
-  p.fillRect(rect, bgColor);
+  //QColor bgColor(bg.red(), bg.green(), bg.blue(), 255);
+  QColor bgColorToFill(bg.red(), bg.green(), bg.blue(), 255);
 
-  if (showSteering) {
+  // If in hidden mode, the background might only apply to the lower half
+  if (this->fpUiHiddenModeActive) {
+    p.fillRect(0, y_offset, width(), height() - y_offset, bgColorToFill);
+  } else {
+    p.fillRect(rect, bgColorToFill);
+  }
+
+  //p.fillRect(rect, bgColor);
+
+  if (showSteering && !this->fpUiHiddenModeActive) { // Only show if not hidden
     static float smoothedSteer = 0.0;
 
     smoothedSteer = 0.1 * std::abs(steer) + 0.9 * smoothedSteer;
@@ -218,7 +275,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
     }
   }
 
-  if (showBlindspot || showSignal) {
+  if ((showBlindspot || showSignal) && !this->fpUiHiddenModeActive) { // Only show if not hidden
     static bool leftFlickerActive = false;
     static bool rightFlickerActive = false;
 
@@ -243,7 +300,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
     QColor borderColorLeft = getBorderColor(blindSpotLeft, turnSignalLeft, leftFlickerActive);
     QColor borderColorRight = getBorderColor(blindSpotRight, turnSignalRight, rightFlickerActive);
 
-    p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), borderColorLeft);
+    //p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), borderColorLeft);
     p.fillRect(rect.x() + rect.width() / 2, rect.y(), rect.width() / 2, rect.height(), borderColorRight);
   }
 
@@ -276,18 +333,26 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
 
     int x = (rect.width() - fontMetrics.horizontalAdvance(logicsDisplayString)) / 2 - UI_BORDER_SIZE;
     int y = rect.top() + (fontMetrics.height() / 1.5);
+    int y_logics = (this->fpUiHiddenModeActive ? y_offset : 0) + rect.top() + (fontMetrics.height() / 1.5);
+
+    if (this->fpUiHiddenModeActive && y_logics < y_offset) y_logics = y_offset + (fontMetrics.height()/1.5);
+
 
     QStringList parts = logicsDisplayString.split("|");
     for (QString part : parts) {
       if (part.contains("Max:") && maxAccelTimer > 0) {
         QString baseText = QString("Acceleration: %1 %2 - ").arg(acceleration, 0, 'f', 2).arg(nvg->accelerationUnit);
         p.setPen(whiteColor());
-        p.drawText(x, y, baseText);
+        //p.drawText(x, y, baseText);
+        p.drawText(x, y_logics, baseText);
+
         x += fontMetrics.horizontalAdvance(baseText);
 
         QString maxText = QString("Max: %1 %2 | ").arg(maxAcceleration, 0, 'f', 2).arg(nvg->accelerationUnit);
         p.setPen(redColor());
-        p.drawText(x, y, maxText);
+        //p.drawText(x, y, maxText);
+        p.drawText(x, y_logics, maxText);
+
         x += fontMetrics.horizontalAdvance(maxText);
       } else if (part.contains("Acceleration Jerk") && accelerationJerkDifference != 0) {
         QString baseText = QString("Acceleration Jerk: %1").arg(accelerationJerk, 0, 'f', 2);
@@ -323,7 +388,8 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
       } else {
         part += " | ";
         p.setPen(whiteColor());
-        p.drawText(x, y, part);
+        //p.drawText(x, y, part);
+        p.drawText(x, y_logics, part);
         x += fontMetrics.horizontalAdvance(part);
       }
     }
@@ -369,7 +435,11 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
     int textWidth = p.fontMetrics().horizontalAdvance(fpsDisplayString);
     int xPos = (rect.width() - textWidth) / 2;
     int yPos = rect.bottom() - 5;
+    int y_fps = (this->fpUiHiddenModeActive ? y_offset : 0) + rect.bottom() - 5;
+    y_fps = (this->fpUiHiddenModeActive ? height() : (y_offset + (height() - y_offset))) -5;
 
-    p.drawText(xPos, yPos, fpsDisplayString);
+    p.drawText(xPos, y_fps, fpsDisplayString);
+
+    //p.drawText(xPos, yPos, fpsDisplayString);
   }
 }
