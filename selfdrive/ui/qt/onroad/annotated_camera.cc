@@ -422,7 +422,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       p.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fullText);
     };
 
-    QRect dashboardRect(sign_rect.x() - sign_margin, sign_rect.y() + sign_rect.height() + 30, 500, 60);
+    QRect dashboardRect(sign_rect.x() - sign_margin, sign_rect.y() + sign_rect.height() + 30 + y_offset_hud, 500, 60);
     QRect mapDataRect(dashboardRect.x(), dashboardRect.y() + dashboardRect.height() + 15, 500, 60);
     QRect navigationRect(mapDataRect.x(), mapDataRect.y() + mapDataRect.height() + 15, 500, 60);
     QRect upcomingLimitRect(navigationRect.x(), navigationRect.y() + navigationRect.height() + 15, 500, 60);
@@ -468,14 +468,14 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       int seconds = standstillDuration % 60;
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, rect().center().x(), y_offset_hud + 210, speedStr); // y_offset_hud added
+      drawText(p, rect().center().x(), 210, minutes == 1 ? "1 minute" : QString("%1 minutes").arg(minutes), 255, true); // This line needs the offset
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), y_offset_hud + 290, QString("%1 seconds").arg(seconds));
-    } else {
+      drawText(p, rect().center().x(), y_offset_hud + 290, QString("%1 seconds").arg(seconds)); // This line already has the offset
+    } else { // This is the non-standstill case, which was correctly offset
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, rect().center().x(), 210, speedStr);
+      drawText(p, rect().center().x(), y_offset_hud + 210, speedStr);
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), y_offset_hud + 290, speedUnit, 200); // y_offset_hud added
+      drawText(p, rect().center().x(), y_offset_hud + 290, speedUnit, 200);
     }
   }
 
