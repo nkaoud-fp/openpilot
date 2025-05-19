@@ -10,10 +10,12 @@ class OnroadAlerts : public QWidget {
 public:
   OnroadAlerts(QWidget *parent = 0) : QWidget(parent) {}
   void updateState(const UIState &s);
+  void setUiHiddenMode(bool hidden); // ADDED
   void clear();
 
   // FrogPilot variables
   int alert_height;
+  bool fpUiHiddenModeActive; // ADDED
 
 protected:
   struct Alert {
