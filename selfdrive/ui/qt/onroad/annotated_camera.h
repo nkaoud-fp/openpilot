@@ -3,6 +3,8 @@
 #include <QVBoxLayout>
 #include <memory>
 
+#include <QSpacerItem> // Add for spacer item
+
 #include "selfdrive/ui/qt/onroad/buttons.h"
 #include "selfdrive/ui/qt/widgets/cameraview.h"
 
@@ -37,6 +39,7 @@ class AnnotatedCameraWidget : public CameraWidget {
 public:
   explicit AnnotatedCameraWidget(VisionStreamType type, QWidget* parent = 0);
   void updateState(int alert_height, const UIState &s);
+  void setUiHiddenMode(bool hidden); // ADDED: To explicitly set mode
 
   MapSettingsButton *map_settings_btn;
 
@@ -47,10 +50,21 @@ public:
 
   float accelerationConversion;
 
+  bool fpHideMapIconActive;
+  bool fpPreviousHideMapIconActiveState;
+  QSpacerItem *top_layout_spacer; // ADDED: For shifting layout down
+
+
+
 private:
   void drawText(QPainter &p, int x, int y, const QString &text, int alpha = 255, bool overridePen = false);
 
+  void updateFrogPilotWidgetsLayout(); // ADDED: To handle widget position adjustments
+
   QVBoxLayout *main_layout;
+  QHBoxLayout *buttons_layout_internal; // ADDED: Keep a pointer if needed for spacer
+  QVBoxLayout *top_right_layout_internal; // ADDED: Keep a pointer if needed for spacer
+
   ExperimentalButton *experimental_btn;
   QPixmap dm_img;
   float speed;
