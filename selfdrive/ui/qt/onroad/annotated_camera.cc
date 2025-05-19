@@ -169,11 +169,11 @@ void AnnotatedCameraWidget::updateFrogPilotWidgetsLayout() {
 }
 
 void AnnotatedCameraWidget::drawHud(QPainter &p) {
-  if (this->fpHideMapIconActive && !s->scene.world_objects_visible) { // Example condition to draw SOME hud even if hidden
+   // Example condition to draw SOME hud even if hidden
    // Maybe draw minimal speed if needed, but for now, skip if camera is meant to be fully black
    // However, if paintEvent already filled black and returned, this won't be called.
    // This assumes paintEvent draws black for camera, but HUD is still processed.
-  }
+
 
 
   p.save();
