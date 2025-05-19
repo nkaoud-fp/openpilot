@@ -16,8 +16,10 @@ signals:
 
 private:
   void createMapWidget();
-  void paintEvent(QPaintEvent *event);
+  void paintEvent(QPaintEvent *event) override;
   void mousePressEvent(QMouseEvent* e) override;
+  void updateFrogPilotLayout(); // New function to handle layout changes
+
   OnroadAlerts *alerts;
   AnnotatedCameraWidget *nvg;
   QColor bg = bg_colors[STATUS_DISENGAGED];
@@ -36,6 +38,9 @@ private:
   bool showTuning;
   bool turnSignalLeft;
   bool turnSignalRight;
+  bool fpUiHiddenModeActive; // ADDED: To store HideMapIcon state
+  bool fpPreviousUiHiddenModeState; // ADDED: To detect changes
+
 
   float acceleration;
   float accelerationJerk;
