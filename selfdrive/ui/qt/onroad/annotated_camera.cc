@@ -877,7 +877,7 @@ void AnnotatedCameraWidget::paintGL() {
     // Optionally clear to black here if CameraWidget doesn't do it when not rendering
     //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     //glClear(GL_COLOR_BUFFER_BIT);
-    return;
+    //return;
   }
   CameraWidget::paintGL(); // Call base class to render camera
 }
