@@ -14,6 +14,17 @@
 
 #include "selfdrive/ui/qt/util.h"
 
+static QColor getBorderColor(bool blindSpotActive, bool turnSignalActive, bool flickerActive) {
+  if (blindSpotActive) {
+    return QColor(255, 0, 0, 255); // Red for blindspot
+  } else if (turnSignalActive) {
+    // Example: Yellow/Orange for turn signal, with a flicker effect
+    return flickerActive ? QColor(255, 200, 0, 255) : QColor(255, 165, 0, 150);
+  }
+  return Qt::transparent; // Default to transparent if no conditions met
+}
+
+
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Initialize fpPreviousUiHiddenModeState, perhaps to a value that ensures first update.
   fpPreviousUiHiddenModeState = !params_memory.getBool("HideMapIcon"); // Or some default
