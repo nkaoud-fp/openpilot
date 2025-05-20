@@ -183,7 +183,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   y_offset_hud_d = height() / 2;
 
   if (this->fpHideMapIconActive) {
-    y_offset_hud = height() / 4;// back to 2 after throubleshooting
+    y_offset_hud = height() / 2;// back to 2 after throubleshooting
   }
   
   
@@ -874,12 +874,21 @@ void AnnotatedCameraWidget::drawLead(QPainter &painter, const cereal::RadarState
 
 void AnnotatedCameraWidget::paintGL() {
   if (this->fpHideMapIconActive) {
-    // Optionally clear to black here if CameraWidget doesn't do it when not rendering
-    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    //glClear(GL_COLOR_BUFFER_BIT);
-    //return;
+    // We remove the 'return;' here to allow drawing of HUD elements.
+    // However, we still want to block the camera stream.
+    // The CameraWidget::paintGL() is what actually draws the camera feed.
+    // If you want a black screen instead of camera when hidden, keep the glClear calls.
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Clear to black
+    glClear(GL_COLOR_BUFFER_BIT);       // Apply the clear
+  } else {
+    // Only call the base CameraWidget's paintGL if HideMapIcon is OFF
+    CameraWidget::paintGL(); // Call base class to render camera
   }
-  CameraWidget::paintGL(); // Call base class to render camera
+
+  // Now, unconditionally call drawHud AFTER the camera (or black screen) is drawn.
+  // This ensures HUD elements are always drawn, but on top of either the camera or a black background.
+  QPainter p(this);
+  drawHud(p); // This is where your HUD elements and debug text are drawn
 }
 
 void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
