@@ -312,6 +312,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
     };
 
     //p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), borderColorLeft);
+    p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), borderColorLeft);
     p.fillRect(rect.x() + rect.width() / 2, rect.y(), rect.width() / 2, rect.height(), borderColorRight);
   }
 
