@@ -271,6 +271,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
         rectToHide = QRect(rect.x() + rect.width() - UI_BORDER_SIZE, rect.y(), UI_BORDER_SIZE, rect.height() - visibleHeight);
       }
       p.fillRect(rectToFill, brush);
+      QColor bgColor = Qt::black; // ADD THIS LINE
       p.fillRect(rectToHide, bgColor);
     }
   }
@@ -278,6 +279,8 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   if ((showBlindspot || showSignal) && !this->fpUiHiddenModeActive) { // Only show if not hidden
     static bool leftFlickerActive = false;
     static bool rightFlickerActive = false;
+    QColor borderColorLeft = getBorderColor(blindSpotLeft, turnSignalLeft, leftFlickerActive);
+    QColor borderColorRight = getBorderColor(blindSpotRight, turnSignalRight, rightFlickerActive);
 
     std::function<QColor(bool, bool, bool&)> getBorderColor = [&](bool blindSpot, bool turnSignal, bool &flickerActive) -> QColor {
       if (showSignal && turnSignal) {
@@ -296,9 +299,6 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
         return bg;
       }
     };
-
-    QColor borderColorLeft = getBorderColor(blindSpotLeft, turnSignalLeft, leftFlickerActive);
-    QColor borderColorRight = getBorderColor(blindSpotRight, turnSignalRight, rightFlickerActive);
 
     //p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), borderColorLeft);
     p.fillRect(rect.x() + rect.width() / 2, rect.y(), rect.width() / 2, rect.height(), borderColorRight);
@@ -434,7 +434,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
 
     int textWidth = p.fontMetrics().horizontalAdvance(fpsDisplayString);
     int xPos = (rect.width() - textWidth) / 2;
-    int yPos = rect.bottom() - 5;
+    //int yPos = rect.bottom() - 5;
     int y_fps = (this->fpUiHiddenModeActive ? y_offset : 0) + rect.bottom() - 5;
     y_fps = (this->fpUiHiddenModeActive ? height() : (y_offset + (height() - y_offset))) -5;
 
