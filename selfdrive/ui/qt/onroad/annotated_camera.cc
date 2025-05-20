@@ -177,9 +177,16 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
 
   p.save();
+  
+  // DEBUG: Draw a test rectangle to verify drawHud is being called
+  p.setPen(Qt::yellow); // Use a bright color
+  p.drawRect(10, 10 + y_offset_hud, 50, 50); // Draw a small rectangle in the top-left, adjusted by y_offset_hud
+  p.drawText(10, 80 + y_offset_hud, "HUD Active"); // Debug text, also adjusted
+  
+  
   int y_offset_hud = 0;
   if (this->fpHideMapIconActive) {
-    y_offset_hud = height() / 2;
+    y_offset_hud = height() / 4;// back to 2 after throubleshooting
   }
   
 
