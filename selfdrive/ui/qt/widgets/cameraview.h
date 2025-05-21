@@ -42,6 +42,12 @@ public:
   VisionStreamType getStreamType() { return active_stream_type; }
   void stopVipcThread();
 
+
+
+  // Added for controlling camera visibility
+  void setCameraHidden(bool hidden); //
+  bool isCameraHidden() const { return camera_hidden_; } //
+
 signals:
   void clicked();
   void vipcThreadConnected(VisionIpcClient *);
@@ -93,6 +99,9 @@ protected:
   std::deque<std::pair<uint32_t, VisionBuf*>> frames;
   uint32_t draw_frame_id = 0;
   uint32_t prev_frame_id = 0;
+
+private: // Added private member for camera visibility state
+  bool camera_hidden_ = false; //
 
 protected slots:
   void vipcConnected(VisionIpcClient *vipc_client);
