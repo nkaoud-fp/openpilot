@@ -181,7 +181,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int y_offset_hud = 0;
 
   if (this->fpHideMapIconActive) {
-    y_offset_hud = height() / 2;// back to 2 after throubleshooting
+    y_offset_hud = height() / 1.1 ;// back to 2 after throubleshooting
   }
   
   
