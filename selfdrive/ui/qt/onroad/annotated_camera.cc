@@ -876,8 +876,9 @@ void AnnotatedCameraWidget::paintGL() {
     // However, we still want to block the camera stream.
     // The CameraWidget::paintGL() is what actually draws the camera feed.
     // If you want a black screen instead of camera when hidden, keep the glClear calls.
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Clear to black
-    glClear(GL_COLOR_BUFFER_BIT);       // Apply the clear
+    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Clear to black
+    //glClear(GL_COLOR_BUFFER_BIT);       // Apply the clear
+    CameraWidget::paintGL(); // Call base class to render camera
   } else {
     // Only call the base CameraWidget's paintGL if HideMapIcon is OFF
     CameraWidget::paintGL(); // Call base class to render camera
