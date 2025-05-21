@@ -120,6 +120,17 @@ CameraWidget::~CameraWidget() {
   doneCurrent();
 }
 
+
+
+// Added to control camera visibility state
+void CameraWidget::setCameraHidden(bool hidden) { //
+    if (camera_hidden_ != hidden) { //
+        camera_hidden_ = hidden; //
+        update(); // Request a repaint to apply the change
+    } //
+} //
+
+
 // Qt uses device-independent pixels, depending on platform this may be
 // different to what OpenGL uses
 int CameraWidget::glWidth() {
@@ -272,6 +283,15 @@ void CameraWidget::updateCalibration(const mat3 &calib) {
 void CameraWidget::paintGL() {
   glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
   glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+
+
+  // Only draw camera if not hidden
+  if (camera_hidden_) { //
+      // Camera is hidden, just clear to black background
+      return; //
+  } //
+
 
   std::lock_guard lk(frame_lock);
   if (frames.empty()) return;
