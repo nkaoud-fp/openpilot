@@ -231,7 +231,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
 
   int y_offset = 0;
   if (this->fpUiHiddenModeActive) {
-    y_offset = height() / 2;
+    y_offset = height() / 1.1 ; // set to 2 later
     // Optionally, draw a black background for the top half if nvg is not doing it
     // p.fillRect(0, 0, width(), y_offset, Qt::black);
   }
