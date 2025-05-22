@@ -53,6 +53,12 @@ private:
   QVBoxLayout *main_layout;
   ExperimentalButton *experimental_btn;
   QPixmap dm_img;
+  
+  // >>> ADD THESE LINES
+  QVBoxLayout *top_right_layout;
+  int y_hud_offset_pixels;
+  // <<< END ADDED LINES
+  
   float speed;
   QString speedUnit;
   float setSpeed;
