@@ -422,14 +422,18 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       int seconds = standstillDuration % 60;
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, rect().center().x(), 210, minutes == 1 ? "1 minute" : QString("%1 minutes").arg(minutes), 255, true);
+      drawText(p, rect().center().x(), speed_text_y, minutes == 1 ? "1 minute" : QString("%1 minutes").arg(minutes), 255, true);
+      //drawText(p, rect().center().x(), 210, minutes == 1 ? "1 minute" : QString("%1 minutes").arg(minutes), 255, true);
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), 290, QString("%1 seconds").arg(seconds));
+      //drawText(p, rect().center().x(), 290, QString("%1 seconds").arg(seconds));
+      drawText(p, rect().center().x(), speed_unit_y, QString("%1 seconds").arg(seconds));
     } else {
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, rect().center().x(), 210, speedStr);
+      drawText(p, rect().center().x(), speed_text_y, speedStr);
+      //drawText(p, rect().center().x(), 210, speedStr);
       p.setFont(InterFont(66));
-      drawText(p, rect().center().x(), 290, speedUnit, 200);
+      //drawText(p, rect().center().x(), 290, speedUnit, 200);
+      drawText(p, rect().center().x(), speed_unit_y, speedUnit, 200);
     }
   }
 
