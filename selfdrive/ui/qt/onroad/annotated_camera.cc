@@ -495,27 +495,36 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     int speed_text_y = original_speed_text_y + this->y_hud_offset_pixels;
     int speed_unit_y = original_speed_unit_y + this->y_hud_offset_pixels;
 
-    // Calculate the x-coordinate for the current speed display
     int current_speed_center_x;
     if (this->hideMapIcon) {
-      // Position to the left of the set_speed_cluster_rect when hideMapIcon is true
-      p.save(); // Save painter state if changing font temporarily for metrics
-      p.setFont(InterFont(176, QFont::Bold)); // Font for speedStr
-      int speedStr_width = p.fontMetrics().horizontalAdvance(speedStr);
-      // Assuming speedStr is the primary element for width calculation here,
-      // as speedUnit is typically drawn below it and centered on the same X.
-      int relevant_width_for_centering = speedStr_width;
-      p.restore(); // Restore painter state
+      p.save();
+      p.setFont(InterFont(176, QFont::Bold));
+      int speedStr_width_metric = p.fontMetrics().horizontalAdvance(speedStr);
+      // You might want to use std::max if speedUnit could be wider and also needs to fit
+      // int speedUnit_width_metric = p.fontMetrics(InterFont(66)).horizontalAdvance(speedUnit);
+      // int relevant_width_for_centering = std::max(speedStr_width_metric, speedUnit_width_metric);
+      int relevant_width_for_centering = speedStr_width_metric; // Assuming speedStr is dominant for width
+      p.restore();
 
       current_speed_center_x = set_speed_cluster_rect.left() - h_spacing - (relevant_width_for_centering / 2);
-      // Ensure the text center doesn't result in drawing off-screen left
-      current_speed_center_x = std::max(UI_BORDER_SIZE + (relevant_width_for_centering / 2), current_speed_center_x);
+      // REMOVED: current_speed_center_x = std::max(UI_BORDER_SIZE + (relevant_width_for_centering / 2), current_speed_center_x);
+      // By removing this, the current speed text will maintain its position relative to the cluster,
+      // even if that means drawing partially or fully off-screen to the left.
+
     } else {
-      // Original centering logic when map is not hidden
       current_speed_center_x = rect().center().x();
     }
 
-    if (standstillDuration > 1) {
+    // ... (rest of the drawing logic for standstill or normal speed, using 'p' and 'current_speed_center_x')
+    // Example for normal speed:
+    if (!(standstillDuration > 1)) { // Simplified condition for brevity
+        p.setFont(InterFont(176, QFont::Bold));
+        drawText(p, current_speed_center_x, speed_text_y, speedStr);
+        p.setFont(InterFont(66));
+        drawText(p, current_speed_center_x, speed_unit_y, speedUnit, 200);
+    } else {
+      // ... standstill drawing logic using current_speed_center_x ...
+      // (As previously corrected, ensure this part also uses current_speed_center_x for x-positioning)
       float transition = qBound(0.0f, standstillDuration / 120.0f, 1.0f);
       QColor start, end;
 
@@ -549,17 +558,14 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       QString standstill_sub_text = tr("%1 seconds").arg(seconds);
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, current_speed_center_x, speed_text_y, standstill_main_text, 255, true); // Use modified x
+      drawText(p, current_speed_center_x, speed_text_y, standstill_main_text, 255, true);
       p.setFont(InterFont(66));
-      drawText(p, current_speed_center_x, speed_unit_y, standstill_sub_text); // Use modified x and default alpha
-    } else {
-      p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, current_speed_center_x, speed_text_y, speedStr); // Use modified x
-      p.setFont(InterFont(66));
-      drawText(p, current_speed_center_x, speed_unit_y, speedUnit, 200); // Use modified x
+      drawText(p, current_speed_center_x, speed_unit_y, standstill_sub_text);
     }
   }
 
+
+    
   p.restore(); // Final restore for the painter saved at the beginning of drawHud
 }
 
