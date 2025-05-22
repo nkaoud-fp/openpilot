@@ -124,10 +124,12 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   QPen pendingLimitPenColor = pendingLimitTimer.isValid() && pendingLimitTimer.elapsed() % 1000 <= 500 ? QPen(redColor(), 6) : QPen(blackColor(), 6);
 
   // Header gradient
-  QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
-  bg.setColorAt(0, QColor::fromRgbF(0, 0, 0, 0.45));
-  bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
-  p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
+  if (!this->hideMapIcon) { // <<< ADD THIS CONDITION
+    QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
+    bg.setColorAt(0, QColor::fromRgbF(0, 0, 0, 0.45));
+    bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
+    p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
+  } // <<< END ADDED CONDITION
 
   QString mtscSpeedStr = (mtscSpeed > 1) ? QString::number(std::nearbyint(fmin(speed, mtscSpeed))) + speedUnit : "–";
   QString newSpeedLimitStr = (unconfirmedSpeedLimit > 1) ? QString::number(std::nearbyint(unconfirmedSpeedLimit)) : "–";
@@ -797,6 +799,15 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
+  // Set the background color for the CameraWidget area (will be used by glClear in CameraWidget::paintGL)
+  this->setBackgroundColor(bg_colors[s->status]); // <<< ADD THIS LINE
+
+  // Ensure car_space_transform is updated for HUD elements.
+  // This calls CameraWidget::updateFrameMat() (base) which updates CameraWidget's internal state (e.g., zoom, offsets),
+  // and then computes s->car_space_transform based on that state.
+  this->updateFrameMat(); // <<< ADD THIS LINE
+
+
   // draw camera frame
   {
     std::lock_guard lk(frame_lock);
@@ -846,8 +857,11 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   painter.setPen(Qt::NoPen);
 
   if (s->scene.world_objects_visible) {
-    update_model(s, model, sm["uiPlan"].getUiPlan());
-    drawLaneLines(painter, s, v_ego);
+    // Conditionally update model data and draw lane lines/paths
+    if (!this->hideMapIcon) { // <<<--- ADD THIS CONDITION
+      update_model(s, model, sm["uiPlan"].getUiPlan());
+      drawLaneLines(painter, s, v_ego);
+    } // <<<--- END ADDED CONDITION
 
     if (s->scene.longitudinal_control && sm.rcv_frame("radarState") > s->scene.started_frame && !s->scene.hide_lead_marker) {
       auto radar_state = sm["radarState"].getRadarState();
@@ -1002,6 +1016,10 @@ void AnnotatedCameraWidget::initializeFrogPilotWidgets() {
 }
 
 void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIScene &scene) {
+
+  hideMapIcon = scene.hide_map_icon; // This member already exists and is updated
+  this->setStreamHidden(hideMapIcon); // <<< ADD THIS LINE to control the base CameraWidget
+
   if (is_metric || useSI) {
     accelerationUnit = tr("m/s²");
     leadDistanceUnit = tr(mapOpen ? "m" : "meters");
