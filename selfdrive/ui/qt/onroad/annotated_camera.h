@@ -56,6 +56,7 @@ private:
   
   // >>> ADD THESE LINES
   QVBoxLayout *top_right_layout;
+  QHBoxLayout *buttons_layout;   // <<< ADD THIS LINE
   int y_hud_offset_pixels;
   // <<< END ADDED LINES
   
