@@ -21,20 +21,23 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   main_layout->setMargin(UI_BORDER_SIZE);
   main_layout->setSpacing(0);
 
-  QHBoxLayout *buttons_layout = new QHBoxLayout();
-  buttons_layout->setSpacing(0);
+  //QHBoxLayout *buttons_layout = new QHBoxLayout();
+
+  this->buttons_layout = new QHBoxLayout(); // Or just buttons_layout = new QHBoxLayout();
+  this->buttons_layout->setSpacing(0);
+  //buttons_layout->setSpacing(0);
 
   // Neokii screen recorder
   screenRecorder = new ScreenRecorder(this);
-  buttons_layout->addWidget(screenRecorder);
+  this->buttons_layout->addWidget(screenRecorder);
 
   experimental_btn = new ExperimentalButton(this);
-  buttons_layout->addWidget(experimental_btn);
+  this->buttons_layout->addWidget(experimental_btn);
 
   //QVBoxLayout *top_right_layout = new QVBoxLayout();
   this->top_right_layout = new QVBoxLayout();   
   top_right_layout->setSpacing(0);
-  top_right_layout->addLayout(buttons_layout);
+  top_right_layout->addLayout(this->buttons_layout);
 
   pedal_icons = new PedalIcons(this);
   top_right_layout->addWidget(pedal_icons, 0, Qt::AlignRight);
