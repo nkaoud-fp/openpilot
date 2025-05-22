@@ -24,6 +24,7 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   //QHBoxLayout *buttons_layout = new QHBoxLayout();
 
   this->buttons_layout = new QHBoxLayout(); // Or just buttons_layout = new QHBoxLayout();
+  this->buttons_layout->setContentsMargins(0, 0, 0, 0);
   this->buttons_layout->setSpacing(0);
   //buttons_layout->setSpacing(0);
 
@@ -193,7 +194,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int cluster_y_pos = 45 + this->y_hud_offset_pixels;
   int cluster_x_pos;
 
-  const int h_spacing = 5; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
+  //const int h_spacing = 5; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
+  const int h_spacing = 0; // Set to 0 for touching.
+
 
   if (this->hideMapIcon) {
     // When map is hidden, elements are aligned from the right side:
@@ -217,15 +220,18 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     // Position the set_speed_cluster to the left of the buttons group
     cluster_x_pos = buttons_group_left_x - h_spacing - set_speed_cluster_total_size.width();
     // Ensure it doesn't go off-screen left
-    cluster_x_pos = std::max(UI_BORDER_SIZE, cluster_x_pos);
+    //cluster_x_pos = std::max(UI_BORDER_SIZE, cluster_x_pos);
 
   } else {
     // Original X-coordinate logic for when the map is visible (e.g., centered)
     // This covers cases where hideMapIcon is false, regardless of RHD/LHD for this particular element's original placement.
     cluster_x_pos = 60 + (speed_value_display_base_dims.width() - set_speed_cluster_total_size.width()) / 2;
+    cluster_x_pos = std::max(UI_BORDER_SIZE, cluster_x_pos); // <<< KEEP this clamp for the 'else' case (map visible)
+
   }
 
-
+// DELETE OR COMMENT OUT THIS ENTIRE BLOCK:
+/*
   if (this->hideMapIcon && !this->rightHandDM) {
     int dm_icon_center_x = this->dmIconPosition.x();
     int dm_icon_visual_radius = this->dm_img.width() / 2;
@@ -241,6 +247,8 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     // Original X-coordinate logic (centered with a left margin, using base dimensions for reference)
     cluster_x_pos = 60 + (speed_value_display_base_dims.width() - set_speed_cluster_total_size.width()) / 2;
   }
+  
+*/
 
   // This is the main rectangle for the entire cluster (background)
   QRect set_speed_cluster_rect(QPoint(cluster_x_pos, cluster_y_pos), set_speed_cluster_total_size);
