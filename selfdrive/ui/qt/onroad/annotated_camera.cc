@@ -13,6 +13,10 @@
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
 
+  // >>> ADD THIS LINE
+  y_hud_offset_pixels = 0;
+  // <<< END ADDED LINE
+
   main_layout = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
   main_layout->setSpacing(0);
@@ -27,7 +31,8 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   experimental_btn = new ExperimentalButton(this);
   buttons_layout->addWidget(experimental_btn);
 
-  QVBoxLayout *top_right_layout = new QVBoxLayout();
+  //QVBoxLayout *top_right_layout = new QVBoxLayout();
+  this->top_right_layout = new QVBoxLayout();   
   top_right_layout->setSpacing(0);
   top_right_layout->addLayout(buttons_layout);
 
@@ -155,7 +160,17 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int top_radius = 32;
   int bottom_radius = has_eu_speed_limit ? 100 : 32;
 
-  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
+  // >>> MODIFY THIS SECTION
+  int original_set_speed_rect_y = 45; // Original Y value from your code
+  int set_speed_rect_y = original_set_speed_rect_y + this->y_hud_offset_pixels;
+  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, set_speed_rect_y), set_speed_size);
+  // <<< END MODIFICATION
+
+  //QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
+  
+  
+  
+  
   if (!hideMaxSpeed) {
     if (trafficMode) {
       p.setPen(QPen(redColor(), 10));
@@ -368,6 +383,14 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
   // current speed
   if (!(bigMapOpen || hideSpeed)) {
+  
+    // >>> MODIFY THESE LINES
+    int original_speed_text_y = 210;
+    int original_speed_unit_y = 290;
+    int speed_text_y = original_speed_text_y + this->y_hud_offset_pixels;
+    int speed_unit_y = original_speed_unit_y + this->y_hud_offset_pixels;
+    // <<< END MODIFICATION
+  
     if (standstillDuration > 1) {
       float transition = qBound(0.0f, standstillDuration / 120.0f, 1.0f);
       QColor start, end;
@@ -1019,6 +1042,20 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
 
   hideMapIcon = scene.hide_map_icon; // This member already exists and is updated
   this->setStreamHidden(hideMapIcon); // <<< ADD THIS LINE to control the base CameraWidget
+
+  // >>> ADD THESE LINES
+  if (this->hideMapIcon) {
+    // UI_HEADER_HEIGHT is 420, so 0.45 * 420 = 189
+    this->y_hud_offset_pixels = static_cast<int>(UI_HEADER_HEIGHT * 0.45f);
+  } else {
+    this->y_hud_offset_pixels = 0;
+  }
+
+  // This affects the Record Button and Experimental Button ("steering wheel")
+  if (this->top_right_layout) {
+    this->top_right_layout->setContentsMargins(0, this->y_hud_offset_pixels, 0, 0); // (Left, Top, Right, Bottom)
+  }
+  // <<< END ADDED LINES
 
   if (is_metric || useSI) {
     accelerationUnit = tr("m/s²");
