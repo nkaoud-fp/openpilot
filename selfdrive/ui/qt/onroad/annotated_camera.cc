@@ -499,13 +499,13 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     int current_speed_center_x;
     if (this->hideMapIcon) {
       // Position to the left of the set_speed_cluster_rect when hideMapIcon is true
-      painter.save(); // Save painter state if changing font temporarily for metrics
-      painter.setFont(InterFont(176, QFont::Bold)); // Font for speedStr
-      int speedStr_width = painter.fontMetrics().horizontalAdvance(speedStr);
+      p.save(); // Save painter state if changing font temporarily for metrics
+      p.setFont(InterFont(176, QFont::Bold)); // Font for speedStr
+      int speedStr_width = p.fontMetrics().horizontalAdvance(speedStr);
       // Assuming speedStr is the primary element for width calculation here,
       // as speedUnit is typically drawn below it and centered on the same X.
       int relevant_width_for_centering = speedStr_width;
-      painter.restore(); // Restore painter state
+      p.restore(); // Restore painter state
 
       current_speed_center_x = set_speed_cluster_rect.left() - h_spacing - (relevant_width_for_centering / 2);
       // Ensure the text center doesn't result in drawing off-screen left
