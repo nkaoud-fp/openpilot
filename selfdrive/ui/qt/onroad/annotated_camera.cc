@@ -163,6 +163,39 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   // >>> MODIFY THIS SECTION
   int original_set_speed_rect_y = 45; // Original Y value from your code
   int set_speed_rect_y = original_set_speed_rect_y + this->y_hud_offset_pixels;
+  
+  
+  
+  
+  // >>> START OF NEW X-COORDINATE LOGIC FOR SET_SPEED_RECT
+  int current_set_speed_rect_x;
+
+  if (this->hideMapIcon && !this->rightHandDM) {
+    // When HideMapIcon is ON and DM is on the LEFT:
+    // Position set_speed_rect to the right of the DM icon.
+    // this->dmIconPosition.x() is the center of the DM icon from the previous frame.
+    // this->dm_img.width() is the width of the DM face icon.
+    int dm_icon_center_x = this->dmIconPosition.x();
+    int dm_icon_visual_radius = this->dm_img.width() / 2;
+    int dm_icon_right_edge = dm_icon_center_x + dm_icon_visual_radius;
+    int spacing_after_dm = 25; // Adjust this spacing as needed
+    current_set_speed_rect_x = dm_icon_right_edge + spacing_after_dm;
+    // Ensure the speed cluster doesn't go off the right edge of the screen
+    if (current_set_speed_rect_x + set_speed_size.width() > width() - UI_BORDER_SIZE) {
+      current_set_speed_rect_x = width() - set_speed_size.width() - UI_BORDER_SIZE;
+    }
+    // Ensure it doesn't start too far left (e.g., if DM icon was unexpectedly far left)
+    current_set_speed_rect_x = std::max(UI_BORDER_SIZE, current_set_speed_rect_x);
+  } else {
+    // Original X-coordinate logic (centered with a left margin):
+    // Used when hideMapIcon is OFF, or if DM icon is on the right.
+    current_set_speed_rect_x = 60 + (default_size.width() - set_speed_size.width()) / 2; //
+  }
+  // >>> END OF NEW X-COORDINATE LOGIC
+  
+  
+  
+  
   QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, set_speed_rect_y), set_speed_size);
   // <<< END MODIFICATION
 
@@ -200,12 +233,40 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       max_color = QColor(0xa6, 0xa6, 0xa6, 0xff);
       set_speed_color = QColor(0x72, 0x72, 0x72, 0xff);
     }
-    p.setFont(InterFont(40, QFont::DemiBold));
-    p.setPen(max_color);
-    p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX"));
-    p.setFont(InterFont(90, QFont::Bold));
-    p.setPen(set_speed_color);
-    p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);
+
+    // Conditional layout for "MAX" and setSpeedStr (side-by-side or stacked)
+    if (this->hideMapIcon) {
+      // Side-by-side layout when hideMapIcon is ON
+      QString maxLabel = tr("MAX");
+      QFont maxFont = InterFont(40, QFont::DemiBold); //
+      QFont valueFont = InterFont(90, QFont::Bold);   //
+      QFontMetrics maxMetrics(maxFont);
+      QFontMetrics valueMetrics(valueFont);
+      int maxTextWidth = maxMetrics.horizontalAdvance(maxLabel);
+      int valueTextWidth = valueMetrics.horizontalAdvance(setSpeedStr);
+      int spacing = 10;
+      int totalTextEffectiveWidth = maxTextWidth + spacing + valueTextWidth;
+      QRect text_area_rect = QRect(set_speed_rect.left(), set_speed_rect.top(), set_speed_rect.width(), default_size.height()); // Uses default_size.height for the vertical space of this text
+      int start_x_for_combined_text = text_area_rect.left() + (text_area_rect.width() - totalTextEffectiveWidth) / 2;
+      
+      QRect max_label_draw_rect(start_x_for_combined_text, text_area_rect.top(), maxTextWidth, text_area_rect.height());
+      p.setFont(maxFont);
+      p.setPen(max_color);
+      p.drawText(max_label_draw_rect, Qt::AlignCenter, maxLabel);
+      
+      QRect speed_value_draw_rect(start_x_for_combined_text + maxTextWidth + spacing, text_area_rect.top(), valueTextWidth, text_area_rect.height());
+      p.setFont(valueFont);
+      p.setPen(set_speed_color);
+      p.drawText(speed_value_draw_rect, Qt::AlignCenter, setSpeedStr);
+    } else {
+      // Original stacked layout when hideMapIcon is OFF
+      p.setFont(InterFont(40, QFont::DemiBold)); //
+      p.setPen(max_color);
+      p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX")); //       
+      p.setFont(InterFont(90, QFont::Bold)); //
+      p.setPen(set_speed_color);
+      p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr); //
+    }
   }
 
   if (!speedLimitChanged && cscStatus) {
