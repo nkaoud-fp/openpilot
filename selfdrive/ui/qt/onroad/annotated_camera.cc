@@ -196,7 +196,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   
   
   
-  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, set_speed_rect_y), set_speed_size);
+  //QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, set_speed_rect_y), set_speed_size);
+  QRect set_speed_rect(QPoint(current_set_speed_rect_x, set_speed_rect_y), set_speed_size);
+
   // <<< END MODIFICATION
 
   //QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
