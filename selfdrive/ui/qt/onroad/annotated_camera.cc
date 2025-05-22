@@ -193,7 +193,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int cluster_y_pos = 45 + this->y_hud_offset_pixels;
   int cluster_x_pos;
 
-  const int h_spacing = 5; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
+  const int h_spacing = -25; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
 
   if (this->hideMapIcon) {
     // When map is hidden, elements are aligned from the right side:
