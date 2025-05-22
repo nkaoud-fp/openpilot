@@ -235,40 +235,12 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       max_color = QColor(0xa6, 0xa6, 0xa6, 0xff);
       set_speed_color = QColor(0x72, 0x72, 0x72, 0xff);
     }
-
-    // Conditional layout for "MAX" and setSpeedStr (side-by-side or stacked)
-    if (this->hideMapIcon) {
-      // Side-by-side layout when hideMapIcon is ON
-      QString maxLabel = tr("MAX");
-      QFont maxFont = InterFont(40, QFont::DemiBold); //
-      QFont valueFont = InterFont(90, QFont::Bold);   //
-      QFontMetrics maxMetrics(maxFont);
-      QFontMetrics valueMetrics(valueFont);
-      int maxTextWidth = maxMetrics.horizontalAdvance(maxLabel);
-      int valueTextWidth = valueMetrics.horizontalAdvance(setSpeedStr);
-      int spacing = 10;
-      int totalTextEffectiveWidth = maxTextWidth + spacing + valueTextWidth;
-      QRect text_area_rect = QRect(set_speed_rect.left(), set_speed_rect.top(), set_speed_rect.width(), default_size.height()); // Uses default_size.height for the vertical space of this text
-      int start_x_for_combined_text = text_area_rect.left() + (text_area_rect.width() - totalTextEffectiveWidth) / 2;
-      
-      QRect max_label_draw_rect(start_x_for_combined_text, text_area_rect.top(), maxTextWidth, text_area_rect.height());
-      p.setFont(maxFont);
-      p.setPen(max_color);
-      p.drawText(max_label_draw_rect, Qt::AlignCenter, maxLabel);
-      
-      QRect speed_value_draw_rect(start_x_for_combined_text + maxTextWidth + spacing, text_area_rect.top(), valueTextWidth, text_area_rect.height());
-      p.setFont(valueFont);
-      p.setPen(set_speed_color);
-      p.drawText(speed_value_draw_rect, Qt::AlignCenter, setSpeedStr);
-    } else {
-      // Original stacked layout when hideMapIcon is OFF
-      p.setFont(InterFont(40, QFont::DemiBold)); //
-      p.setPen(max_color);
-      p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX")); //       
-      p.setFont(InterFont(90, QFont::Bold)); //
-      p.setPen(set_speed_color);
-      p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr); //
-    }
+    p.setFont(InterFont(40, QFont::DemiBold)); //
+    p.setPen(max_color);
+    p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX")); //       
+    p.setFont(InterFont(90, QFont::Bold)); //
+    p.setPen(set_speed_color);
+    p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr); // 
   }
 
   if (!speedLimitChanged && cscStatus) {
