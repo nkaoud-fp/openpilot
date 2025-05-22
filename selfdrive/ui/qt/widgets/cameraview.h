@@ -41,6 +41,8 @@ public:
   void setStreamType(VisionStreamType type) { requested_stream_type = type; }
   VisionStreamType getStreamType() { return active_stream_type; }
   void stopVipcThread();
+  void setStreamHidden(bool hidden) { m_streamHidden = hidden; } // <<< ADD THIS LINE
+
 
 signals:
   void clicked();
@@ -63,6 +65,7 @@ protected:
   int glHeight();
 
   bool zoomed_view;
+  bool m_streamHidden; // <<< ADD THIS LINE
   GLuint frame_vao, frame_vbo, frame_ibo;
   GLuint textures[2];
   mat4 frame_mat = {};
