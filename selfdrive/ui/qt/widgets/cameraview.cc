@@ -99,7 +99,7 @@ mat4 get_fit_view_transform(float widget_aspect_ratio, float frame_aspect_ratio)
 } // namespace
 
 CameraWidget::CameraWidget(std::string stream_name, VisionStreamType type, bool zoom, QWidget* parent) :
-                          stream_name(stream_name), active_stream_type(type), requested_stream_type(type), zoomed_view(zoom), QOpenGLWidget(parent) {
+                          stream_name(stream_name), active_stream_type(type), requested_stream_type(type), zoomed_view(zoom), m_streamHidden(false), QOpenGLWidget(parent) {
   setAttribute(Qt::WA_OpaquePaintEvent);
   qRegisterMetaType<std::set<VisionStreamType>>("availableStreams");
   QObject::connect(this, &CameraWidget::vipcThreadConnected, this, &CameraWidget::vipcConnected, Qt::BlockingQueuedConnection);
@@ -270,35 +270,41 @@ void CameraWidget::updateCalibration(const mat3 &calib) {
 }
 
 void CameraWidget::paintGL() {
-  glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
+  glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF()); // Use the background color set by setBackgroundColor
   glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+  updateFrameMat(); // This call is important for updating transform matrices (CameraWidget::frame_mat and potentially x_offset, y_offset, zoom used by AnnotatedCameraWidget::updateFrameMat)
+
+  if (m_streamHidden) { // <<< CHECK THE FLAG
+    return; // If stream is hidden, only the clear operation is performed.
+  }
+
   std::lock_guard lk(frame_lock);
-  if (frames.empty()) return;
+  if (frames.empty()) {
+    prev_frame_id = 0; // Reset prev_frame_id if no frames to draw
+    return;
+  }
 
   int frame_idx = frames.size() - 1;
 
-  // Always draw latest frame until sync logic is more stable
-  // for (frame_idx = 0; frame_idx < frames.size() - 1; frame_idx++) {
-  //   if (frames[frame_idx].first == draw_frame_id) break;
-  // }
-
-  // Log duplicate/dropped frames
-  if (frames[frame_idx].first == prev_frame_id) {
+  // Log duplicate/dropped frames (original logic)
+  if (frames[frame_idx].first == prev_frame_id && frames[frame_idx].first != 0) { // Added check for 0 to avoid false positive on init
     qDebug() << "Drawing same frame twice" << frames[frame_idx].first;
-  } else if (frames[frame_idx].first != prev_frame_id + 1) {
-    qDebug() << "Skipped frame" << frames[frame_idx].first;
+  } else if (frames[frame_idx].first != prev_frame_id + 1 && prev_frame_id != 0) { // Added check for 0
+    qDebug() << "Skipped frame from" << prev_frame_id << "to" << frames[frame_idx].first;
   }
   prev_frame_id = frames[frame_idx].first;
   VisionBuf *frame = frames[frame_idx].second;
   assert(frame != nullptr);
 
-  updateFrameMat();
+  // updateFrameMat(); // Original position: MOVED UP so it always executes
 
   glViewport(0, 0, glWidth(), glHeight());
   glBindVertexArray(frame_vao);
   glUseProgram(program->programId());
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  
+
 
 #ifdef QCOM2
   // no frame copy
@@ -320,7 +326,7 @@ void CameraWidget::paintGL() {
   assert(glGetError() == GL_NO_ERROR);
 #endif
 
-  glUniformMatrix4fv(program->uniformLocation("uTransform"), 1, GL_TRUE, frame_mat.v);
+  glUniformMatrix4fv(program->uniformLocation("uTransform"), 1, GL_TRUE, this->frame_mat.v); // Use this->frame_mat set by updateFrameMat()
   glEnableVertexAttribArray(0);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, (const void *)0);
   glDisableVertexAttribArray(0);
