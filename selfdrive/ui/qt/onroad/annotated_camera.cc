@@ -190,6 +190,39 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int cluster_y_pos = 45 + this->y_hud_offset_pixels;
   int cluster_x_pos;
 
+  const int h_spacing = 25; // Define a common horizontal spacing between elements when hideMapIcon is true
+
+  if (this->hideMapIcon) {
+    // When map is hidden, elements are aligned from the right side:
+    // ScreenRightEdge <UI_BORDER_SIZE> [Buttons] <h_spacing> [SetSpeedCluster] <h_spacing> [CurrentSpeedText] ... ScreenLeftEdge
+    // The [Screen Recorder][Experimental Btn] are in 'buttons_layout', part of 'top_right_layout'.
+    // 'top_right_layout' is aligned (Qt::AlignTop | Qt::AlignRight) by 'main_layout'.
+    // The 'y_hud_offset_pixels' is applied as a top margin to 'top_right_layout's contents, effectively shifting the buttons down.
+
+    // Calculate the combined width of the screen recorder and experimental button.
+    // These buttons are already part of top_right_layout which is handled by y_hud_offset_pixels for its vertical position.
+    int exp_btn_width = experimental_btn->isVisible() ? experimental_btn->width() : 0;
+    int rec_btn_width = screenRecorder->isVisible() ? screenRecorder->width() : 0;
+    // Get spacing from the buttons_layout if both buttons are visible and the layout object exists
+    int btns_layout_spacing = (exp_btn_width > 0 && rec_btn_width > 0 && buttons_layout) ? buttons_layout->spacing() : 0;
+    int combined_buttons_actual_width = exp_btn_width + rec_btn_width + btns_layout_spacing;
+
+    // Determine the x-coordinate of the left edge of this combined button group.
+    // Since top_right_layout (containing buttons_layout) is right-aligned by main_layout.
+    int buttons_group_left_x = (width() - UI_BORDER_SIZE) - combined_buttons_actual_width;
+
+    // Position the set_speed_cluster to the left of the buttons group
+    cluster_x_pos = buttons_group_left_x - h_spacing - set_speed_cluster_total_size.width();
+    // Ensure it doesn't go off-screen left
+    cluster_x_pos = std::max(UI_BORDER_SIZE, cluster_x_pos);
+
+  } else {
+    // Original X-coordinate logic for when the map is visible (e.g., centered)
+    // This covers cases where hideMapIcon is false, regardless of RHD/LHD for this particular element's original placement.
+    cluster_x_pos = 60 + (speed_value_display_base_dims.width() - set_speed_cluster_total_size.width()) / 2;
+  }
+
+
   if (this->hideMapIcon && !this->rightHandDM) {
     int dm_icon_center_x = this->dmIconPosition.x();
     int dm_icon_visual_radius = this->dm_img.width() / 2;
