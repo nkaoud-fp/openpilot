@@ -532,7 +532,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     int original_speed_text_y = 210;
     int original_speed_unit_y = 290;
     int speed_text_y = original_speed_text_y + this->y_hud_offset_pixels;
-    int speed_unit_y = original_speed_unit_y + this->y_hud_offset_pixels;
+    //int speed_unit_y = original_speed_unit_y + this->y_hud_offset_pixels;
 
     int current_speed_center_x;
     if (this->hideMapIcon) {
