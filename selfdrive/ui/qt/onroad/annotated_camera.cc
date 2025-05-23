@@ -1220,10 +1220,10 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   // >>> ADD THIS LINE to control the 50% height reduction in CameraWidget <<<
   this->setReduceHeightMode(this->hideMapIcon); // 'this' refers to AnnotatedCameraWidget, which IS A CameraWidget
 
-  // >>> ADD THESE LINES  / to reduce height by 45% set (UI_HEADER_HEIGHT * 0.45f) and so on
+  // >>> ADD THESE LINES  / to reduce height by 45% set (UI_HEADER_HEIGHT * 0.45f) and so on , this is the height of speed , steering wheel , and set speed 
   if (this->hideMapIcon) {
     // UI_HEADER_HEIGHT is 420, so 0.45 * 420 = 189
-    this->y_hud_offset_pixels = static_cast<int>(UI_HEADER_HEIGHT * 0.45f);
+    this->y_hud_offset_pixels = static_cast<int>(UI_HEADER_HEIGHT * 1.75f);
   } else {
     this->y_hud_offset_pixels = 0;
   }
