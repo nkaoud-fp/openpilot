@@ -134,6 +134,35 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   }
   QPen pendingLimitPenColor = pendingLimitTimer.isValid() && pendingLimitTimer.elapsed() % 1000 <= 500 ? QPen(redColor(), 6) : QPen(blackColor(), 6);
 
+
+  // === Define default Y positions/centers for elements when map is visible === // <<< NEW/MODIFIED BLOCK
+  const int default_cluster_top_y_when_map_visible = 45;
+  const int default_speed_text_center_y_when_map_visible = 210;
+  const int default_speed_unit_center_y_when_map_visible = 290;
+
+  int current_cluster_top_y;
+  int current_speed_text_center_y;
+  int current_speed_unit_center_y;
+
+  if (this->hideMapIcon) {
+    // When hideMapIcon is true, elements share a common top reference
+    // based on buttons' positioning (UI_BORDER_SIZE + y_hud_offset_pixels).
+    int shared_top_reference = UI_BORDER_SIZE + this->y_hud_offset_pixels; // Assumes UI_BORDER_SIZE is accessible (e.g., #define or const)
+
+    current_cluster_top_y = shared_top_reference;
+    // Maintain original vertical spacing from cluster top to speed text center
+    current_speed_text_center_y = shared_top_reference + (default_speed_text_center_y_when_map_visible - default_cluster_top_y_when_map_visible);
+    // Maintain original vertical spacing from speed text center to speed unit center
+    current_speed_unit_center_y = current_speed_text_center_y + (default_speed_unit_center_y_when_map_visible - default_speed_text_center_y_when_map_visible);
+  } else {
+    // Original positions when map is visible (y_hud_offset_pixels is 0 here)
+    current_cluster_top_y = default_cluster_top_y_when_map_visible;
+    current_speed_text_center_y = default_speed_text_center_y_when_map_visible;
+    current_speed_unit_center_y = default_speed_unit_center_y_when_map_visible;
+  }
+  // === END MODIFICATION BLOCK ===
+
+
   // Header gradient (user's existing conditional drawing)
   if (!this->hideMapIcon) {
     QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
@@ -191,7 +220,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
 
   // Determine top-left position of the cluster using user's existing y_hud_offset_pixels and x-coordination logic
-  int cluster_y_pos = 45 + this->y_hud_offset_pixels;
+  //int cluster_y_pos = 45 + this->y_hud_offset_pixels;
+  // int cluster_y_pos = 45 + this->y_hud_offset_pixels; // <<< OLD LINE
+  int cluster_y_pos = current_cluster_top_y; // <<< NEW/MODIFIED LINE: Use the calculated Y position  
   int cluster_x_pos;
 
   //const int h_spacing = 5; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
@@ -527,9 +558,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     // Example for normal speed:
     if (!(standstillDuration > 1)) { // Simplified condition for brevity
         p.setFont(InterFont(176, QFont::Bold));
-        drawText(p, current_speed_center_x, speed_text_y, speedStr);
+        drawText(p, current_speed_display_center_x, current_speed_text_center_y, speedStr); // <<< NEW/MODIFIED LINE
         p.setFont(InterFont(66));
-        drawText(p, current_speed_center_x, speed_unit_y, speedUnit, 200);
+        drawText(p, current_speed_display_center_x, current_speed_unit_center_y, speedUnit, 200); // <<< NEW/MODIFIED LINE
     } else {
       // ... standstill drawing logic using current_speed_center_x ...
       // (As previously corrected, ensure this part also uses current_speed_center_x for x-positioning)
@@ -566,9 +597,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       QString standstill_sub_text = tr("%1 seconds").arg(seconds);
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, current_speed_center_x, speed_text_y, standstill_main_text, 255, true);
+      drawText(p, current_speed_display_center_x, current_speed_text_center_y, standstill_main_text, 255, true); // <<< NEW/MODIFIED LINE
       p.setFont(InterFont(66));
-      drawText(p, current_speed_center_x, speed_unit_y, standstill_sub_text);
+      drawText(p, current_speed_display_center_x, current_speed_unit_center_y, standstill_sub_text); // <<< NEW/MODIFIED LINE
     }
   }
 
