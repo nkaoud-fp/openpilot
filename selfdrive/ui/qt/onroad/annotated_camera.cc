@@ -1217,6 +1217,9 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   hideMapIcon = scene.hide_map_icon; // This member already exists and is updated
   this->setStreamHidden(hideMapIcon); // <<< ADD THIS LINE to control the base CameraWidget
 
+  // >>> ADD THIS LINE to control the 50% height reduction in CameraWidget <<<
+  this->setReduceHeightMode(this->hideMapIcon); // 'this' refers to AnnotatedCameraWidget, which IS A CameraWidget
+
   // >>> ADD THESE LINES  / to reduce height by 45% set (UI_HEADER_HEIGHT * 0.45f) and so on
   if (this->hideMapIcon) {
     // UI_HEADER_HEIGHT is 420, so 0.45 * 420 = 189
