@@ -529,8 +529,8 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   // current speed (using user's y_hud_offset_pixels logic)
   // current speed (using user's y_hud_offset_pixels logic)
   if (!(bigMapOpen || hideSpeed)) {
-    int original_speed_text_y = 210;
-    int original_speed_unit_y = 290;
+    //int original_speed_text_y = 210;
+    //int original_speed_unit_y = 290;
     //int speed_text_y = original_speed_text_y + this->y_hud_offset_pixels;
     //int speed_unit_y = original_speed_unit_y + this->y_hud_offset_pixels;
 
