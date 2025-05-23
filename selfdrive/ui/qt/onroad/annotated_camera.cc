@@ -1220,7 +1220,7 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   // >>> ADD THESE LINES  / to reduce height by 45% set (UI_HEADER_HEIGHT * 0.45f) and so on
   if (this->hideMapIcon) {
     // UI_HEADER_HEIGHT is 420, so 0.45 * 420 = 189
-    this->y_hud_offset_pixels = static_cast<int>(UI_HEADER_HEIGHT * 0.90f);
+    this->y_hud_offset_pixels = static_cast<int>(UI_HEADER_HEIGHT * 1.50f);
   } else {
     this->y_hud_offset_pixels = 0;
   }
