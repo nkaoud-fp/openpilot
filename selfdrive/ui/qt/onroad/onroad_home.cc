@@ -13,7 +13,11 @@
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
-  main_layout->setMargin(UI_BORDER_SIZE);
+  //main_layout->setMargin(UI_BORDER_SIZE);
+  // Define your new desired vertical border size
+  int new_vertical_border_size = 15; // Example: half of the original UI_BORDER_SIZE
+  main_layout->setContentsMargins(UI_BORDER_SIZE, new_vertical_border_size, UI_BORDER_SIZE, new_vertical_border_size);
+  
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
   main_layout->addLayout(stacked_layout);
