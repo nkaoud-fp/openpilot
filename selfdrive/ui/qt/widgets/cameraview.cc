@@ -306,9 +306,9 @@ void CameraWidget::paintGL() {
 
     glEnable(GL_SCISSOR_TEST);
     // Clear top 50% with bg color
-    //glScissor(0, render_region_y_offset, full_gl_width, render_region_height);
-    //glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
-    //glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    glScissor(0, render_region_y_offset, full_gl_width, render_region_height);
+    glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
+    glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     // Clear bottom 50% with black
     glScissor(0, 0, full_gl_width, render_region_y_offset); // Bottom region height is render_region_y_offset
