@@ -17,7 +17,7 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Define your new desired vertical border size
   //int new_vertical_border_size = 240; // Example: half of the original UI_BORDER_SIZE
   //main_layout->setContentsMargins(UI_BORDER_SIZE, new_vertical_border_size, UI_BORDER_SIZE, new_vertical_border_size);
-  int top_border_thickness = 120;
+  int top_border_thickness = 300;
   int bottom_border_thickness = 30; // Or UI_BORDER_SIZE, or any other value you prefer
   int left_border_size = UI_BORDER_SIZE; // Or your preferred value
   int right_border_size = UI_BORDER_SIZE; // Or your preferred value
