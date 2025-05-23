@@ -301,7 +301,8 @@ void CameraWidget::paintGL() {
     // === 50% HEIGHT REDUCTION LOGIC (renders in top 50%) ===
     int full_gl_width = glWidth();
     int full_gl_height = glHeight();
-    int render_region_height = full_gl_height / 4;  // the height of the black background
+    //int render_region_height = full_gl_height / 4;  // the height of the black background
+    int render_region_height = 0;  // full region will be black, no camera feed the height of the black background
     int render_region_y_offset = full_gl_height - render_region_height; // Y-offset from bottom for top region
 
     glEnable(GL_SCISSOR_TEST);
