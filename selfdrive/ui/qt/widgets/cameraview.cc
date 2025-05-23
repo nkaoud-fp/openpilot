@@ -79,6 +79,19 @@ mat4 get_driver_view_transform(int screen_width, int screen_height, int stream_w
   return transform;
 }
 
+// Matrix multiplication: C = A * B (assuming row-major mat4 storage)
+mat4 multmat(const mat4& mat_a, const mat4& mat_b) {
+  mat4 result = {0};
+  for (int i = 0; i < 4; i++) { // result row
+    for (int j = 0; j < 4; j++) { // result col
+      for (int k = 0; k < 4; k++) { // common dimension
+        result.v[i * 4 + j] += mat_a.v[i * 4 + k] * mat_b.v[k * 4 + j];
+      }
+    }
+  }
+  return result;
+}
+
 mat4 get_fit_view_transform(float widget_aspect_ratio, float frame_aspect_ratio) {
   float zx = 1, zy = 1;
   if (frame_aspect_ratio > widget_aspect_ratio) {
@@ -99,7 +112,7 @@ mat4 get_fit_view_transform(float widget_aspect_ratio, float frame_aspect_ratio)
 } // namespace
 
 CameraWidget::CameraWidget(std::string stream_name, VisionStreamType type, bool zoom, QWidget* parent) :
-                          stream_name(stream_name), active_stream_type(type), requested_stream_type(type), zoomed_view(zoom), m_streamHidden(false), QOpenGLWidget(parent) {
+                          stream_name(stream_name), active_stream_type(type), requested_stream_type(type), zoomed_view(zoom), m_streamHidden(false), QOpenGLWidget(parent), m_reduceHeightMode(false) { // <<< INITIALIZE m_reduceHeightMode
   setAttribute(Qt::WA_OpaquePaintEvent);
   qRegisterMetaType<std::set<VisionStreamType>>("availableStreams");
   QObject::connect(this, &CameraWidget::vipcThreadConnected, this, &CameraWidget::vipcConnected, Qt::BlockingQueuedConnection);
@@ -210,6 +223,14 @@ void CameraWidget::stopVipcThread() {
 #endif
 }
 
+void CameraWidget::setReduceHeightMode(bool reduce) {
+  m_reduceHeightMode = reduce;
+  if (isVisible()) {
+    update(); // Request a repaint if the mode changes while visible
+  }
+}
+
+
 void CameraWidget::availableStreamsUpdated(std::set<VisionStreamType> streams) {
   available_streams = streams;
 }
@@ -270,41 +291,77 @@ void CameraWidget::updateCalibration(const mat3 &calib) {
 }
 
 void CameraWidget::paintGL() {
-  glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF()); // Use the background color set by setBackgroundColor
-  glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+  // updateFrameMat() is always called first based on full widget dimensions.
+  // It calculates this->frame_mat.
+  updateFrameMat();
 
-  updateFrameMat(); // This call is important for updating transform matrices (CameraWidget::frame_mat and potentially x_offset, y_offset, zoom used by AnnotatedCameraWidget::updateFrameMat)
+  mat4 current_draw_transform = this->frame_mat; // Default to original transform
 
-  if (m_streamHidden) { // <<< CHECK THE FLAG
-    return; // If stream is hidden, only the clear operation is performed.
+  if (m_reduceHeightMode) {
+    // === 50% HEIGHT REDUCTION LOGIC (renders in top 50%) ===
+    int full_gl_width = glWidth();
+    int full_gl_height = glHeight();
+    int render_region_height = full_gl_height / 2;
+    int render_region_y_offset = full_gl_height - render_region_height; // Y-offset from bottom for top region
+
+    glEnable(GL_SCISSOR_TEST);
+    // Clear top 50% with bg color
+    glScissor(0, render_region_y_offset, full_gl_width, render_region_height);
+    glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
+    glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+    // Clear bottom 50% with black
+    glScissor(0, 0, full_gl_width, render_region_y_offset); // Bottom region height is render_region_y_offset
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black
+    glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    glDisable(GL_SCISSOR_TEST);
+
+    if (!m_streamHidden) { // Only setup viewport and transform if stream is not hidden
+        glViewport(0, render_region_y_offset, full_gl_width, render_region_height);
+        // Adjust transform to squeeze full content into the top half viewport
+        mat4 viewport_adjustment_matrix = {{
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.5f, 0.0f, 0.5f, // Scale Y by 0.5, translate Y by +0.5
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f,
+        }};
+        current_draw_transform = multmat(viewport_adjustment_matrix, this->frame_mat);
+    }
+  } else {
+    // === ORIGINAL FULL HEIGHT LOGIC ===
+    glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
+    glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+    if (!m_streamHidden) { // Only setup viewport if stream is not hidden
+        glViewport(0, 0, glWidth(), glHeight()); // Full viewport
+        // current_draw_transform is already this->frame_mat (default)
+    }
   }
 
+  if (m_streamHidden) {
+    return; // Only clear operations performed if stream is hidden
+  }
+
+  // Common frame fetching and drawing logic
   std::lock_guard lk(frame_lock);
   if (frames.empty()) {
-    prev_frame_id = 0; // Reset prev_frame_id if no frames to draw
+    prev_frame_id = 0;
     return;
   }
-
   int frame_idx = frames.size() - 1;
-
-  // Log duplicate/dropped frames (original logic)
-  if (frames[frame_idx].first == prev_frame_id && frames[frame_idx].first != 0) { // Added check for 0 to avoid false positive on init
+  // Original frame logging logic
+  if (frames[frame_idx].first == prev_frame_id && frames[frame_idx].first != 0) {
     qDebug() << "Drawing same frame twice" << frames[frame_idx].first;
-  } else if (frames[frame_idx].first != prev_frame_id + 1 && prev_frame_id != 0) { // Added check for 0
+  } else if (frames[frame_idx].first != prev_frame_id + 1 && prev_frame_id != 0) {
     qDebug() << "Skipped frame from" << prev_frame_id << "to" << frames[frame_idx].first;
   }
   prev_frame_id = frames[frame_idx].first;
   VisionBuf *frame = frames[frame_idx].second;
   assert(frame != nullptr);
 
-  // updateFrameMat(); // Original position: MOVED UP so it always executes
-
-  glViewport(0, 0, glWidth(), glHeight());
   glBindVertexArray(frame_vao);
   glUseProgram(program->programId());
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  
-
 
 #ifdef QCOM2
   // no frame copy
@@ -326,12 +383,17 @@ void CameraWidget::paintGL() {
   assert(glGetError() == GL_NO_ERROR);
 #endif
 
-  glUniformMatrix4fv(program->uniformLocation("uTransform"), 1, GL_TRUE, this->frame_mat.v); // Use this->frame_mat set by updateFrameMat()
+  glUniformMatrix4fv(program->uniformLocation("uTransform"), 1, GL_TRUE, current_draw_transform.v);
   glEnableVertexAttribArray(0);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, (const void *)0);
+
+  // Cleanup
   glDisableVertexAttribArray(0);
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
+#ifdef QCOM2
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+#endif
   glActiveTexture(GL_TEXTURE0);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
   glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
