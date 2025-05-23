@@ -40,6 +40,7 @@ public:
   void setFrameId(int frame_id) { draw_frame_id = frame_id; }
   void setStreamType(VisionStreamType type) { requested_stream_type = type; }
   VisionStreamType getStreamType() { return active_stream_type; }
+  void setReduceHeightMode(bool reduce);               // <<< ADD THIS LINE
   void stopVipcThread();
   void setStreamHidden(bool hidden) { m_streamHidden = hidden; } // <<< ADD THIS LINE
 
@@ -83,6 +84,7 @@ protected:
   std::atomic<VisionStreamType> active_stream_type;
   std::atomic<VisionStreamType> requested_stream_type;
   std::set<VisionStreamType> available_streams;
+  std::atomic<bool> m_reduceHeightMode;                 // <<< ADD THIS LINE
   QThread *vipc_thread = nullptr;
 
   // Calibration
