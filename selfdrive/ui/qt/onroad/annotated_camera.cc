@@ -225,8 +225,8 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   int cluster_y_pos = current_cluster_top_y; // <<< NEW/MODIFIED LINE: Use the calculated Y position  
   int cluster_x_pos;
 
-  //const int h_spacing = 5; // 25 Define a common horizontal spacing between elements when hideMapIcon is true
-  const int h_spacing = 0; // Set to 0 for touching.
+  //const int h_spacing = 5; // 25 Define a common horizontal spacing gap between elements when hideMapIcon is true
+  const int h_spacing = 25; // Set to 0 for touching.
 
 
   if (this->hideMapIcon) {
