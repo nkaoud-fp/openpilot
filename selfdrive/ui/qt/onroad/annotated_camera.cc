@@ -558,9 +558,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
     // Example for normal speed:
     if (!(standstillDuration > 1)) { // Simplified condition for brevity
         p.setFont(InterFont(176, QFont::Bold));
-        drawText(p, current_speed_display_center_x, current_speed_text_center_y, speedStr); // <<< NEW/MODIFIED LINE
+        drawText(p, current_speed_center_x, current_speed_text_center_y, speedStr); // <<< NEW/MODIFIED LINE
         p.setFont(InterFont(66));
-        drawText(p, current_speed_display_center_x, current_speed_unit_center_y, speedUnit, 200); // <<< NEW/MODIFIED LINE
+        drawText(p, current_speed_center_x, current_speed_unit_center_y, speedUnit, 200); // <<< NEW/MODIFIED LINE
     } else {
       // ... standstill drawing logic using current_speed_center_x ...
       // (As previously corrected, ensure this part also uses current_speed_center_x for x-positioning)
@@ -597,9 +597,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       QString standstill_sub_text = tr("%1 seconds").arg(seconds);
 
       p.setFont(InterFont(176, QFont::Bold));
-      drawText(p, current_speed_display_center_x, current_speed_text_center_y, standstill_main_text, 255, true); // <<< NEW/MODIFIED LINE
+      drawText(p, current_speed_center_x, current_speed_text_center_y, standstill_main_text, 255, true); // <<< NEW/MODIFIED LINE
       p.setFont(InterFont(66));
-      drawText(p, current_speed_display_center_x, current_speed_unit_center_y, standstill_sub_text); // <<< NEW/MODIFIED LINE
+      drawText(p, current_speed_center_x, current_speed_unit_center_y, standstill_sub_text); // <<< NEW/MODIFIED LINE
     }
   }
 
