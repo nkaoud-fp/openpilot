@@ -14,8 +14,8 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
 
   main_layout = new QVBoxLayout(this);
-//main_layout->setMargin(UI_BORDER_SIZE);
-  main_layout->setMargin(0); // NIZ add // MODIFICATION: Let parent OnroadWindow handle outer margins 
+  main_layout->setMargin(UI_BORDER_SIZE);
+//main_layout->setMargin(0); // NIZ add // MODIFICATION: Let parent OnroadWindow handle outer margins 
   main_layout->setSpacing(0);
 
   QHBoxLayout *buttons_layout = new QHBoxLayout();
