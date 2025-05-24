@@ -180,6 +180,12 @@ void OnroadWindow::primeChanged(bool prime) {
 void OnroadWindow::paintEvent(QPaintEvent *event) {
 
   QPainter p(this);
+
+  // niz add == try after bg color
+  QRect screenRect = this->rect(); // Full widget rect
+  // Draw the top black rectangle, covering anything that might be there.
+  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 22), Qt::black);
+  
   QRect CRECT = this->contentsRect(); // This rect respects main_layout's margins.
 
   UIState *s = uiState();
@@ -189,10 +195,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   // Fill the background of the content area (where nvg and map will be placed by the layout)
   p.fillRect(CRECT, current_bg_status_color);
 
-  // niz add == try after bg color
-  QRect screenRect = this->rect(); // Full widget rect
-  // Draw the top black rectangle, covering anything that might be there.
-  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 22), Qt::black);
+
 
 
   // Steering indicators (are on the extreme left/right edges of the window, but below top bar)
