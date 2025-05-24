@@ -800,6 +800,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
   // draw camera frame
+*/
   {
     std::lock_guard lk(frame_lock);
 
@@ -844,6 +845,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
     CameraWidget::paintGL();
     painter.endNativePainting();
   }
+*/
 
   painter.setPen(Qt::NoPen);
 
