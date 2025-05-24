@@ -16,21 +16,8 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   //QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout = new QVBoxLayout(this);
 
-// Store a pointer to the main_layout so you can access it in updateState
-  //this->main_layout = main_layout; // Add this line, and a private member 'QVBoxLayout *main_layout;' to OnroadWindow header
-
   // No longer check hide_map_icon here, it will be handled in updateState
   main_layout->setMargin(UI_BORDER_SIZE); // Set a default margin
-
-/*
-  // Access hide_map_icon state at construction time
-  UIState *currentState = uiState(); // Get the UIState instance
-  if (currentState->scene.hide_map_icon) {
-    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 26, UI_BORDER_SIZE, UI_BORDER_SIZE); 
-  } else {
-    main_layout->setMargin(UI_BORDER_SIZE); 
-  }
-*/
 
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
