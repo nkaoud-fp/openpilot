@@ -18,7 +18,7 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Access hide_map_icon state at construction time
   UIState *currentState = uiState(); // Get the UIState instance
   if (currentState->scene.hide_map_icon) {
-    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE); 
+    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 26, UI_BORDER_SIZE, UI_BORDER_SIZE); 
   } else {
     main_layout->setMargin(UI_BORDER_SIZE); 
   }
@@ -205,7 +205,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   }
   // Draw the top black rectangle, covering anything that might be there.
   //QRect screenRect = this->rect(); 
-  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 24), Qt::black);
+  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 25), Qt::black);
   
 
   if (showSteering) {
