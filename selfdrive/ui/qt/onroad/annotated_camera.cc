@@ -799,8 +799,9 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
+// disable camera feed
+/*
   // draw camera frame
-*/
   {
     std::lock_guard lk(frame_lock);
 
