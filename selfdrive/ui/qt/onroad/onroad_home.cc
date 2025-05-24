@@ -10,7 +10,7 @@
 #endif
 
 #include "selfdrive/ui/qt/util.h"
-#include "selfdrive/ui/ui.h"
+#include "selfdrive/ui/ui.h"  // add this
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   //QVBoxLayout *main_layout  = new QVBoxLayout(this);
