@@ -70,6 +70,12 @@ void OnroadWindow::updateState(const UIState &s) {
 
   bool shouldUpdate = false;
 
+  QColor new_scene_bg_color = bg_colors[s.status]; // Local variable for comparison
+  if (this->bg != new_scene_bg_color) { // Compare with member 'bg'
+    this->bg = new_scene_bg_color;    // Update member 'bg'
+    shouldUpdate = true;
+  }
+
   bool new_custom_ui_active_state = s.scene.hide_map_icon;
   if (this->custom_ui_active != new_custom_ui_active_state) {
     this->custom_ui_active = new_custom_ui_active_state;
@@ -89,31 +95,37 @@ void OnroadWindow::updateState(const UIState &s) {
   }
 
   // FrogPilot variables
+  // Update member variables from s.scene using original names
   const UIScene &scene = s.scene;
 
-  acceleration = scene.acceleration;
-  accelerationJerk = scene.acceleration_jerk;
-  accelerationJerkDifference = scene.acceleration_jerk_difference;
-  blindSpotLeft = scene.blind_spot_left;
-  blindSpotRight = scene.blind_spot_right;
-  fps = scene.fps;
-  friction = scene.friction;
-  latAccel = scene.lat_accel;
-  liveValid = scene.live_valid;
-  showBlindspot = scene.show_blind_spot;
-  showFPS = scene.show_fps;
-  showJerk = scene.jerk_metrics;
-  showSignal = scene.signal_metrics;
-  showSteering = scene.steering_metrics;
-  showTuning = scene.lateral_tuning_metrics;
-  speedJerk = scene.speed_jerk;
-  speedJerkDifference = scene.speed_jerk_difference;
-  steer = scene.steer;
-  steeringAngleDeg = scene.steering_angle_deg;
-  turnSignalLeft = scene.turn_signal_left;
-  turnSignalRight = scene.turn_signal_right;
+  this->acceleration = scene.acceleration;
+  this->accelerationJerk = scene.acceleration_jerk;
+  this->accelerationJerkDifference = scene.acceleration_jerk_difference;
+  this->blindSpotLeft = scene.blind_spot_left;
+  this->blindSpotRight = scene.blind_spot_right;
+  this->fps = scene.fps; // Update member 'fps'
+  this->friction = scene.friction;
+  this->latAccel = scene.lat_accel;
+  this->liveValid = scene.live_valid;
 
-  if (showBlindspot || showFPS || showJerk || showSignal || showSteering || showTuning) {
+  // Update member 'show*' flags
+  this->showBlindspot = scene.show_blind_spot;
+  this->showFPS = scene.show_fps;
+  this->showJerk = scene.jerk_metrics;
+  this->showSignal = scene.signal_metrics;
+  this->showSteering = scene.steering_metrics;
+  this->showTuning = scene.lateral_tuning_metrics;
+
+  this->speedJerk = scene.speed_jerk;
+  this->speedJerkDifference = scene.speed_jerk_difference;
+  this->steer = scene.steer; // Update member 'steer'
+  this->steeringAngleDeg = scene.steering_angle_deg; // Update member 'steeringAngleDeg'
+  this->turnSignalLeft = scene.turn_signal_left;
+  this->turnSignalRight = scene.turn_signal_right;
+  // Note: maxAcceleration and maxAccelTimer are managed within paintEvent in the original code.
+
+  // Determine if an update is needed based on visibility flags
+  if (this->showBlindspot || this->showFPS || this->showJerk || this->showSignal || this->showSteering || this->showTuning) {
     shouldUpdate = true;
   }
 
