@@ -195,7 +195,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   QColor bgColor(bg.red(), bg.green(), bg.blue(), 255);
   p.fillRect(rect, bgColor);
 
-  /*
+  
   // Access hide_map_icon state at construction time
   UIState *currentState = uiState(); // Get the UIState instance
   if (currentState->scene.hide_map_icon) {
@@ -206,7 +206,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   // Draw the top black rectangle, covering anything that might be there.
   //QRect screenRect = this->rect(); 
   //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 24), Qt::black);
-  */
+  
 
   if (showSteering) {
     static float smoothedSteer = 0.0;
