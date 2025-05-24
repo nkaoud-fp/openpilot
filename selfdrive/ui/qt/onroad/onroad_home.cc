@@ -192,7 +192,8 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   // niz add == try after bg color
   QRect screenRect = this->rect(); // Full widget rect
   // Draw the top black rectangle, covering anything that might be there.
-  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 15), Qt::black);
+  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 22), Qt::black);
+
 
   // Steering indicators (are on the extreme left/right edges of the window, but below top bar)
   if (showSteering) {
