@@ -13,8 +13,8 @@
 #include "selfdrive/ui/ui.h"
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
-  QVBoxLayout *main_layout  = new QVBoxLayout(this);
-
+  //QVBoxLayout *main_layout  = new QVBoxLayout(this);
+  main_layout = new QVBoxLayout(this);
 
 // Store a pointer to the main_layout so you can access it in updateState
   this->main_layout = main_layout; // Add this line, and a private member 'QVBoxLayout *main_layout;' to OnroadWindow header
