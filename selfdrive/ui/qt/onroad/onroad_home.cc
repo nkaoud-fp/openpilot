@@ -12,7 +12,7 @@
 #include "selfdrive/ui/qt/util.h"
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
-  QVBoxLayout *main_layout  = new QVBoxLayout(this);
+  //QVBoxLayout *main_layout  = new QVBoxLayout(this);
   //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
   main_layout = new QVBoxLayout(this); // MODIFIED: Assign to member 'main_layout'
   //main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 23, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
