@@ -206,8 +206,8 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
 
   
   // Access hide_map_icon state at construction time
-  UIState *currentState = uiState(); // Get the UIState instance
-  if (currentState->scene.hide_map_icon) {
+  //UIState *currentState = uiState(); // Get the UIState instance
+  if (s->scene.hide_map_icon) {
     // Draw the top black rectangle, covering anything that might be there.
     QRect screenRect = this->rect(); 
     p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 25), Qt::black);
