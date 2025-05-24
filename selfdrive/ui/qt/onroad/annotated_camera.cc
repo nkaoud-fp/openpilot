@@ -14,7 +14,8 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
 
   main_layout = new QVBoxLayout(this);
-  main_layout->setMargin(UI_BORDER_SIZE);
+  //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
+  main_layout->setMargin(0); // NIZ add // MODIFICATION: Let parent OnroadWindow handle outer margins 
   main_layout->setSpacing(0);
 
   QHBoxLayout *buttons_layout = new QHBoxLayout();
@@ -793,10 +794,18 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   SubMaster &sm = *(s->sm);
   QPainter painter(this);
   painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+
+  // niz === MODIFICATION START ===
+  // Fill the entire widget with black instead of drawing camera stream
+  painter.fillRect(this->rect(), Qt::black);
+  // niz === MODIFICATION END ===
+  
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
+  // niz remove entire camera frame
+  /*
   // draw camera frame
   {
     std::lock_guard lk(frame_lock);
@@ -813,6 +822,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
       // transitions from the narrow and wide cameras
       skip_frame_count = 5;
     }
+  */
 
     // Wide or narrow cam dependent on speed
     bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
@@ -826,6 +836,9 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
       // for replay of old routes, never go to widecam
       wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
     }
+
+// niz remove entire CameraWidget::setStreamType
+  /*
     CameraWidget::setStreamType(cameraView == 1 ? VISION_STREAM_DRIVER :
                                 cameraView == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
                                 VISION_STREAM_ROAD);
@@ -842,7 +855,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
     CameraWidget::paintGL();
     painter.endNativePainting();
   }
-
+*/
   painter.setPen(Qt::NoPen);
 
   if (s->scene.world_objects_visible) {
