@@ -92,6 +92,23 @@ void OnroadWindow::updateState(const UIState &s) {
     shouldUpdate = true;
   }
 
+
+
+  // --- BEGIN NEW/MODIFIED LOGIC FOR hide_map_icon ---
+  // Check if the hide_map_icon state has changed
+  if (s.scene.hide_map_icon != prev_hide_map_icon_state) { // prev_hide_map_icon_state needs to be a new member variable
+    if (s.scene.hide_map_icon) {
+      main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 26, UI_BORDER_SIZE, UI_BORDER_SIZE);
+    } else {
+      main_layout->setMargin(UI_BORDER_SIZE);
+    }
+    prev_hide_map_icon_state = s.scene.hide_map_icon; // Update the stored state
+    shouldUpdate = true; // Request a repaint because margins changed
+  }
+  // --- END NEW/MODIFIED LOGIC FOR hide_map_icon ---
+
+
+
   // FrogPilot variables
   const UIScene &scene = s.scene;
 
