@@ -14,7 +14,9 @@
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
-  main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 23, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
+  main_layout = new QVBoxLayout(this); // MODIFIED: Assign to member 'main_layout'
+  //main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 23, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
+  main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove?
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
   main_layout->addLayout(stacked_layout);
@@ -67,6 +69,17 @@ void OnroadWindow::updateState(const UIState &s) {
   nvg->updateState(alerts->alert_height, s);
 
   bool shouldUpdate = false;
+
+  bool new_custom_ui_active_state = s.scene.hide_map_icon;
+  if (this->custom_ui_active != new_custom_ui_active_state) {
+    this->custom_ui_active = new_custom_ui_active_state;
+    if (this->custom_ui_active) {
+      main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 23, UI_BORDER_SIZE, UI_BORDER_SIZE); // MODIFIED
+    } else {
+      main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE, UI_BORDER_SIZE, UI_BORDER_SIZE); // MODIFIED
+    }
+    shouldUpdate = true;
+  }
 
   QColor bgColor = bg_colors[s.status];
   if (bg != bgColor) {
