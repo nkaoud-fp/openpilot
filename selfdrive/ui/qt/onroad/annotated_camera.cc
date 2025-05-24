@@ -801,7 +801,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
-  if (this->hideMapIcon) {
+  if (!this->hideMapIcon) {
   // disable camera feed
   // draw camera frame
     {
