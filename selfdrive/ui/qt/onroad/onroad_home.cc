@@ -18,9 +18,11 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Access hide_map_icon state at construction time
   UIState *currentState = uiState(); // Get the UIState instance
   if (currentState->scene.hide_map_icon) {
-    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
-  } else {
+    //main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
     main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
+  } else {
+    //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
+    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
   }
 //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
 //main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
