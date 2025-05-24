@@ -21,7 +21,7 @@ private:
   void paintEvent(QPaintEvent *event);
   void mousePressEvent(QMouseEvent* e) override;
 
-  QVBoxLayout *main_layout_ptr; // MODIFIED: Pointer to the main layout
+  QVBoxLayout *main_layout; // MODIFIED: Changed name from main_layout_ptr to main_layout
   OnroadAlerts *alerts;
   AnnotatedCameraWidget *nvg;
   QColor bg = bg_colors[STATUS_DISENGAGED];
