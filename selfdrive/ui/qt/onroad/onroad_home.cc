@@ -13,8 +13,14 @@
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
+
+  if (s.scene.hide_map_icon) {
+    main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
+  } else {
+    main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
+  }
 //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
-  main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
+//main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 25, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
 
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
@@ -188,9 +194,14 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   QColor bgColor(bg.red(), bg.green(), bg.blue(), 255);
   p.fillRect(rect, bgColor);
 
+  if (s.scene.hide_map_icon) {
+    // Draw the top black rectangle, covering anything that might be there.
+    QRect screenRect = this->rect(); 
+    p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 24), Qt::black);
+  }
   // Draw the top black rectangle, covering anything that might be there.
-  QRect screenRect = this->rect(); 
-  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 24), Qt::black);
+  //QRect screenRect = this->rect(); 
+  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 24), Qt::black);
 
   if (showSteering) {
     static float smoothedSteer = 0.0;
