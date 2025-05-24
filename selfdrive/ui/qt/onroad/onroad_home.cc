@@ -195,6 +195,11 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   // Fill the background of the content area (where nvg and map will be placed by the layout)
   p.fillRect(CRECT, current_bg_status_color);
 
+  // niz add == try after bg color
+  QRect screenRect = this->rect(); // Full widget rect
+  // 1. Draw the top black rectangle, covering anything that might be there.
+  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 10), Qt::black);
+
   // Steering indicators (are on the extreme left/right edges of the window, but below top bar)
   if (showSteering) {
     static float smoothedSteer = 0.0;
