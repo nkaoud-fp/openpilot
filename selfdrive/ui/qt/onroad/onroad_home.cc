@@ -180,10 +180,10 @@ void OnroadWindow::primeChanged(bool prime) {
 void OnroadWindow::paintEvent(QPaintEvent *event) {
 
   QPainter p(this);
-  QRect screenRect = this->rect(); // Full widget rect
+  //QRect screenRect = this->rect(); // Full widget rect
 
   // 1. Draw the top black rectangle, covering anything that might be there.
-  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 10), Qt::black);
+  //p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 10), Qt::black);
 
   // 2. The area for status-dependent background and indicators is the contentRect of the window.
   QRect CRECT = this->contentsRect(); // This rect respects main_layout's margins.
@@ -198,7 +198,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   // niz add == try after bg color
   QRect screenRect = this->rect(); // Full widget rect
   // 1. Draw the top black rectangle, covering anything that might be there.
-  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 10), Qt::black);
+  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 15), Qt::black);
 
   // Steering indicators (are on the extreme left/right edges of the window, but below top bar)
   if (showSteering) {
