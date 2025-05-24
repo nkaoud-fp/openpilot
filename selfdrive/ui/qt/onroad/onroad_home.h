@@ -2,6 +2,8 @@
 
 #include "selfdrive/ui/qt/onroad/alerts.h"
 #include "selfdrive/ui/qt/onroad/annotated_camera.h"
+#include <QVBoxLayout> // Add this for QVBoxLayout pointer
+
 
 class OnroadWindow : public QWidget {
   Q_OBJECT
@@ -18,6 +20,8 @@ private:
   void createMapWidget();
   void paintEvent(QPaintEvent *event);
   void mousePressEvent(QMouseEvent* e) override;
+
+  QVBoxLayout *main_layout_ptr; // MODIFIED: Pointer to the main layout
   OnroadAlerts *alerts;
   AnnotatedCameraWidget *nvg;
   QColor bg = bg_colors[STATUS_DISENGAGED];
@@ -25,6 +29,7 @@ private:
   QHBoxLayout* split;
 
   // FrogPilot variables
+  bool custom_ui_active = false; // MODIFIED: Flag for our custom UI state
   bool blindSpotLeft;
   bool blindSpotRight;
   bool liveValid;
