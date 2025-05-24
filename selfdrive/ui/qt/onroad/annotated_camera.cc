@@ -794,59 +794,61 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   SubMaster &sm = *(s->sm);
   QPainter painter(this);
   painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-  //painter.fillRect(this->rect(), Qt::black); // black out camera stream
+  if (this->hideMapIcon) {
+    painter.fillRect(this->rect(), Qt::black); // black out camera stream
+  }
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
-// disable camera feed
-/*
+  if (this->hideMapIcon) {
+  // disable camera feed
   // draw camera frame
-  {
-    std::lock_guard lk(frame_lock);
+    {
+      std::lock_guard lk(frame_lock);
 
-    if (frames.empty()) {
-      if (skip_frame_count > 0) {
-        skip_frame_count--;
-        qDebug() << "skipping frame, not ready";
-        return;
+      if (frames.empty()) {
+        if (skip_frame_count > 0) {
+          skip_frame_count--;
+          qDebug() << "skipping frame, not ready";
+          return;
+        }
+      } else {
+        // skip drawing up to this many frames if we're
+        // missing camera frames. this smooths out the
+        // transitions from the narrow and wide cameras
+        skip_frame_count = 5;
       }
-    } else {
-      // skip drawing up to this many frames if we're
-      // missing camera frames. this smooths out the
-      // transitions from the narrow and wide cameras
-      skip_frame_count = 5;
-    }
 
-    // Wide or narrow cam dependent on speed
-    bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
-    if (has_wide_cam && cameraView == 0) {
-      if ((v_ego < 10) || available_streams.size() == 1) {
-        wide_cam_requested = true;
-      } else if (v_ego > 15) {
-        wide_cam_requested = false;
+      // Wide or narrow cam dependent on speed
+      bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
+      if (has_wide_cam && cameraView == 0) {
+        if ((v_ego < 10) || available_streams.size() == 1) {
+          wide_cam_requested = true;
+        } else if (v_ego > 15) {
+          wide_cam_requested = false;
+        }
+        wide_cam_requested = wide_cam_requested && experimentalMode;
+        // for replay of old routes, never go to widecam
+        wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
       }
-      wide_cam_requested = wide_cam_requested && experimentalMode;
-      // for replay of old routes, never go to widecam
-      wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
+      CameraWidget::setStreamType(cameraView == 1 ? VISION_STREAM_DRIVER :
+                                  cameraView == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
+                                  VISION_STREAM_ROAD);
+  
+      s->scene.wide_cam = CameraWidget::getStreamType() == VISION_STREAM_WIDE_ROAD;
+      if (s->scene.calibration_valid) {
+        auto calib = s->scene.wide_cam ? s->scene.view_from_wide_calib : s->scene.view_from_calib;
+        CameraWidget::updateCalibration(calib);
+      } else {
+        CameraWidget::updateCalibration(DEFAULT_CALIBRATION);
+      }
+      painter.beginNativePainting();
+      CameraWidget::setFrameId(model.getFrameId());
+      CameraWidget::paintGL();
+      painter.endNativePainting();
     }
-    CameraWidget::setStreamType(cameraView == 1 ? VISION_STREAM_DRIVER :
-                                cameraView == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
-                                VISION_STREAM_ROAD);
-
-    s->scene.wide_cam = CameraWidget::getStreamType() == VISION_STREAM_WIDE_ROAD;
-    if (s->scene.calibration_valid) {
-      auto calib = s->scene.wide_cam ? s->scene.view_from_wide_calib : s->scene.view_from_calib;
-      CameraWidget::updateCalibration(calib);
-    } else {
-      CameraWidget::updateCalibration(DEFAULT_CALIBRATION);
-    }
-    painter.beginNativePainting();
-    CameraWidget::setFrameId(model.getFrameId());
-    CameraWidget::paintGL();
-    painter.endNativePainting();
   }
-*/
 
   painter.setPen(Qt::NoPen);
 
