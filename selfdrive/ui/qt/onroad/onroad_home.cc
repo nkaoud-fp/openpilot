@@ -183,7 +183,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   QRect screenRect = this->rect(); // Full widget rect
 
   // 1. Draw the top black rectangle, covering anything that might be there.
-  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 5), Qt::black);
+  p.fillRect(QRect(0, 0, screenRect.width(), UI_BORDER_SIZE * 10), Qt::black);
 
   // 2. The area for status-dependent background and indicators is the contentRect of the window.
   QRect CRECT = this->contentsRect(); // This rect respects main_layout's margins.
