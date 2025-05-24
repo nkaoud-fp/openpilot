@@ -794,7 +794,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   SubMaster &sm = *(s->sm);
   QPainter painter(this);
   painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-  painter.fillRect(this->rect(), Qt::black); // black out camera stream
+  //painter.fillRect(this->rect(), Qt::black); // black out camera stream
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
