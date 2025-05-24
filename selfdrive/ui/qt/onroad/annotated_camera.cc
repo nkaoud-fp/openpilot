@@ -794,75 +794,79 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   SubMaster &sm = *(s->sm);
   QPainter painter(this);
   painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-
-  // niz === MODIFICATION START ===
-  // Fill the entire widget with black instead of drawing camera stream
-  painter.fillRect(this->rect(), Qt::black);
-  // niz === MODIFICATION END ===
-  
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const float v_ego = sm["carState"].getCarState().getVEgo();
 
-  // niz remove entire camera frame
-  /*
-  // draw camera frame
-  {
-    std::lock_guard lk(frame_lock);
+  if (this->frog_pilot_hide_camera_stream) { // Check the member flag
+    painter.fillRect(this->rect(), Qt::black);
+    // If the camera stream is hidden, we draw black.
+    // The common overlays (lanes, HUD, etc.) will be drawn on this black background later.
+  } else {
+    // Attempt to draw the actual camera stream
+    std::lock_guard lk(frame_lock); // frame_lock is a member of CameraWidget (base class)
 
-    if (frames.empty()) {
-      if (skip_frame_count > 0) {
-        skip_frame_count--;
-        qDebug() << "skipping frame, not ready";
-        return;
-      }
-    } else {
-      // skip drawing up to this many frames if we're
-      // missing camera frames. this smooths out the
-      // transitions from the narrow and wide cameras
-      skip_frame_count = 5;
-    }
-  */
-
-    // Wide or narrow cam dependent on speed
+    // Determine desired stream type (logic from original file)
     bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
-    if (has_wide_cam && cameraView == 0) {
+    if (has_wide_cam && this->cameraView == 0) { // Use member 'cameraView'
       if ((v_ego < 10) || available_streams.size() == 1) {
-        wide_cam_requested = true;
+        this->wide_cam_requested = true; // Use member 'wide_cam_requested'
       } else if (v_ego > 15) {
-        wide_cam_requested = false;
+        this->wide_cam_requested = false;
       }
-      wide_cam_requested = wide_cam_requested && experimentalMode;
-      // for replay of old routes, never go to widecam
-      wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
+      // 'experimentalMode' is a member in your provided annotated_camera.h
+      this->wide_cam_requested = this->wide_cam_requested && this->experimentalMode;
+      this->wide_cam_requested = this->wide_cam_requested && s->scene.calibration_wide_valid;
     }
-
-// niz remove entire CameraWidget::setStreamType
-  /*
-    CameraWidget::setStreamType(cameraView == 1 ? VISION_STREAM_DRIVER :
-                                cameraView == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
+    CameraWidget::setStreamType(this->cameraView == 1 ? VISION_STREAM_DRIVER :
+                                this->cameraView == 3 || this->wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
                                 VISION_STREAM_ROAD);
-
     s->scene.wide_cam = CameraWidget::getStreamType() == VISION_STREAM_WIDE_ROAD;
+
+    // Update calibration
     if (s->scene.calibration_valid) {
       auto calib = s->scene.wide_cam ? s->scene.view_from_wide_calib : s->scene.view_from_calib;
       CameraWidget::updateCalibration(calib);
     } else {
       CameraWidget::updateCalibration(DEFAULT_CALIBRATION);
     }
-    painter.beginNativePainting();
-    CameraWidget::setFrameId(model.getFrameId());
-    CameraWidget::paintGL();
-    painter.endNativePainting();
+
+    bool should_attempt_gl_paint = true;
+    // The 'frames' deque is a member of the base CameraWidget
+    if (frames.empty()) {
+      if (this->skip_frame_count > 0) { // skip_frame_count is member of AnnotatedCameraWidget
+        this->skip_frame_count--;
+        // qDebug() << "AnnotatedCameraWidget: No new frame, skipping GL paint (skip_frame_count > 0)";
+        should_attempt_gl_paint = false;
+      } else {
+        // qDebug() << "AnnotatedCameraWidget: No new frame and skip_frame_count is 0, not painting GL";
+        should_attempt_gl_paint = false;
+      }
+    } else {
+      this->skip_frame_count = 5; // Reset when frames are available
+    }
+
+    if (should_attempt_gl_paint) {
+      painter.beginNativePainting();
+      CameraWidget::setFrameId(model.getFrameId());
+      CameraWidget::paintGL(); // This is the call to the base class to draw the camera
+      painter.endNativePainting();
+    } else {
+      // If not painting GL (e.g., frames empty), explicitly clear to black
+      // to prevent stale images or unpainted areas.
+      painter.fillRect(this->rect(), Qt::black);
+    }
   }
-*/
+
+  // Common drawing logic for overlays (lanes, leads, DM, HUD, FrogPilot widgets)
+  // This section is now drawn regardless of whether the camera feed itself was black or live video.
   painter.setPen(Qt::NoPen);
 
   if (s->scene.world_objects_visible) {
     update_model(s, model, sm["uiPlan"].getUiPlan());
     drawLaneLines(painter, s, v_ego);
 
-    if (s->scene.longitudinal_control && sm.rcv_frame("radarState") > s->scene.started_frame && !s->scene.hide_lead_marker) {
+    if (s->scene.longitudinal_control && sm.rcv_frame("radarState") > s.scene.started_frame && !s.scene.hide_lead_marker) {
       auto radar_state = sm["radarState"].getRadarState();
       update_leads(s, radar_state, model.getPosition());
       auto lead_one = radar_state.getLeadOne();
@@ -874,7 +878,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
       } else if (lead_one.getStatus()) {
         drawLead(painter, lead_one, s->scene.lead_vertices[0], v_ego, s->scene.lead_marker_color);
       } else {
-        leadTextRect = QRect();
+        leadTextRect = QRect(); // Ensure this is reset if no leads
       }
       if (lead_left.getStatus()) {
         drawLead(painter, lead_left, s->scene.lead_vertices[2], v_ego, blueColor(), true);
@@ -886,30 +890,35 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   }
 
   // DMoji
-  if (!hideBottomIcons && (sm.rcv_frame("driverStateV2") > s->scene.started_frame)) {
-    update_dmonitoring(s, sm["driverStateV2"].getDriverStateV2(), dm_fade_state, rightHandDM);
+  // Use member 'hideBottomIcons' which is updated in AnnotatedCameraWidget::updateState
+  if (!this->hideBottomIcons && (sm.rcv_frame("driverStateV2") > s.scene.started_frame)) {
+    // Use member 'dm_fade_state' and 'rightHandDM'
+    update_dmonitoring(s, sm["driverStateV2"].getDriverStateV2(), this->dm_fade_state, this->rightHandDM);
     drawDriverState(painter, s);
   }
 
-  drawHud(painter);
+  drawHud(painter); // This draws speed, MAX speed, speed limit etc.
 
+  // Timing and debug message publishing
   double cur_draw_t = millis_since_boot();
   double dt = cur_draw_t - prev_draw_t;
-  double fps = fps_filter.update(1. / dt * 1000);
-  s->scene.fps = fps;
-  if (fps < 15) {
-    LOGW("slow frame rate: %.2f fps", fps);
+  if (dt < 1e-3) dt = 1e-3; // Prevent division by zero if called too rapidly
+  float current_fps_val = fps_filter.update(1. / dt * 1000); // fps_filter is a member
+  s->scene.fps = current_fps_val; // Update the global scene's FPS
+  if (current_fps_val < 15) {
+    LOGW("slow frame rate: %.2f fps", current_fps_val);
   }
-  prev_draw_t = cur_draw_t;
+  prev_draw_t = cur_draw_t; // prev_draw_t is a member
 
-  // publish debug msg
   MessageBuilder msg;
   auto m = msg.initEvent().initUiDebug();
   m.setDrawTimeMillis(cur_draw_t - start_draw_t);
-  pm->send("uiDebug", msg);
+  pm->send("uiDebug", msg); // pm is a member
 
-  // Paint FrogPilot widgets
-  paintFrogPilotWidgets(painter);
+  paintFrogPilotWidgets(painter); // This draws your custom FrogPilot widgets
+  
+
+  
 }
 
 void AnnotatedCameraWidget::showEvent(QShowEvent *event) {
