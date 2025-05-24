@@ -14,7 +14,7 @@
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   //main_layout->setMargin(UI_BORDER_SIZE); // NIZ remove
-  main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 20, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
+  main_layout->setContentsMargins(UI_BORDER_SIZE, UI_BORDER_SIZE * 23, UI_BORDER_SIZE, UI_BORDER_SIZE);  // NIZ add
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
   main_layout->addLayout(stacked_layout);
