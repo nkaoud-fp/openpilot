@@ -17,7 +17,7 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   main_layout = new QVBoxLayout(this);
 
 // Store a pointer to the main_layout so you can access it in updateState
-  this->main_layout = main_layout; // Add this line, and a private member 'QVBoxLayout *main_layout;' to OnroadWindow header
+  //this->main_layout = main_layout; // Add this line, and a private member 'QVBoxLayout *main_layout;' to OnroadWindow header
 
   // No longer check hide_map_icon here, it will be handled in updateState
   main_layout->setMargin(UI_BORDER_SIZE); // Set a default margin
