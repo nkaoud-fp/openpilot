@@ -24,6 +24,12 @@ private:
   QWidget *map = nullptr;
   QHBoxLayout* split;
 
+  // --- NEW MEMBER VARIABLES ---
+  QVBoxLayout *main_layout; // To store the pointer to your main layout
+  bool prev_hide_map_icon_state = false; // To track the previous state of hide_map_icon
+  // --- END NEW MEMBER VARIABLES ---
+
+
   // FrogPilot variables
   bool blindSpotLeft;
   bool blindSpotRight;
