@@ -88,4 +88,6 @@ void FrogPilotUIState::update() {
 
   frogpilot_scene.conditional_status = frogpilot_scene.enabled ? params_memory.getInt("CEStatus") : 0;
   frogpilot_scene.driver_camera_timer = frogpilot_scene.reverse && frogpilot_toggles.value("driver_camera_in_reverse").toBool() ? frogpilot_scene.driver_camera_timer + 1 : 0;
+  frogpilot_scene.headless_mode = frogpilot_scene.frogpilot_toggles.value("headless_mode").toBool();
+
 }

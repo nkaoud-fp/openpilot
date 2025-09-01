@@ -38,11 +38,11 @@ class FrogPilotCard:
   def update_distance_button(self, sm):
     if self.car.frogpilot_toggles.experimental_mode_via_distance and sm["carControl"].longActive:
       handle_experimental_mode(self.car.frogpilot_toggles.conditional_experimental_mode)
-    elif self.car.frogpilot_toggles.force_coast_via_distance:
+    elif self.car.frogpilot_toggles.force_coast_via_distance and sm["carControl"].longActive:
       self.force_coast = not self.force_coast
     elif self.car.frogpilot_toggles.pause_lateral_via_distance:
       self.pause_lateral = not self.pause_lateral
-    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance:
+    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance and sm["carControl"].longActive:
       self.pause_longitudinal = not self.pause_longitudinal
     elif self.car.frogpilot_toggles.traffic_mode_via_distance and sm["carControl"].longActive:
       self.traffic_mode_enabled = not self.traffic_mode_enabled
@@ -50,11 +50,11 @@ class FrogPilotCard:
   def update_distance_button_long(self, sm):
     if self.car.frogpilot_toggles.experimental_mode_via_distance_long and sm["carControl"].longActive:
       handle_experimental_mode(self.car.frogpilot_toggles.conditional_experimental_mode)
-    elif self.car.frogpilot_toggles.force_coast_via_distance_long:
+    elif self.car.frogpilot_toggles.force_coast_via_distance_long and sm["carControl"].longActive:
       self.force_coast = not self.force_coast
     elif self.car.frogpilot_toggles.pause_lateral_via_distance_long:
       self.pause_lateral = not self.pause_lateral
-    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance_long:
+    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance_long and sm["carControl"].longActive:
       self.pause_longitudinal = not self.pause_longitudinal
     elif self.car.frogpilot_toggles.traffic_mode_via_distance_long and sm["carControl"].longActive:
       self.traffic_mode_enabled = not self.traffic_mode_enabled
@@ -64,11 +64,11 @@ class FrogPilotCard:
 
     if self.car.frogpilot_toggles.experimental_mode_via_distance_very_long and sm["carControl"].longActive:
       handle_experimental_mode(self.car.frogpilot_toggles.conditional_experimental_mode)
-    elif self.car.frogpilot_toggles.force_coast_via_distance_very_long:
+    elif self.car.frogpilot_toggles.force_coast_via_distance_very_long and sm["carControl"].longActive:
       self.force_coast = not self.force_coast
     elif self.car.frogpilot_toggles.pause_lateral_via_distance_very_long:
       self.pause_lateral = not self.pause_lateral
-    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance_very_long:
+    elif self.car.frogpilot_toggles.pause_longitudinal_via_distance_very_long and sm["carControl"].longActive:
       self.pause_longitudinal = not self.pause_longitudinal
     elif self.car.frogpilot_toggles.traffic_mode_via_distance_very_long and sm["carControl"].longActive:
       self.traffic_mode_enabled = not self.traffic_mode_enabled
@@ -76,11 +76,11 @@ class FrogPilotCard:
   def update_lkas_button(self, sm):
     if self.car.frogpilot_toggles.experimental_mode_via_lkas and sm["carControl"].longActive:
       handle_experimental_mode(self.car.frogpilot_toggles.conditional_experimental_mode)
-    elif self.car.frogpilot_toggles.force_coast_via_lkas:
+    elif self.car.frogpilot_toggles.force_coast_via_lkas and sm["carControl"].longActive:
       self.force_coast = not self.force_coast
     elif self.car.frogpilot_toggles.pause_lateral_via_lkas:
       self.pause_lateral = not self.pause_lateral
-    elif self.car.frogpilot_toggles.pause_longitudinal_via_lkas:
+    elif self.car.frogpilot_toggles.pause_longitudinal_via_lkas and sm["carControl"].longActive:
       self.pause_longitudinal = not self.pause_longitudinal
     elif self.car.frogpilot_toggles.traffic_mode_via_lkas and sm["carControl"].longActive:
       self.traffic_mode_enabled = not self.traffic_mode_enabled
@@ -125,6 +125,21 @@ class FrogPilotCard:
 
     lkas_button = any(be.pressed and be.type == FrogPilotButtonType.lkas for be in carState.buttonEvents)
 
+
+    ##############dynamic traffic Mode ####################
+    change_traffic_mode_req = params.get_bool("ChangTrafficModeReq")
+    if change_traffic_mode_req:
+      params.put_bool("ChangTrafficModeReq", False)
+      auto_pers_profile = params.get_bool("AutoPersonalityProfile")
+      if auto_pers_profile:
+        change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
+        if self.traffic_mode_enabled!= change_traffic_mode_state :
+          self.traffic_mode_enabled = change_traffic_mode_state
+          frogpilotCarState.trafficModeEnabled = self.traffic_mode_enabled
+    ##############dynamic traffic Mode ####################
+
+    
+    
     if lkas_button:
       self.update_lkas_button(sm)
 
