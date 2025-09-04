@@ -154,6 +154,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("AMapKey2", "", 0, ""),
   ("AutomaticallyDownloadModels", "1", 1, "0"),
   ("AutomaticUpdates", "1", 0, "1"),
+  ("AutoPersonalityProfile", "1", 2, "0"),
   ("AvailableModelNames", "", 1, ""),
   ("AvailableModels", "", 1, ""),
   ("BigMap", "0", 2, "0"),
@@ -181,6 +182,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("CESpeedLead", "0", 1, "0"),
   ("CEStoppedLead", "0", 1, "0"),
   ("ClusterOffset", "1.015", 2, "1.015"),
+  ("CloseWindows", "0", 2, "0"),  
   ("Compass", "0", 1, "0"),
   ("ConditionalExperimental", "1", 0, "0"),
   ("CurveSensitivity", "100", 2, "100"),
@@ -223,6 +225,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("ExperimentalModeConfirmed", "0", 0, "0"),
   ("Fahrenheit", "0", 3, "0"),
   ("FavoriteDestinations", "", 0, ""),
+  ("FoldMirrors", "0", 2, "0"),
   ("ForceAutoTune", "0", 2, "0"),
   ("ForceAutoTuneOff", "0", 2, "0"),
   ("ForceFingerprint", "0", 2, "0"),
@@ -241,6 +244,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("GreenLightAlert", "0", 0, "0"),
   ("GsmApn", "", 0, ""),
   ("GsmRoaming", "1", 0, "0"),
+  ("HeadlessMode", "0", 2, "0"),
   ("HideAlerts", "0", 2, "0"),
   ("HideLeadMarker", "0", 2, "0"),
   ("HideMapIcon", "0", 2, "0"),
@@ -704,6 +708,7 @@ class FrogPilotVariables:
     toggle.traffic_mode_jerk_speed = [np.clip(params.get_int("TrafficJerkSpeed") / 100, 0.25, 2) if traffic_profile and tuning_level >= level["TrafficJerkSpeed"] else default.get_int("TrafficJerkSpeed") / 100, toggle.aggressive_jerk_speed]
     toggle.traffic_mode_jerk_speed_decrease = [np.clip(params.get_int("TrafficJerkSpeedDecrease") / 100, 0.25, 2) if traffic_profile and tuning_level >= level["TrafficJerkSpeedDecrease"] else default.get_int("TrafficJerkSpeedDecrease") / 100, toggle.aggressive_jerk_speed_decrease]
     toggle.traffic_mode_follow = [np.clip(params.get_float("TrafficFollow"), 0.5, 5) if traffic_profile and tuning_level >= level["TrafficFollow"] else default.get_float("TrafficFollow"), toggle.aggressive_follow]
+    auto_personality_profile = toggle.custom_personalities and (params.get_bool("AutoPersonalityProfile") if tuning_level >= level["AutoPersonalityProfile"] else default.get_bool("AutoPersonalityProfile"))
 
     custom_ui = params.get_bool("CustomUI") if tuning_level >= level["CustomUI"] else default.get_bool("CustomUI")
     toggle.acceleration_path = toggle.openpilot_longitudinal and (custom_ui and (params.get_bool("AccelerationPath") if tuning_level >= level["AccelerationPath"] else default.get_bool("AccelerationPath")) or toggle.debug_mode)
@@ -821,6 +826,8 @@ class FrogPilotVariables:
     toggle.traffic_mode_via_lkas = toggle.openpilot_longitudinal and lkas_button_control == BUTTON_FUNCTIONS["TRAFFIC_MODE"]
 
     toggle.lock_doors_timer = params.get_int("LockDoorsTimer") if toggle.car_make == "toyota" and tuning_level >= level["LockDoorsTimer"] else default.get_int("LockDoorsTimer")
+    toggle.fold_mirrors = params.get_int("FoldMirrors") if toggle.car_make == "toyota" and tuning_level >= level["FoldMirrors"] else default.get_int("FoldMirrors")
+    toggle.Close_windows = params.get_int("CloseWindows") if toggle.car_make == "toyota" and tuning_level >= level["CloseWindows"] else default.get_int("CloseWindows")
 
     toggle.long_pitch = toggle.openpilot_longitudinal and toggle.car_make == "gm" and (params.get_bool("LongPitch") if tuning_level >= level["LongPitch"] else default.get_bool("LongPitch"))
 
@@ -920,6 +927,8 @@ class FrogPilotVariables:
     toggle.driver_camera_in_reverse = quality_of_life_visuals and (params.get_bool("DriverCamera") if tuning_level >= level["DriverCamera"] else default.get_bool("DriverCamera"))
     toggle.onroad_distance_button = toggle.openpilot_longitudinal and (quality_of_life_visuals and (params.get_bool("OnroadDistanceButton") if tuning_level >= level["OnroadDistanceButton"] else default.get_bool("OnroadDistanceButton")) or toggle.debug_mode)
     toggle.standby_mode = quality_of_life_visuals and (params.get_bool("StandbyMode") if tuning_level >= level["StandbyMode"] else default.get_bool("StandbyMode"))
+    toggle.headless_mode = quality_of_life_visuals and (params.get_bool("HeadlessMode") if tuning_level >= level["HeadlessMode"] else default.get_bool("HeadlessMode"))
+
     toggle.stopped_timer = quality_of_life_visuals and (params.get_bool("StoppedTimer") if tuning_level >= level["StoppedTimer"] else default.get_bool("StoppedTimer"))
 
     toggle.rainbow_path = params.get_bool("RainbowPath") if tuning_level >= level["RainbowPath"] else default.get_bool("RainbowPath")

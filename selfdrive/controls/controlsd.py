@@ -66,6 +66,8 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
+    self.personality_timer = 0  ### Dynamic personality
+    self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -587,6 +589,46 @@ class Controls:
 
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
+
+
+############################### #AutoPersonality
+    auto_pers_profile = self.params.get_bool("AutoPersonalityProfile")
+
+    if auto_pers_profile and not self.personality_timer > 0:
+      self.personality_timer = 100
+      stn_personality = log.LongitudinalPersonality.standard
+      agr_personality = log.LongitudinalPersonality.aggressive
+      rlx_personality = log.LongitudinalPersonality.relaxed
+      speed_kph = CS.vEgo * 3.6
+      crnt_personality = self.params.get("LongitudinalPersonality", encoding="utf8")
+      #TrafficModeStatus = self.params.get('ChangTrafficModeStat')
+      
+      if crnt_personality is None:
+        crnt_personality = str(stn_personality)
+      if speed_kph < 3 and self.traffic_mode_request_sent: #and not TrafficModeStatus:  # turn on at 11 kph
+        self.params.put_bool("ChangTrafficModeStat", True)
+        self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        self.traffic_mode_request_sent = False
+      elif 25 < speed_kph < 60 and crnt_personality != str(agr_personality):
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_nonblocking('LongitudinalPersonality', str(agr_personality))
+        self.traffic_mode_request_sent = True
+      elif 65 < speed_kph < 110 and crnt_personality != str(stn_personality):
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_nonblocking('LongitudinalPersonality', str(stn_personality))
+        self.traffic_mode_request_sent = True
+      elif speed_kph > 115 and crnt_personality != str(rlx_personality):
+        self.params.put_bool("ChangTrafficModeStat", False)
+        self.params.put_bool("ChangTrafficModeReq", True)
+        self.params.put_nonblocking('LongitudinalPersonality', str(rlx_personality))
+        self.traffic_mode_request_sent = True
+    self.personality_timer -= 1
+    ############################### #AutoPersonality
+
+    
 
     # Update VehicleModel
     lp = self.sm['liveParameters']
