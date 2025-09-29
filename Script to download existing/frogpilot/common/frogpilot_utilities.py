@@ -13,8 +13,6 @@ import zipfile
 
 import openpilot.system.sentry as sentry
 
-from datetime import datetime
-
 from functools import cache
 from pathlib import Path
 
@@ -159,7 +157,7 @@ def is_url_pingable(url):
     sentry.capture_exception(exception)
     return False
 
-def lock_doors_old(lock_doors_timer, sm):
+def lock_doors(lock_doors_timer, sm):
   wait_for_no_driver(sm, door_checks=True, time_threshold=lock_doors_timer)
 
   can_parser = CANParser("toyota_nodsu_pt_generated", [("DOOR_LOCKS", 3)], bus=0)
@@ -202,40 +200,11 @@ def lock_doors_old(lock_doors_timer, sm):
       break
 
 
-
-def lock_doors(lock_doors_timer, sm):
-  # Record the start time
-  start_time = time.monotonic()
-  # wait_for_no_driver(sm, door_checks=True, time_threshold=lock_doors_timer)
+def lock_doors_old(lock_doors_timer, sm):
+  wait_for_no_driver(sm, door_checks=True, time_threshold=lock_doors_timer)
 
   can_parser = CANParser("toyota_nodsu_pt_generated", [("DOOR_LOCKS", 3)], bus=0)
   can_sock = messaging.sub_sock("can", timeout=100)
-  
-  # Initialize window_code and try to get a non-zero code
-  window_code = 0
-  for _ in range(8):  # Try up to 8 times
-    # Loop to get a stable window status code
-    while True:
-        can_msgs = messaging.drain_sock_raw(can_sock, wait_for_one=True)
-        can_parser.update_strings(can_msgs)
-        if can_parser.vl["DOOR_LOCKS"]["LOCK_STATUS_CHANGED"] == 0:
-            # Assign directly and check if we should break out of the retry loop
-            #window_code = can_parser.vl["DOOR_LOCKS"]["UNKNOWN_183"] #WINDOW_STATUS_CHANGED
-            window_code = can_parser.vl["DOOR_LOCKS"]["WINDOW_STATUS_CHANGED"] #WINDOW_STATUS_CHANGED
-            break
-        time.sleep(0.1) # Avoid tight loop while waiting for stable lock status
-    
-    if window_code != 0:
-      break  # Success! Exit the retry loop
-    time.sleep(0.5) # Wait before retrying
-
-  # --- Calculate the elapsed time and adjust the timer ---
-  elapsed_time = time.monotonic() - start_time
-  adjusted_timer = max(0, lock_doors_timer - elapsed_time)
-  
-  # Call wait_for_no_driver with the adjusted timer
-  wait_for_no_driver(sm, door_checks=True, time_threshold=adjusted_timer)
-  #wait_for_no_driver(sm, door_checks=True, time_threshold=lock_doors_timer)
 
   while True:
     sm.update()
@@ -248,25 +217,36 @@ def lock_doors(lock_doors_timer, sm):
       panda.can_send(0x750, LOCK_CMD, 0)
       time.sleep(0.150)
       panda.send_heartbeat()
-      
-      # Auto Mirror Folding 
       if params.get_bool("FoldMirrors"):
-        mirror_commands = {'R': MIRR_FOLD_R, 'L': MIRR_FOLD_L}
-        for command in mirror_commands.values():
-            panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
-            panda.can_send(0x750, command, 0)
-            time.sleep(0.150)
-            panda.send_heartbeat()
-  
-      # Auto Windows Closing 
-      if params.get_bool("CloseWindows") and window_code != 0:
-        window_positions = {'RR': WINDOW_CLOSE_RR, 'RL': WINDOW_CLOSE_RL, 'FL': WINDOW_CLOSE_FL, 'FR': WINDOW_CLOSE_FR}
-        for window, command in window_positions.items():
-          if get_window_state(window_code, window) != 0:
-            panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
-            panda.can_send(0x750, command, 0)
-            time.sleep(0.150)
-            panda.send_heartbeat()
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, MIRR_FOLD_R, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()
+      if params.get_bool("FoldMirrors"):
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, MIRR_FOLD_L, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()    
+      if params.get_bool("CloseWindows"):
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, WINDOW_CLOSE_RR, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()    
+      if params.get_bool("CloseWindows"):
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, WINDOW_CLOSE_RL, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()    
+      if params.get_bool("CloseWindows"):
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, WINDOW_CLOSE_FL, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()    
+      if params.get_bool("CloseWindows"):
+        panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+        panda.can_send(0x750, WINDOW_CLOSE_FR, 0)
+        time.sleep(0.150)
+        panda.send_heartbeat()  
 
     time.sleep(1)
 
@@ -420,66 +400,4 @@ def wait_for_no_driver(sm, door_checks=False, time_threshold=60):
     time.sleep(DT_DMON)
 
   params.remove("IsDriverViewEnabled")
-
-
-
-def get_window_state(code: int, window: str) -> int:
-    """
-    Decodes a car window code to find the numerical state of a specific window
-    and saves the state of all windows to a file.
-
-    Args:
-        code: The 5-digit code representing the window positions.
-        window: The identifier for the window to check.
-                Must be one of 'FR', 'FL', 'RR', 'RL'.
-
-    Returns:
-        An integer representing the window's state:
-        -1 for open
-         0 for closed
-         1 for partially
-
-    Raises:
-        ValueError: If the provided window identifier is invalid.
-    """
-    # --- 1. Define constants and mappings ---
-    K = 43521
-    WEIGHTS = {'FL': 16384, 'FR': 4096, 'RR': 1024, 'RL': 256}
-
-    # --- 2. Validate the window input ---
-    if window not in WEIGHTS:
-        raise ValueError("Invalid window identifier. Must be one of 'FR', 'FL', 'RR', or 'RL'.")
-
-    # The order of processing must be from largest weight to smallest
-    WINDOW_ORDER = ['FL', 'FR', 'RR', 'RL']
-
-    # --- 3. Calculate the base value and initialize ---
-    base_value = code - K
-    remainder = base_value
-    decoded_states = {}
-
-    # --- 4. Decode the state for each window to find the correct remainder ---
-    for win in WINDOW_ORDER:
-        weight = WEIGHTS[win]
-
-        # Determine the numerical value (-1, 0, or 1) for the state
-        state_value = int(round(remainder / weight))
-        decoded_states[win] = state_value
-
-        # Update the remainder for the next calculation
-        remainder -= weight * state_value
-
-    # --- 5. Save the state of all windows to a file ---
-    try:
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        log_entry = f"{timestamp} - Code: {code} - {json.dumps(decoded_states)}\n"
-        
-        with open('/data/media/get_window.txt', 'a') as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"Failed to write to /data/media/get_window.txt: {e}")
-
-    # --- 6. Return the state of the requested window ---
-    return decoded_states[window]
-
 
