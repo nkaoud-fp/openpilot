@@ -154,7 +154,21 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::FrogPilotPlan::Re
   int top_radius = 32;
   int bottom_radius = has_eu_speed_limit ? 100 : 32;
 
-  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
+
+  // Shift MAX speed for headless mode
+  int screen_recorder_x_pos = screen_recorder->x();
+  int center_x_pos = rect().center().x();
+  int desired_x = 0; //(center_x_pos + screen_recorder_x_pos) / 2 - (set_speed_size.width() / 2); // Roughly center it
+
+  if (frogpilot_toggles.value("headless_mode").toBool()) {
+    desired_x = (center_x_pos + screen_recorder_x_pos) / 2 - (set_speed_size.width() / 2); // Roughly center it
+  } else {
+    desired_x  = 60 ;
+  }
+  
+  QRect set_speed_rect(QPoint(desired_x + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
+
+  //QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
   if (!frogpilot_toggles.value("hide_max_speed").toBool()) {
     if (fs.frogpilot_scene.traffic_mode_enabled) {
       p.setPen(QPen(redColor(), 10));
@@ -244,6 +258,13 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::FrogPilotPlan::Re
 
   // current speed
   if (!frogpilot_nvg->bigMapOpen && frogpilot_nvg->standstillDuration == 0 && !frogpilot_toggles.value("hide_speed").toBool()) {
+
+    int current_speed_x = rect().center().x();
+    if (frogpilot_toggles.value("headless_mode").toBool()) {
+      //current_speed_x -= 100; // Adjust this value to shift left as desired
+      current_speed_x -= static_cast<int>(width() * 0.04); // Shift left by 4% of screen width
+    }
+
     p.setFont(InterFont(176, QFont::Bold));
     drawText(p, rect().center().x(), 210, speedStr);
     p.setFont(InterFont(66));
@@ -508,57 +529,65 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
   const cereal::FrogPilotPlan::Reader &frogpilotPlan = fpsm["frogpilotPlan"].getFrogpilotPlan();
 
-  // draw camera frame
-  {
-    std::lock_guard lk(frame_lock);
-
-    if (frames.empty()) {
-      if (skip_frame_count > 0) {
-        skip_frame_count--;
-        qDebug() << "skipping frame, not ready";
-        return;
+// Blackout screen in headless Mode
+  painter.beginNativePainting();
+  if (frogpilot_toggles.value("headless_mode").toBool()) {
+    //painter.beginNativePainting();
+    painter.fillRect(this->rect(), Qt::black);
+    //painter.endNativePainting();
+  } else {
+    // draw camera frame
+    {
+      std::lock_guard lk(frame_lock);
+  
+      if (frames.empty()) {
+        if (skip_frame_count > 0) {
+          skip_frame_count--;
+          qDebug() << "skipping frame, not ready";
+          return;
+        }
+      } else {
+        // skip drawing up to this many frames if we're
+        // missing camera frames. this smooths out the
+        // transitions from the narrow and wide cameras
+        skip_frame_count = 5;
       }
-    } else {
-      // skip drawing up to this many frames if we're
-      // missing camera frames. this smooths out the
-      // transitions from the narrow and wide cameras
-      skip_frame_count = 5;
-    }
-
-    // Wide or narrow cam dependent on speed
-    bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
-    if (has_wide_cam && frogpilot_toggles.value("camera_view").toInt() == 0) {
-      float v_ego = sm["carState"].getCarState().getVEgo();
-      if ((v_ego < 10) || available_streams.size() == 1) {
-        wide_cam_requested = true;
-      } else if (v_ego > 15) {
-        wide_cam_requested = false;
+  
+      // Wide or narrow cam dependent on speed
+      bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
+      if (has_wide_cam && frogpilot_toggles.value("camera_view").toInt() == 0) {
+        float v_ego = sm["carState"].getCarState().getVEgo();
+        if ((v_ego < 10) || available_streams.size() == 1) {
+          wide_cam_requested = true;
+        } else if (v_ego > 15) {
+          wide_cam_requested = false;
+        }
+        wide_cam_requested = wide_cam_requested && sm["controlsState"].getControlsState().getExperimentalMode();
+        // for replay of old routes, never go to widecam
+        wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
       }
-      wide_cam_requested = wide_cam_requested && sm["controlsState"].getControlsState().getExperimentalMode();
-      // for replay of old routes, never go to widecam
-      wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;
+      CameraWidget::setStreamType(frogpilot_toggles.value("camera_view").toInt() == 1 ? VISION_STREAM_DRIVER :
+                                  frogpilot_toggles.value("camera_view").toInt() == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
+                                  VISION_STREAM_ROAD);
+  
+      s->scene.wide_cam = CameraWidget::getStreamType() == VISION_STREAM_WIDE_ROAD;
+      if (s->scene.calibration_valid) {
+        auto calib = s->scene.wide_cam ? s->scene.view_from_wide_calib : s->scene.view_from_calib;
+        CameraWidget::updateCalibration(calib);
+      } else {
+        CameraWidget::updateCalibration(DEFAULT_CALIBRATION);
+      }
+      //painter.beginNativePainting();      
+      CameraWidget::setFrameId(model.getFrameId());
+      CameraWidget::paintGL();
+      //painter.endNativePainting();
     }
-    CameraWidget::setStreamType(frogpilot_toggles.value("camera_view").toInt() == 1 ? VISION_STREAM_DRIVER :
-                                frogpilot_toggles.value("camera_view").toInt() == 3 || wide_cam_requested ? VISION_STREAM_WIDE_ROAD :
-                                VISION_STREAM_ROAD);
-
-    s->scene.wide_cam = CameraWidget::getStreamType() == VISION_STREAM_WIDE_ROAD;
-    if (s->scene.calibration_valid) {
-      auto calib = s->scene.wide_cam ? s->scene.view_from_wide_calib : s->scene.view_from_calib;
-      CameraWidget::updateCalibration(calib);
-    } else {
-      CameraWidget::updateCalibration(DEFAULT_CALIBRATION);
-    }
-    painter.beginNativePainting();
-    CameraWidget::setFrameId(model.getFrameId());
-    CameraWidget::paintGL();
-    painter.endNativePainting();
   }
-
+  painter.endNativePainting();
   painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing);
   painter.setPen(Qt::NoPen);
 
-  if (s->scene.world_objects_visible) {
+  if (s->scene.world_objects_visible && !frogpilot_toggles.value("headless_mode").toBool()) {
     update_model(s, fs, model, sm["uiPlan"].getUiPlan(), frogpilot_toggles);
     drawLaneLines(painter, s, fs);
 
