@@ -230,7 +230,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
       for (int i = 0; i <= 300; ++i) {
         autoLockLabels[i] = i == 0 ? tr("Never") : QString::number(i) + tr(" seconds");
       }
-      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 300, QString(), autoLockLabels, 5);
+      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 300, QString(), autoLockLabels, 1);
     } else if (param == "ClusterOffset") {
       std::vector<QString> clusterOffsetButton{"Reset"};
       FrogPilotParamValueButtonControl *clusterOffsetToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 1.000, 1.050, "x", std::map<float, QString>(), 0.001, false, {}, clusterOffsetButton, false, false);
@@ -442,3 +442,4 @@ void FrogPilotVehiclesPanel::updateToggles() {
 
   update();
 }
+
