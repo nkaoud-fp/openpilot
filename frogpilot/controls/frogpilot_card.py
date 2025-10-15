@@ -125,6 +125,24 @@ class FrogPilotCard:
 
     lkas_button = any(be.pressed and be.type == FrogPilotButtonType.lkas for be in carState.buttonEvents)
 
+
+
+
+
+    ##############dynamic traffic Mode ####################
+    change_traffic_mode_req = params.get_bool("ChangTrafficModeReq")
+    if change_traffic_mode_req:
+      params.put_bool("ChangTrafficModeReq", False)
+      auto_pers_profile = params.get_bool("AutoPersonalityProfile")
+      if auto_pers_profile:
+        change_traffic_mode_state = params.get_bool("ChangTrafficModeStat")
+        if self.traffic_mode_enabled!= change_traffic_mode_state :
+          self.traffic_mode_enabled = change_traffic_mode_state
+          frogpilotCarState.trafficModeEnabled = self.traffic_mode_enabled
+    ##############dynamic traffic Mode ####################
+
+    
+
     if lkas_button:
       self.update_lkas_button(sm)
 

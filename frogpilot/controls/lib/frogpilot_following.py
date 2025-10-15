@@ -59,6 +59,23 @@ class FrogPilotFollowing:
       self.base_speed_jerk = 0
       self.t_follow = 0
 
+    #### ========================================================================
+    #### Stopped Car LOGIC - ADD THIS
+    #### ========================================================================
+    #### Increase follow distance when approaching a stopped car to encourage earlier braking ONLY when approaching
+    # a stopped car from an approaching speed greater than 60 kph (16.5 m/s).
+    if self.frogpilot_planner.tracking_lead and self.frogpilot_planner.lead_one.vLead < 1.0 and v_ego > 16.5:
+    #if self.frogpilot_planner.tracking_lead and self.frogpilot_planner.lead_one.vLead < 1.0:
+      # This multiplier INCREASES t_follow. A larger value means an earlier reaction.
+      # 1.3 = 30% increase in desired follow time
+      # 1.5 = 50% increase in desired follow time
+      stopped_car_factor = 2 #1.5
+      self.t_follow *= stopped_car_factor
+    #### ========================================================================
+    #### END OF Stopped Car LOGIC
+    #### ========================================================================    
+    
+    
     self.acceleration_jerk = self.base_acceleration_jerk
     self.danger_jerk = self.base_danger_jerk
     self.speed_jerk = self.base_speed_jerk
@@ -83,7 +100,19 @@ class FrogPilotFollowing:
 
     # Offset by FrogAi for FrogPilot for a more natural approach to a slower lead
     if (frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following) and v_lead < v_ego:
-      distance_factor = max(lead_distance - (v_lead * self.t_follow), 1)
+
+      ################################   ADD softer breaking ###############################
+      # 1. Define how close to get before braking, a buffer time proportional to our speed (in seconds)
+      CoastingBufferTime = 0.3 # (0.35 is almost 8 meters @ 80KPH)
+      # 2. Define how gradual the approach is (0.1=very broad, 1.0=original)
+      RampBroadness = 0.5
+      
+      # 3. Calculate the dynamic buffer distance based on our speed
+      dynamic_coasting_buffer = v_ego * CoastingBufferTime
+      # 4. Calculate the modified distance_factor with the dynamic buffer
+      base_distance = lead_distance - ((v_lead * self.t_follow) - dynamic_coasting_buffer)
+      
+      distance_factor = max(1, base_distance * RampBroadness)
       braking_offset = float(np.clip(min(v_ego - v_lead, v_lead) - COMFORT_BRAKE, 1, distance_factor))
 
       if frogpilot_toggles.human_following:
@@ -93,3 +122,4 @@ class FrogPilotFollowing:
           far_lead_offset = 0
         self.t_follow /= braking_offset + far_lead_offset
       self.slower_lead = braking_offset > 1
+

@@ -20,7 +20,8 @@ import openpilot.system.sentry as sentry
 from cereal import log, messaging
 from opendbc.can.parser import CANParser
 from openpilot.common.realtime import DT_DMON, DT_HW
-from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD
+from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD, MIRR_FOLD_R, MIRR_FOLD_L, WINDOW_CLOSE_FR, WINDOW_CLOSE_FL, WINDOW_CLOSE_RR, WINDOW_CLOSE_RL
+
 from openpilot.system.hardware import HARDWARE
 from panda import Panda
 
@@ -204,11 +205,33 @@ def lock_doors(lock_doors_timer, sm):
       panda.set_safety_mode(panda.SAFETY_TOYOTA)
       panda.can_send(0x750, LOCK_CMD, 0)
 
+      time.sleep(0.150)
+      panda.send_heartbeat()
+      
+      # Auto Mirror Folding 
+      if params.get_bool("FoldMirrors"):
+        mirror_commands = {'R': MIRR_FOLD_R, 'L': MIRR_FOLD_L}
+        for command in mirror_commands.values():
+            panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+            panda.can_send(0x750, command, 0)
+            time.sleep(0.150)
+            panda.send_heartbeat()
+
+      # Auto Windows Closing 
+      if params.get_bool("CloseWindows"):
+        window_commands = {'RR': WINDOW_CLOSE_RR, 'RL': WINDOW_CLOSE_RL, 'FL': WINDOW_CLOSE_FL, 'FR': WINDOW_CLOSE_FR}
+        for command in window_commands.values():
+            panda.set_safety_mode(panda.SAFETY_ALLOUTPUT)
+            panda.can_send(0x750, command, 0)
+            time.sleep(0.150)
+            panda.send_heartbeat()
+
     time.sleep(1)
 
     lock_status = get_lock_status(can_parser, can_sock)
     if lock_status == 0:
       break
+
 
 def run_cmd(cmd, success_message, fail_message, report=True, env=None):
   try:
@@ -316,7 +339,10 @@ def wait_for_no_driver(sm, door_checks=False, time_threshold=60):
   can_parser = CANParser("toyota_nodsu_pt_generated", [("BODY_CONTROL_STATE", 3)], bus=0)
   can_sock = messaging.sub_sock("can", timeout=100)
 
-  while sm["deviceState"].screenBrightnessPercent != 0 or any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+  #while sm["deviceState"].screenBrightnessPercent != 0 or any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+  while any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):
+
+
     sm.update()
 
     if any(ps.ignitionLine or ps.ignitionCan for ps in sm["pandaStates"] if ps.pandaType != log.PandaState.PandaType.unknown):

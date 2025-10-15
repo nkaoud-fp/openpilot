@@ -180,6 +180,9 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"ClusterOffset", tr("Dashboard Speed Offset"), tr("<b>The speed offset openpilot uses to match the speed on the dashboard display.</b>"), ""},
     {"FrogsGoMoosTweak", tr("FrogsGoMoo's Personal Tweaks"), tr("<b>Personal tweaks by FrogsGoMoo for quicker acceleration and smoother braking.</b>"), ""},
     {"LockDoorsTimer", tr("Lock Doors On Ignition Off After"), tr("<b>Automatically lock the doors on ignition off</b> when no one is detected in the front seats."), ""},
+
+    {"FoldMirrors", tr("Fold Mirrors When Locking Doors"), tr("Automatically Fold Mirrors after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
+    {"CloseWindows", tr("Close Windows When Locking Doors"), tr("Automatically Close Windows after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
     {"SNGHack", tr("Stop-and-Go Hack"), tr("<b>Force stop-and-go</b> on Lexus/Toyota vehicles without stock stop-and-go functionality."), ""},
 
     {"VehicleInfo", tr("Vehicle Info"), tr("<b>Information about your vehicle in regards to openpilot support and functionality.</b>"), ""},
@@ -227,7 +230,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
       for (int i = 0; i <= 300; ++i) {
         autoLockLabels[i] = i == 0 ? tr("Never") : QString::number(i) + tr(" seconds");
       }
-      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 300, QString(), autoLockLabels, 5);
+      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 300, QString(), autoLockLabels, 1);
     } else if (param == "ClusterOffset") {
       std::vector<QString> clusterOffsetButton{"Reset"};
       FrogPilotParamValueButtonControl *clusterOffsetToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 1.000, 1.050, "x", std::map<float, QString>(), 0.001, false, {}, clusterOffsetButton, false, false);
@@ -394,6 +397,16 @@ void FrogPilotVehiclesPanel::updateToggles() {
     if (key == "LockDoorsTimer") {
       setVisible &= !isC3;
     }
+
+
+    if (key == "FoldMirrors") {
+      setVisible &= !isC3;
+    }
+
+    if (key == "CloseWindows") {
+      setVisible &= !isC3;
+    }      
+
 
     else if (key == "SNGHack") {
       setVisible &= !hasPedal && !hasSNG;
