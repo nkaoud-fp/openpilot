@@ -69,21 +69,21 @@ class FrogPilotFollowing:
       # This multiplier INCREASES t_follow. A larger value means an earlier reaction.
       # 1.3 = 30% increase in desired follow time
       # 1.5 = 50% increase in desired follow time
-      ##stopped_car_factor = 2 #1.5
-      ##self.t_follow *= stopped_car_factor
+      stopped_car_factor = 2 #1.5
+      self.t_follow *= stopped_car_factor
 
       # Define the distance breakpoints and the corresponding follow time multipliers.
       # At 40m or less, the multiplier is 2.0x (maximum effect).
       # At 150m or more, the multiplier is 1.0x (no effect).
       # The effect scales linearly between these two points.
-      DISTANCE_BP = [50, 150]  # meters
-      MULTIPLIER_VP = [2.0, 1.0] # factor
+      ##DISTANCE_BP = [50, 150]  # meters
+      ##MULTIPLIER_VP = [2.0, 1.0] # factor
       # Get the current distance to the lead car.
-      d_rel = self.frogpilot_planner.lead_one.dRel
+      ##d_rel = self.frogpilot_planner.lead_one.dRel
       # Calculate the proportional multiplier using interpolation.
-      stopped_car_factor = np.interp(d_rel, DISTANCE_BP, MULTIPLIER_VP)
+      ##stopped_car_factor = np.interp(d_rel, DISTANCE_BP, MULTIPLIER_VP)
       # Apply the calculated multiplier to the follow time.
-      self.t_follow *= stopped_car_factor
+      ##self.t_follow *= stopped_car_factor
 
     #### ========================================================================
     #### END OF Stopped Car LOGIC
