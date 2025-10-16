@@ -76,7 +76,7 @@ class FrogPilotFollowing:
       # At 40m or less, the multiplier is 2.0x (maximum effect).
       # At 150m or more, the multiplier is 1.0x (no effect).
       # The effect scales linearly between these two points.
-      DISTANCE_BP = [40, 150]  # meters
+      DISTANCE_BP = [50, 150]  # meters
       MULTIPLIER_VP = [2.0, 1.0] # factor
       # Get the current distance to the lead car.
       d_rel = self.frogpilot_planner.lead_one.dRel
