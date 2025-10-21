@@ -28,6 +28,10 @@ class FrogPilotFollowing:
       # ======================================================================
       # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
       # ======================================================================
+
+      
+      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
+      CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       curve_factor = 2.0
@@ -46,8 +50,8 @@ class FrogPilotFollowing:
       # ======================= END OF CUSTOM VALUES =========================
       # ======================================================================
 
-      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
-      normalized_speed = np.clip(v_ego / CITY_SPEED_LIMIT, 0.0, 1.0)
+      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
+      normalized_speed = np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0)
       
       # Apply the curve factor to create the eased transition
       eased_speed = normalized_speed ** curve_factor
