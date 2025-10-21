@@ -699,6 +699,7 @@ class FrogPilotVariables:
     auto_personality_profile = toggle.custom_personalities and (params.get_bool("AutoPersonalityProfile") if tuning_level >= level["AutoPersonalityProfile"] else default.get_bool("AutoPersonalityProfile"))
     
     #dynamic_personality = toggle.custom_personalities and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
+    #toggle.dynamic_personality = toggle.custom_personalities and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
     toggle.dynamic_personality = toggle.openpilot_longitudinal and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
     
 
@@ -978,6 +979,7 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
 
 
 
