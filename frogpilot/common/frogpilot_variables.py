@@ -140,6 +140,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("AutomaticallyDownloadModels", "1", 1, "0"),
   ("AutomaticUpdates", "1", 0, "1"),
   ("AutoPersonalityProfile", "1", 2, "0"),
+  ("DynamicPersonality", "0", 1, "0"),
 
   ("AvailableModelNames", "", 1, ""),
   ("AvailableModels", "", 1, ""),
@@ -696,6 +697,10 @@ class FrogPilotVariables:
     toggle.traffic_mode_follow = [np.clip(params.get_float("TrafficFollow"), 0.5, MAX_T_FOLLOW) if traffic_profile and tuning_level >= level["TrafficFollow"] else default.get_float("TrafficFollow"), toggle.aggressive_follow]
 
     auto_personality_profile = toggle.custom_personalities and (params.get_bool("AutoPersonalityProfile") if tuning_level >= level["AutoPersonalityProfile"] else default.get_bool("AutoPersonalityProfile"))
+    
+    Dynamic_Personality = toggle.custom_personalities and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
+
+    
 
     custom_ui = params.get_bool("CustomUI") if tuning_level >= level["CustomUI"] else default.get_bool("CustomUI")
     toggle.acceleration_path = toggle.openpilot_longitudinal and (custom_ui and (params.get_bool("AccelerationPath") if tuning_level >= level["AccelerationPath"] else default.get_bool("AccelerationPath")) or toggle.debug_mode)
@@ -973,3 +978,4 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
