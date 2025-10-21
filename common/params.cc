@@ -322,6 +322,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"DriverCamera", PERSISTENT},
     {"DynamicPathWidth", PERSISTENT},
     {"DynamicPedalsOnUI", PERSISTENT},
+    {"DynamicPersonality", PERSISTENT},
     {"EngageVolume", PERSISTENT},
     {"ExperimentalGMTune", PERSISTENT},
     {"Fahrenheit", PERSISTENT},
@@ -729,3 +730,4 @@ void Params::asyncWriteThread() {
     put(p.first, p.second);
   }
 }
+
