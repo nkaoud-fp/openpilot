@@ -140,7 +140,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("AutomaticallyDownloadModels", "1", 1, "0"),
   ("AutomaticUpdates", "1", 0, "1"),
   ("AutoPersonalityProfile", "1", 2, "0"),
-  ("DynamicPersonality", "0", 1, "0"),
 
   ("AvailableModelNames", "", 1, ""),
   ("AvailableModels", "", 1, ""),
@@ -209,6 +208,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("DriverCamera", "0", 1, "0"),
   ("DynamicPathWidth", "0", 2, "0"),
   ("DynamicPedalsOnUI", "1", 1, "0"),
+  ("DynamicPersonality", "1", 2, "0"),
   ("EngageVolume", "101", 2, "101"),
   ("ExperimentalGMTune", "0", 2, "0"),
   ("ExperimentalLongitudinalEnabled", "0", 0, "0"),
@@ -978,5 +978,6 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
 
 
