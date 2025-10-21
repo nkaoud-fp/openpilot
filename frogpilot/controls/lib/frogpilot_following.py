@@ -34,7 +34,7 @@ class FrogPilotFollowing:
       CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
-      curve_factor = 2.0
+      curve_factor = 3.0 #2.0
 
       # Follow distance in seconds [Traffic Mode default, Relaxed Mode default]
       dynamic_follow = [0.5, 1.75]
