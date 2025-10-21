@@ -21,7 +21,51 @@ class FrogPilotFollowing:
     self.t_follow = 0
 
   def update(self, v_ego, sm, frogpilot_toggles):
-    if sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
+    #
+    #
+    # Dynamic Personality Mode
+    if sm["controlsState"].enabled and frogpilot_toggles.dynamic_personality:
+      # ======================================================================
+      # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
+      # ======================================================================
+      
+      # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
+      curve_factor = 2.0
+
+      # Follow distance in seconds [Traffic Mode default, Relaxed Mode default]
+      dynamic_follow = [0.5, 1.75]
+
+      # Jerk multipliers [Traffic Mode default, Relaxed Mode default]
+      dynamic_jerk_acceleration     = [0.5, 1.0]
+      dynamic_jerk_deceleration     = [0.5, 1.0]
+      dynamic_jerk_danger           = [1.0, 1.0]
+      dynamic_jerk_speed            = [0.5, 1.0]
+      dynamic_jerk_speed_decrease   = [0.5, 1.0]
+
+      # ======================================================================
+      # ======================= END OF CUSTOM VALUES =========================
+      # ======================================================================
+
+      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
+      normalized_speed = np.clip(v_ego / CITY_SPEED_LIMIT, 0.0, 1.0)
+      
+      # Apply the curve factor to create the eased transition
+      eased_speed = normalized_speed ** curve_factor
+
+      # Interpolate all values using your custom curve
+      self.t_follow = np.interp(eased_speed, [0, 1], dynamic_follow)
+
+      if sm["carState"].aEgo >= 0:
+        self.base_acceleration_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_acceleration)
+        self.base_speed_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_speed)
+      else:
+        self.base_acceleration_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_deceleration)
+        self.base_speed_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_speed_decrease)
+      
+      self.base_danger_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_danger)
+
+    # Traffic Mode
+    elif sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
       if sm["carState"].aEgo >= 0:
         self.base_acceleration_jerk = float(np.interp(v_ego, TRAFFIC_MODE_BP, frogpilot_toggles.traffic_mode_jerk_acceleration))
         self.base_speed_jerk = float(np.interp(v_ego, TRAFFIC_MODE_BP, frogpilot_toggles.traffic_mode_jerk_speed))
