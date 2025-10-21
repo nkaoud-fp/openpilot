@@ -127,6 +127,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"ResetRelaxedPersonality", tr("Reset to Defaults"), tr("<b>Reset the \"Relaxed\" profile to defaults.</b>"), ""},
 
     {"AutoPersonalityProfile", tr("Auto Personality"), tr("Automatically switch between personality profiles based on your speed."), "../../frogpilot/assets/stock_theme/distance_icons/auto.png"},
+    {"DynamicPersonality", tr("Dynamic Personality"), tr("Dynamicly adjust personality parameters based on your speed."), "../../frogpilot/assets/stock_theme/distance_icons/auto.png"},
 
 
     {"LongitudinalTune", tr("Longitudinal Tuning"), tr("<b>Acceleration and braking control changes</b> to fine-tune how openpilot drives."), "../../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
@@ -885,6 +886,8 @@ void FrogPilotLongitudinalPanel::updateToggles() {
         toggles["RelaxedPersonalityProfile"]->setVisible(true);
       } else if (customDrivingPersonalityKeys.find(key) != customDrivingPersonalityKeys.end()) {
         toggles["AutoPersonalityProfile"]->setVisible(true);
+      } else if (customDrivingPersonalityKeys.find(key) != customDrivingPersonalityKeys.end()) {
+        toggles["DynamicPersonality"]->setVisible(true);
       } else if (speedLimitControllerKeys.contains(key)) {
         toggles["SpeedLimitController"]->setVisible(true);
       } else if (speedLimitControllerOffsetsKeys.contains(key)) {
@@ -905,3 +908,4 @@ void FrogPilotLongitudinalPanel::updateToggles() {
 
   update();
 }
+
