@@ -57,22 +57,22 @@ class FrogPilotFollowing:
       # ======================================================================
 
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
-      normalized_speed = np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0)
+      normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
       
       # Apply the curve factor to create the eased transition
       eased_speed = normalized_speed ** curve_factor
 
       # Interpolate all values using your custom curve
-      self.t_follow = np.interp(eased_speed, [0, 1], dynamic_follow)
+      self.t_follow = float(np.interp(eased_speed, [0, 1], dynamic_follow))
 
       if sm["carState"].aEgo >= 0:
-        self.base_acceleration_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_acceleration)
-        self.base_speed_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_speed)
+        self.base_acceleration_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_acceleration))
+        self.base_speed_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_speed))
       else:
-        self.base_acceleration_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_deceleration)
-        self.base_speed_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_speed_decrease)
+        self.base_acceleration_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_deceleration))
+        self.base_speed_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_speed_decrease))
       
-      self.base_danger_jerk = np.interp(eased_speed, [0, 1], dynamic_jerk_danger)
+      self.base_danger_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_danger))
 
     # Traffic Mode
     elif sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
