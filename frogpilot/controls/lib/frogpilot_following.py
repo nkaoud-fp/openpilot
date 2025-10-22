@@ -4,12 +4,15 @@ import numpy as np
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE, STOP_DISTANCE, desired_follow_distance, get_jerk_factor, get_T_FOLLOW
 
 from openpilot.frogpilot.common.frogpilot_variables import CITY_SPEED_LIMIT
+from openpilot.common.params import Params
+
 
 TRAFFIC_MODE_BP = [0., CITY_SPEED_LIMIT]
 
 class FrogPilotFollowing:
   def __init__(self, FrogPilotPlanner):
     self.frogpilot_planner = FrogPilotPlanner
+    self.params = Params()  
 
     self.following_lead = False
     self.slower_lead = False
@@ -24,7 +27,10 @@ class FrogPilotFollowing:
     #
     #
     # Dynamic Personality Mode
-    if sm["controlsState"].enabled and frogpilot_toggles.dynamic_personality:
+    dynamic_personality_mode = self.params.get_bool("DynamicPersonality")
+
+    #if sm["controlsState"].enabled and frogpilot_toggles.dynamic_personality:
+    if sm["controlsState"].enabled and dynamic_personality_mode:
       # ======================================================================
       # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
       # ======================================================================
