@@ -135,7 +135,7 @@ class FrogPilotFollowing:
       # This multiplier INCREASES t_follow. A larger value means an earlier reaction.
       # 1.3 = 30% increase in desired follow time
       # 1.5 = 50% increase in desired follow time
-      stopped_car_factor = 2 #1.5
+      stopped_car_factor = 1 # 2 #1.5
       self.t_follow *= stopped_car_factor
 
       # Define the distance breakpoints and the corresponding follow time multipliers.
