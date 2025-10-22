@@ -135,7 +135,7 @@ class FrogPilotFollowing:
       # This multiplier INCREASES t_follow. A larger value means an earlier reaction.
       # 1.3 = 30% increase in desired follow time
       # 1.5 = 50% increase in desired follow time
-      stopped_car_factor = 1 # 2 #1.5
+      stopped_car_factor = 1 # 2 #1.5 #### set to 1 to temporarily disable Stopped Car LOGIC
       self.t_follow *= stopped_car_factor
 
       # Define the distance breakpoints and the corresponding follow time multipliers.
@@ -191,8 +191,10 @@ class FrogPilotFollowing:
       dynamic_coasting_buffer = v_ego * CoastingBufferTime
       # 4. Calculate the modified distance_factor with the dynamic buffer
       base_distance = lead_distance - ((v_lead * self.t_follow) - dynamic_coasting_buffer)
+
+      ###distance_factor = max(1, base_distance * RampBroadness) ## to temporarily disable softer breaking 
+      distance_factor = max(lead_distance - (v_lead * self.t_follow), 1)
       
-      distance_factor = max(1, base_distance * RampBroadness)
       braking_offset = float(np.clip(min(v_ego - v_lead, v_lead) - COMFORT_BRAKE, 1, distance_factor))
 
       if frogpilot_toggles.human_following:
