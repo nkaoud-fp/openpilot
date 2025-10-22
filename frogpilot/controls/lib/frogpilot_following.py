@@ -41,6 +41,12 @@ class FrogPilotFollowing:
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       curve_factor = 3.0 #2.0
+      cf_follow =  3.0 #2.0
+      cf_jerk_acceleration     =  3.0 #2.0
+      cf_jerk_deceleration     =  3.0 #2.0
+      cf_jerk_danger           =  3.0 #2.0
+      cf_jerk_speed            =  3.0 #2.0
+      cf_jerk_speed_decrease   =  3.0 #2.0
 
       # Follow distance in seconds [Traffic Mode default, Relaxed Mode default]
       dynamic_follow = [0.5, 1.75]
@@ -61,6 +67,13 @@ class FrogPilotFollowing:
       
       # Apply the curve factor to create the eased transition
       eased_speed = normalized_speed ** curve_factor
+
+      es_cf_follow = normalized_speed ** cf_follow
+      es_cf_jerk_acceleration   = normalized_speed ** cf_jerk_acceleration  
+      es_cf_jerk_deceleration  = normalized_speed ** cf_jerk_deceleration 
+      es_cf_jerk_danger   = normalized_speed ** cf_jerk_danger  
+      es_cf_jerk_speed   = normalized_speed ** cf_jerk_speed
+      es_cf_jerk_speed_decrease = normalized_speed ** cf_jerk_speed_decrease
 
       # Interpolate all values using your custom curve
       self.t_follow = float(np.interp(eased_speed, [0, 1], dynamic_follow))
