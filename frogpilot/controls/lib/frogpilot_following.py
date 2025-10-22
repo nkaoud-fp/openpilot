@@ -40,7 +40,7 @@ class FrogPilotFollowing:
       CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
-      curve_factor = 3.0 #2.0
+      #curve_factor = 3.0 #2.0
       cf_follow =  3.0 #2.0
       cf_jerk_acceleration     =  3.0 #2.0
       cf_jerk_deceleration     =  3.0 #2.0
@@ -66,7 +66,7 @@ class FrogPilotFollowing:
       normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
       
       # Apply the curve factor to create the eased transition
-      eased_speed = normalized_speed ** curve_factor
+      #eased_speed = normalized_speed ** curve_factor
 
       es_cf_follow = normalized_speed ** cf_follow
       es_cf_jerk_acceleration   = normalized_speed ** cf_jerk_acceleration  
