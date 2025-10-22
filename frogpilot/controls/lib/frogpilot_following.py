@@ -76,16 +76,16 @@ class FrogPilotFollowing:
       es_cf_jerk_speed_decrease = normalized_speed ** cf_jerk_speed_decrease
 
       # Interpolate all values using your custom curve
-      self.t_follow = float(np.interp(eased_speed, [0, 1], dynamic_follow))
+      self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
 
       if sm["carState"].aEgo >= 0:
-        self.base_acceleration_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_acceleration))
-        self.base_speed_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_speed))
+        self.base_acceleration_jerk = float(np.interp(es_cf_jerk_acceleration, [0, 1], dynamic_jerk_acceleration))
+        self.base_speed_jerk = float(np.interp(es_cf_jerk_speed, [0, 1], dynamic_jerk_speed))
       else:
-        self.base_acceleration_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_deceleration))
-        self.base_speed_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_speed_decrease))
+        self.base_acceleration_jerk = float(np.interp(es_cf_jerk_deceleration, [0, 1], dynamic_jerk_deceleration))
+        self.base_speed_jerk = float(np.interp(es_cf_jerk_speed_decrease, [0, 1], dynamic_jerk_speed_decrease))
       
-      self.base_danger_jerk = float(np.interp(eased_speed, [0, 1], dynamic_jerk_danger))
+      self.base_danger_jerk = float(np.interp(es_cf_jerk_danger, [0, 1], dynamic_jerk_danger))
 
     # Traffic Mode
     elif sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
