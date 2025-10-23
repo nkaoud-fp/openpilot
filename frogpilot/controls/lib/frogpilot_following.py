@@ -37,7 +37,14 @@ class FrogPilotFollowing:
 
       
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
-      CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
+      #CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
+      speedlimit_follow              = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_acceleration   = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_deceleration   = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_speed          = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_speed_decrease = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_danger         = 35 # 125 kph (35 * 3.6 )
+      
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       #curve_factor = 3.0 #2.0
@@ -62,17 +69,23 @@ class FrogPilotFollowing:
       # ======================================================================
 
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
-      normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
+      #normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
+      ns_follow = float(np.clip(v_ego / speedlimit_follow, 0.0, 1.0))
+      ns_jerk_acceleration = float(np.clip(v_ego / speedlimit_jerk_acceleration , 0.0, 1.0))
+      ns_jerk_deceleration = float(np.clip(v_ego / speedlimit_jerk_deceleration , 0.0, 1.0))
+      ns_jerk_danger = float(np.clip(v_ego / speedlimit_jerk_danger , 0.0, 1.0))
+      ns_jerk_speed = float(np.clip(v_ego / speedlimit_jerk_speed , 0.0, 1.0))
+      ns_jerk_speed_decrease = float(np.clip(v_ego / speedlimit_jerk_speed_decrease , 0.0, 1.0))
       
       # Apply the curve factor to create the eased transition
       #eased_speed = normalized_speed ** curve_factor
 
-      es_cf_follow = normalized_speed ** cf_follow
-      es_cf_jerk_acceleration   = normalized_speed ** cf_jerk_acceleration  
-      es_cf_jerk_deceleration  = normalized_speed ** cf_jerk_deceleration 
-      es_cf_jerk_danger   = normalized_speed ** cf_jerk_danger  
-      es_cf_jerk_speed   = normalized_speed ** cf_jerk_speed
-      es_cf_jerk_speed_decrease = normalized_speed ** cf_jerk_speed_decrease
+      es_cf_follow = ns_follow ** cf_follow
+      es_cf_jerk_acceleration   = ns_jerk_acceleration ** cf_jerk_acceleration  
+      es_cf_jerk_deceleration  = ns_jerk_deceleration ** cf_jerk_deceleration 
+      es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
+      es_cf_jerk_speed   = ns_jerk_speed ** cf_jerk_speed
+      es_cf_jerk_speed_decrease = ns_jerk_speed_decrease ** cf_jerk_speed_decrease
 
       # Interpolate all values using your custom curve
       self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
