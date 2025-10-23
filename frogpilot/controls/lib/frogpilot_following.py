@@ -52,7 +52,7 @@ class FrogPilotFollowing:
       # multipliers [Traffic Mode default, Relaxed Mode default]
       dynamic_follow                = [0.5, 1.75]    #[0.5, 1.75]
       dynamic_jerk_acceleration     = [0.5, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_deceleration     = [0.5, 1.0]    #[0.5, 1.0]
+      dynamic_jerk_deceleration     = [1.0, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
