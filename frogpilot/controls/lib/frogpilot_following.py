@@ -41,29 +41,27 @@ class FrogPilotFollowing:
       speedlimit_follow              = 35 # 125 kph (35 * 3.6 )
       speedlimit_jerk_acceleration   = 35 # 125 kph (35 * 3.6 )
       speedlimit_jerk_deceleration   = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_danger         = 35 # 125 kph (35 * 3.6 )
       speedlimit_jerk_speed          = 35 # 125 kph (35 * 3.6 )
       speedlimit_jerk_speed_decrease = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_danger         = 35 # 125 kph (35 * 3.6 )
-      
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       #curve_factor = 3.0 #2.0
       cf_follow                =  1.3 #2.0
       cf_jerk_acceleration     =  0.8 #2.0
       cf_jerk_deceleration     =  0.6 #2.0
+      cf_jerk_danger           =  1.5 #2.0
       cf_jerk_speed            =  0.7 #2.0
       cf_jerk_speed_decrease   =  1.2 #2.0
-      cf_jerk_danger           =  1.5 #2.0
-
 
       # multipliers [Traffic Mode default, Relaxed Mode default]
       dynamic_follow                = [0.5, 1.75]    #[0.5, 1.75]
       dynamic_jerk_acceleration     = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_deceleration     = [0.75, 1.0]    #[0.5, 1.0]
+      dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
       dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
-
+      
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
       # ======================================================================
