@@ -39,28 +39,28 @@ class FrogPilotFollowing:
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
       #CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
       speedlimit_follow              = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_acceleration   = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_deceleration   = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_danger         = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_speed          = 35 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_speed_decrease = 35 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_acceleration   = 20 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_deceleration   = 20 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_speed          = 20 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_speed_decrease = 30 # 125 kph (35 * 3.6 )
+      speedlimit_jerk_danger         = 25 # 125 kph (35 * 3.6 )
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       #curve_factor = 3.0 #2.0
       cf_follow                =  1.3 #2.0
       cf_jerk_acceleration     =  0.8 #2.0
       cf_jerk_deceleration     =  0.6 #2.0
-      cf_jerk_danger           =  1.5 #2.0
       cf_jerk_speed            =  0.7 #2.0
       cf_jerk_speed_decrease   =  1.2 #2.0
+      cf_jerk_danger           =  1.5 #2.0
 
       # multipliers [Traffic Mode default, Relaxed Mode default]
       dynamic_follow                = [0.5, 1.75]    #[0.5, 1.75]
       dynamic_jerk_acceleration     = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_deceleration     = [0.75, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
       dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
+      dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
       
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
@@ -71,9 +71,9 @@ class FrogPilotFollowing:
       ns_follow = float(np.clip(v_ego / speedlimit_follow, 0.0, 1.0))
       ns_jerk_acceleration = float(np.clip(v_ego / speedlimit_jerk_acceleration , 0.0, 1.0))
       ns_jerk_deceleration = float(np.clip(v_ego / speedlimit_jerk_deceleration , 0.0, 1.0))
-      ns_jerk_danger = float(np.clip(v_ego / speedlimit_jerk_danger , 0.0, 1.0))
       ns_jerk_speed = float(np.clip(v_ego / speedlimit_jerk_speed , 0.0, 1.0))
       ns_jerk_speed_decrease = float(np.clip(v_ego / speedlimit_jerk_speed_decrease , 0.0, 1.0))
+      ns_jerk_danger = float(np.clip(v_ego / speedlimit_jerk_danger , 0.0, 1.0))
       
       # Apply the curve factor to create the eased transition
       #eased_speed = normalized_speed ** curve_factor
@@ -81,9 +81,9 @@ class FrogPilotFollowing:
       es_cf_follow = ns_follow ** cf_follow
       es_cf_jerk_acceleration   = ns_jerk_acceleration ** cf_jerk_acceleration  
       es_cf_jerk_deceleration  = ns_jerk_deceleration ** cf_jerk_deceleration 
-      es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
       es_cf_jerk_speed   = ns_jerk_speed ** cf_jerk_speed
       es_cf_jerk_speed_decrease = ns_jerk_speed_decrease ** cf_jerk_speed_decrease
+      es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
 
       # Interpolate all values using your custom curve
       self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
