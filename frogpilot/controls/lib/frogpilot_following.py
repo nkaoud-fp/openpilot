@@ -203,8 +203,8 @@ class FrogPilotFollowing:
       # 4. Calculate the modified distance_factor with the dynamic buffer
       base_distance = lead_distance - ((v_lead * self.t_follow) - dynamic_coasting_buffer)
 
-      ###distance_factor = max(1, base_distance * RampBroadness) ## to temporarily disable softer breaking 
-      distance_factor = max(lead_distance - (v_lead * self.t_follow), 1)
+      ###distance_factor = max(1, base_distance * RampBroadness) ## uncomment to resume softer breaking 
+      distance_factor = max(lead_distance - (v_lead * self.t_follow), 1) ## to temporarily disable softer breaking 
       
       braking_offset = float(np.clip(min(v_ego - v_lead, v_lead) - COMFORT_BRAKE, 1, distance_factor))
 
