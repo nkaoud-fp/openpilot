@@ -50,7 +50,7 @@ class FrogPilotFollowing:
       cf_follow                =  1.15#2.0
       cf_jerk_acceleration     =  0.8 #2.0
       cf_jerk_deceleration     =  0.6 #2.0
-      cf_jerk_speed            =  0.3 #2.0
+      cf_jerk_speed            =  0.45#2.0
       cf_jerk_speed_decrease   =  1.2 #2.0
       cf_jerk_danger           =  1.5 #2.0
 
