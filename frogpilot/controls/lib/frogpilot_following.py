@@ -38,7 +38,7 @@ class FrogPilotFollowing:
       
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
       #CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
-      speedlimit_follow              = 35 # 125 kph (35 * 3.6 )
+      speedlimit_follow              = 40 # 125 kph (35 * 3.6 )
       speedlimit_jerk_acceleration   = 20 # 125 kph (35 * 3.6 )
       speedlimit_jerk_deceleration   = 20 # 125 kph (35 * 3.6 )
       speedlimit_jerk_speed          = 20 # 125 kph (35 * 3.6 )
@@ -47,7 +47,7 @@ class FrogPilotFollowing:
       
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       #curve_factor = 3.0 #2.0
-      cf_follow                =  1.3 #2.0
+      cf_follow                =  1.15#2.0
       cf_jerk_acceleration     =  0.8 #2.0
       cf_jerk_deceleration     =  0.6 #2.0
       cf_jerk_speed            =  0.5 #2.0
