@@ -60,7 +60,7 @@ class FrogPilotFollowing:
       dynamic_jerk_deceleration     = [0.65, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_danger           = [0.75, 1.0]    #[1, 1.0]
+      dynamic_jerk_danger           = [0.85, 1.0]    #[1, 1.0]
       
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
