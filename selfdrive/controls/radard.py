@@ -118,7 +118,8 @@ class Track:
       return -self.yRel > right_lane
 
   def potential_far_lead(self, standstill: bool, model_data: capnp._DynamicStructReader):
-    if standstill or self.vLead < 1 or abs(self.yRel) > 1:
+    if standstill or self.vLead < 1:
+    #if standstill or self.vLead < 1 or abs(self.yRel) > 1:   # replaced to improve lead detection by removing limitation
       return False
 
     left_lane = interp(self.dRel, model_data.laneLines[1].x, model_data.laneLines[1].y)
