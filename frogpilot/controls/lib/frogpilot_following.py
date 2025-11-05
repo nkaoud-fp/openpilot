@@ -48,7 +48,7 @@ class FrogPilotFollowing:
       # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
       #curve_factor = 3.0 #2.0
       cf_follow                =  1.15#2.0
-      cf_jerk_acceleration     =  0.8 #2.0
+      cf_jerk_acceleration     =  0.4 #2.0
       cf_jerk_deceleration     =  0.6 #2.0
       cf_jerk_speed            =  0.45#2.0
       cf_jerk_speed_decrease   =  1.2 #2.0
