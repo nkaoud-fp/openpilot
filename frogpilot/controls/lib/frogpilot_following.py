@@ -35,6 +35,12 @@ class FrogPilotFollowing:
       # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
       # ======================================================================
 
+      #dynamic_follow: Sets the time gap in seconds you want to maintain behind the car in front of you (lower is a closer follow distance). ⏱️
+      #dynamic_jerk_acceleration: Controls how smoothly or aggressively the car speeds up when accelerating normally (lower is More Aggressive).
+      #dynamic_jerk_deceleration: Manages how smoothly or abruptly the car slows down or brakes in normal traffic (lower is More Aggressive).
+      #dynamic_jerk_speed: Dictates how quickly the car responds when increasing its set speed (lower is a More Aggressive increase).
+      #dynamic_jerk_speed_decrease: Determines how quickly the car reacts when decreasing its set speed (lower is a More Aggressive decrease).
+      #dynamic_jerk_danger: Governs how aggressively the car will brake in an emergency to avoid a collision (lower is a less aggressive response). ⚠️
       
       # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
       #CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
@@ -44,15 +50,7 @@ class FrogPilotFollowing:
       speedlimit_jerk_speed          = 20 # 125 kph (35 * 3.6 )
       speedlimit_jerk_speed_decrease = 30 # 125 kph (35 * 3.6 )
       speedlimit_jerk_danger         = 25 # 125 kph (35 * 3.6 )
-      
-      # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
-      #curve_factor = 3.0 #2.0
-      cf_follow                =  1.15#2.0
-      cf_jerk_acceleration     =  0.4 #2.0
-      cf_jerk_deceleration     =  0.6 #2.0
-      cf_jerk_speed            =  0.45#2.0
-      cf_jerk_speed_decrease   =  1.2 #2.0
-      cf_jerk_danger           =  1.5 #2.0
+
 
       # multipliers [Traffic Mode default, Relaxed Mode default]
       dynamic_follow                = [0.45, 1.75]    #[0.5, 1.75]
@@ -61,6 +59,18 @@ class FrogPilotFollowing:
       dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
       dynamic_jerk_danger           = [0.85, 1.0]    #[1, 1.0]
+
+      
+      # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
+      #curve_factor = 3.0 #2.0
+      cf_follow                =  1.15#2.0
+      cf_jerk_acceleration     =  0.4 #2.0
+      cf_jerk_deceleration     =  0.6 #2.0
+      cf_jerk_speed            =  0.45#2.0
+      cf_jerk_speed_decrease   =  0.5 #1.2 #2.0
+      cf_jerk_danger           =  1.5 #2.0
+
+
       
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
