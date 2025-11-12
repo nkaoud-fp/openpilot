@@ -727,7 +727,35 @@ class FrogPilotVariables:
     #toggle.dynamic_personality = toggle.custom_personalities and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
     toggle.dynamic_personality = toggle.openpilot_longitudinal and (params.get_bool("DynamicPersonality") if tuning_level >= level["DynamicPersonality"] else default.get_bool("DynamicPersonality"))
     
+    # ADD ALL YOUR NEW PARAMS HERE
+    # This logic reads them only if the main "DynamicPersonality" toggle is on
+    toggle.dy_speedlimit_follow = float(params.get("dy_speedlimit_follow", "40.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_follow")
+    toggle.dy_speedlimit_jerk_acceleration = float(params.get("dy_speedlimit_jerk_acceleration", "20.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_jerk_acceleration")
+    toggle.dy_speedlimit_jerk_deceleration = float(params.get("dy_speedlimit_jerk_deceleration", "20.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_jerk_deceleration")
+    toggle.dy_speedlimit_jerk_speed = float(params.get("dy_speedlimit_jerk_speed", "20.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_jerk_speed")
+    toggle.dy_speedlimit_jerk_speed_decrease = float(params.get("dy_speedlimit_jerk_speed_decrease", "30.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_jerk_speed_decrease")
+    toggle.dy_speedlimit_jerk_danger = float(params.get("dy_speedlimit_jerk_danger", "25.0")) if toggle.dynamic_personality else default.get_float("dy_speedlimit_jerk_danger")
 
+    toggle.dy_dynamic_follow_min = float(params.get("dy_dynamic_follow_min", "0.40")) if toggle.dynamic_personality else default.get_float("dy_dynamic_follow_min")
+    toggle.dy_dynamic_follow_max = float(params.get("dy_dynamic_follow_max", "1.75")) if toggle.dynamic_personality else default.get_float("dy_dynamic_follow_max")
+    toggle.dy_dynamic_jerk_acceleration_min = float(params.get("dy_dynamic_jerk_acceleration_min", "0.65")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_acceleration_min")
+    toggle.dy_dynamic_jerk_acceleration_max = float(params.get("dy_dynamic_jerk_acceleration_max", "1.0")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_acceleration_max")
+    toggle.dy_dynamic_jerk_deceleration_min = float(params.get("dy_dynamic_jerk_deceleration_min", "0.65")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_deceleration_min")
+    toggle.dy_dynamic_jerk_deceleration_max = float(params.get("dy_dynamic_jerk_deceleration_max", "1.0")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_deceleration_max")
+    toggle.dy_dynamic_jerk_speed_min = float(params.get("dy_dynamic_jerk_speed_min", "0.5")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_speed_min")
+    toggle.dy_dynamic_jerk_speed_max = float(params.get("dy_dynamic_jerk_speed_max", "1.0")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_speed_max")
+    toggle.dy_dynamic_jerk_speed_decrease_min = float(params.get("dy_dynamic_jerk_speed_decrease_min", "0.5")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_speed_decrease_min")
+    toggle.dy_dynamic_jerk_speed_decrease_max = float(params.get("dy_dynamic_jerk_speed_decrease_max", "1.0")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_speed_decrease_max")
+    toggle.dy_dynamic_jerk_danger_min = float(params.get("dy_dynamic_jerk_danger_min", "0.85")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_danger_min")
+    toggle.dy_dynamic_jerk_danger_max = float(params.get("dy_dynamic_jerk_danger_max", "1.0")) if toggle.dynamic_personality else default.get_float("dy_dynamic_jerk_danger_max")
+
+    toggle.dy_cf_follow = float(params.get("dy_cf_follow", "1.15")) if toggle.dynamic_personality else default.get_float("dy_cf_follow")
+    toggle.dy_cf_jerk_acceleration = float(params.get("dy_cf_jerk_acceleration", "0.6")) if toggle.dynamic_personality else default.get_float("dy_cf_jerk_acceleration")
+    toggle.dy_cf_jerk_deceleration = float(params.get("dy_cf_jerk_deceleration", "0.6")) if toggle.dynamic_personality else default.get_float("dy_cf_jerk_deceleration")
+    toggle.dy_cf_jerk_speed = float(params.get("dy_cf_jerk_speed", "0.45")) if toggle.dynamic_personality else default.get_float("dy_cf_jerk_speed")
+    toggle.dy_cf_jerk_speed_decrease = float(params.get("dy_cf_jerk_speed_decrease", "1.2")) if toggle.dynamic_personality else default.get_float("dy_cf_jerk_speed_decrease")
+    toggle.dy_cf_jerk_danger = float(params.get("dy_cf_jerk_danger", "1.5")) if toggle.dynamic_personality else default.get_float("dy_cf_jerk_danger")
+    
     custom_ui = params.get_bool("CustomUI") if tuning_level >= level["CustomUI"] else default.get_bool("CustomUI")
     toggle.acceleration_path = toggle.openpilot_longitudinal and (custom_ui and (params.get_bool("AccelerationPath") if tuning_level >= level["AccelerationPath"] else default.get_bool("AccelerationPath")) or toggle.debug_mode)
     toggle.adjacent_paths = custom_ui and (params.get_bool("AdjacentPath") if tuning_level >= level["AdjacentPath"] else default.get_bool("AdjacentPath"))
@@ -1004,6 +1032,7 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
 
 
 
