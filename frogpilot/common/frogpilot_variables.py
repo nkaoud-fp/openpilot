@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
-import numpy as np
+import numpy as enga
+
 import random
 
 from functools import cache
@@ -209,6 +210,30 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("DynamicPathWidth", "0", 2, "0"),
   ("DynamicPedalsOnUI", "1", 1, "0"),
   ("DynamicPersonality", "1", 2, "0"),
+  ("dy_speedlimit_follow", "40.0", 2, "40.0"),
+  ("dy_speedlimit_jerk_acceleration", "20.0", 2, "20.0"),
+  ("dy_speedlimit_jerk_deceleration", "20.0", 2, "20.0"),
+  ("dy_speedlimit_jerk_speed", "20.0", 2, "20.0"),
+  ("dy_speedlimit_jerk_speed_decrease", "30.0", 2, "30.0"),
+  ("dy_speedlimit_jerk_danger", "25.0", 2, "25.0"),
+  ("dy_dynamic_follow_min", "0.40", 2, "0.40"),
+  ("dy_dynamic_follow_max", "1.75", 2, "1.75"),
+  ("dy_dynamic_jerk_acceleration_min", "0.65", 2, "0.65"),
+  ("dy_dynamic_jerk_acceleration_max", "1.0", 2, "1.0"),
+  ("dy_dynamic_jerk_deceleration_min", "0.65", 2, "0.65"),
+  ("dy_dynamic_jerk_deceleration_max", "1.0", 2, "1.0"),
+  ("dy_dynamic_jerk_speed_min", "0.5", 2, "0.5"),
+  ("dy_dynamic_jerk_speed_max", "1.0", 2, "1.0"),
+  ("dy_dynamic_jerk_speed_decrease_min", "0.5", 2, "0.5"),
+  ("dy_dynamic_jerk_speed_decrease_max", "1.0", 2, "1.0"),
+  ("dy_dynamic_jerk_danger_min", "0.85", 2, "0.85"),
+  ("dy_dynamic_jerk_danger_max", "1.0", 2, "1.0"),
+  ("dy_cf_follow", "1.15", 2, "1.15"),
+  ("dy_cf_jerk_acceleration", "0.6", 2, "0.6"),
+  ("dy_cf_jerk_deceleration", "0.6", 2, "0.6"),
+  ("dy_cf_jerk_speed", "0.45", 2, "0.45"),
+  ("dy_cf_jerk_speed_decrease", "1.2", 2, "1.2"),
+  ("dy_cf_jerk_danger", "1.5", 2, "1.5"),
   ("EngageVolume", "101", 2, "101"),
   ("ExperimentalGMTune", "0", 2, "0"),
   ("ExperimentalLongitudinalEnabled", "0", 0, "0"),
@@ -979,6 +1004,7 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
 
 
 
