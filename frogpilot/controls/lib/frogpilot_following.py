@@ -27,56 +27,55 @@ class FrogPilotFollowing:
     #
     #
     # Dynamic Personality Mode
-    dynamic_personality_mode = self.params.get_bool("DynamicPersonality")
+dynamic_personality_mode = frogpilot_toggles.dynamic_personality
 
-    #if sm["controlsState"].enabled and frogpilot_toggles.dynamic_personality:
     if sm["controlsState"].enabled and dynamic_personality_mode:
       # ======================================================================
-      # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
+      # ========= READ VALUES FROM frogpilot_toggles, NOT self.params =========
       # ======================================================================
 
-      # Read tunable values from params
+      # Read tunable values from RAM (fast)
       # Speed Limits
-      speedlimit_follow = float(self.params.get("dy_speedlimit_follow", "40.0"))
-      speedlimit_jerk_acceleration = float(self.params.get("dy_speedlimit_jerk_acceleration", "20.0"))
-      speedlimit_jerk_deceleration = float(self.params.get("dy_speedlimit_jerk_deceleration", "20.0"))
-      speedlimit_jerk_speed = float(self.params.get("dy_speedlimit_jerk_speed", "20.0"))
-      speedlimit_jerk_speed_decrease = float(self.params.get("dy_speedlimit_jerk_speed_decrease", "30.0"))
-      speedlimit_jerk_danger = float(self.params.get("dy_speedlimit_jerk_danger", "25.0"))
+      speedlimit_follow = frogpilot_toggles.dy_speedlimit_follow
+      speedlimit_jerk_acceleration = frogpilot_toggles.dy_speedlimit_jerk_acceleration
+      speedlimit_jerk_deceleration = frogpilot_toggles.dy_speedlimit_jerk_deceleration
+      speedlimit_jerk_speed = frogpilot_toggles.dy_speedlimit_jerk_speed
+      speedlimit_jerk_speed_decrease = frogpilot_toggles.dy_speedlimit_jerk_speed_decrease
+      speedlimit_jerk_danger = frogpilot_toggles.dy_speedlimit_jerk_danger
 
       # Min/Max multipliers
       dynamic_follow = [
-        float(self.params.get("dy_dynamic_follow_min", "0.40")),
-        float(self.params.get("dy_dynamic_follow_max", "1.75"))
+        frogpilot_toggles.dy_dynamic_follow_min,
+        frogpilot_toggles.dy_dynamic_follow_max
       ]
       dynamic_jerk_acceleration = [
-        float(self.params.get("dy_dynamic_jerk_acceleration_min", "0.65")),
-        float(self.params.get("dy_dynamic_jerk_acceleration_max", "1.0"))
+        frogpilot_toggles.dy_dynamic_jerk_acceleration_min,
+        frogpilot_toggles.dy_dynamic_jerk_acceleration_max
       ]
       dynamic_jerk_deceleration = [
-        float(self.params.get("dy_dynamic_jerk_deceleration_min", "0.65")),
-        float(self.params.get("dy_dynamic_jerk_deceleration_max", "1.0"))
+        frogpilot_toggles.dy_dynamic_jerk_deceleration_min,
+        frogpilot_toggles.dy_dynamic_jerk_deceleration_max
       ]
       dynamic_jerk_speed = [
-        float(self.params.get("dy_dynamic_jerk_speed_min", "0.5")),
-        float(self.params.get("dy_dynamic_jerk_speed_max", "1.0"))
+        frogpilot_toggles.dy_dynamic_jerk_speed_min,
+        frogpilot_toggles.dy_dynamic_jerk_speed_max
       ]
       dynamic_jerk_speed_decrease = [
-        float(self.params.get("dy_dynamic_jerk_speed_decrease_min", "0.5")),
-        float(self.params.get("dy_dynamic_jerk_speed_decrease_max", "1.0"))
+        frogpilot_toggles.dy_dynamic_jerk_speed_decrease_min,
+        frogpilot_toggles.dy_dynamic_jerk_speed_decrease_max
       ]
       dynamic_jerk_danger = [
-        float(self.params.get("dy_dynamic_jerk_danger_min", "0.85")),
-        float(self.params.get("dy_dynamic_jerk_danger_max", "1.0"))
+        frogpilot_toggles.dy_dynamic_jerk_danger_min,
+        frogpilot_toggles.dy_dynamic_jerk_danger_max
       ]
 
       # Curve Factors
-      cf_follow = float(self.params.get("dy_cf_follow", "1.15"))
-      cf_jerk_acceleration = float(self.params.get("dy_cf_jerk_acceleration", "0.6"))
-      cf_jerk_deceleration = float(self.params.get("dy_cf_jerk_deceleration", "0.6"))
-      cf_jerk_speed = float(self.params.get("dy_cf_jerk_speed", "0.45"))
-      cf_jerk_speed_decrease = float(self.params.get("dy_cf_jerk_speed_decrease", "1.2"))
-      cf_jerk_danger = float(self.params.get("dy_cf_jerk_danger", "1.5"))
+      cf_follow = frogpilot_toggles.dy_cf_follow
+      cf_jerk_acceleration = frogpilot_toggles.dy_cf_jerk_acceleration
+      cf_jerk_deceleration = frogpilot_toggles.dy_cf_jerk_deceleration
+      cf_jerk_speed = frogpilot_toggles.dy_cf_jerk_speed
+      cf_jerk_speed_decrease = frogpilot_toggles.dy_cf_jerk_speed_decrease
+      cf_jerk_danger = frogpilot_toggles.dy_cf_jerk_danger
       
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
