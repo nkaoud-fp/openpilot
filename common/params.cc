@@ -323,6 +323,30 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"DynamicPathWidth", PERSISTENT},
     {"DynamicPedalsOnUI", PERSISTENT},
     {"DynamicPersonality", PERSISTENT},
+    {"dy_speedlimit_follow", PERSISTENT},
+    {"dy_speedlimit_jerk_acceleration", PERSISTENT},
+    {"dy_speedlimit_jerk_deceleration", PERSISTENT},
+    {"dy_speedlimit_jerk_speed", PERSISTENT},
+    {"dy_speedlimit_jerk_speed_decrease", PERSISTENT},
+    {"dy_speedlimit_jerk_danger", PERSISTENT},
+    {"dy_dynamic_follow_min", PERSISTENT},
+    {"dy_dynamic_follow_max", PERSISTENT},
+    {"dy_dynamic_jerk_acceleration_min", PERSISTENT},
+    {"dy_dynamic_jerk_acceleration_max", PERSISTENT},
+    {"dy_dynamic_jerk_deceleration_min", PERSISTENT},
+    {"dy_dynamic_jerk_deceleration_max", PERSISTENT},
+    {"dy_dynamic_jerk_speed_min", PERSISTENT},
+    {"dy_dynamic_jerk_speed_max", PERSISTENT},
+    {"dy_dynamic_jerk_speed_decrease_min", PERSISTENT},
+    {"dy_dynamic_jerk_speed_decrease_max", PERSISTENT},
+    {"dy_dynamic_jerk_danger_min", PERSISTENT},
+    {"dy_dynamic_jerk_danger_max", PERSISTENT},
+    {"dy_cf_follow", PERSISTENT},
+    {"dy_cf_jerk_acceleration", PERSISTENT},
+    {"dy_cf_jerk_deceleration", PERSISTENT},
+    {"dy_cf_jerk_speed", PERSISTENT},
+    {"dy_cf_jerk_speed_decrease", PERSISTENT},
+    {"dy_cf_jerk_danger", PERSISTENT},
     {"EngageVolume", PERSISTENT},
     {"ExperimentalGMTune", PERSISTENT},
     {"Fahrenheit", PERSISTENT},
@@ -730,4 +754,5 @@ void Params::asyncWriteThread() {
     put(p.first, p.second);
   }
 }
+
 
