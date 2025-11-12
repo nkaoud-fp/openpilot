@@ -35,42 +35,48 @@ class FrogPilotFollowing:
       # ========= EDIT YOUR CUSTOM VALUES FOR DYNAMIC PERSONALITY HERE =========
       # ======================================================================
 
-      #dynamic_follow: Sets the time gap in seconds you want to maintain behind the car in front of you (lower is a closer follow distance). ⏱️
-      #dynamic_jerk_acceleration: Controls how smoothly or aggressively the car speeds up when accelerating normally (lower is More Aggressive).
-      #dynamic_jerk_deceleration: Manages how smoothly or abruptly the car slows down or brakes in normal traffic (lower is More Aggressive).
-      #dynamic_jerk_speed: Dictates how quickly the car responds when increasing its set speed (lower is a More Aggressive increase).
-      #dynamic_jerk_speed_decrease: Determines how quickly the car reacts when decreasing its set speed (lower is a More Aggressive decrease).
-      #dynamic_jerk_danger: Governs how aggressively the car will brake in an emergency to avoid a collision (lower is a less aggressive response). ⚠️
-      
-      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT
-      #CITY_SPEED_LIMIT_DY = 35 # 125 kph (35 * 3.6 )
-      speedlimit_follow              = 40 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_acceleration   = 20 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_deceleration   = 20 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_speed          = 20 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_speed_decrease = 30 # 125 kph (35 * 3.6 )
-      speedlimit_jerk_danger         = 25 # 125 kph (35 * 3.6 )
+      # Read tunable values from params
+      # Speed Limits
+      speedlimit_follow = float(self.params.get("dy_speedlimit_follow", "40.0"))
+      speedlimit_jerk_acceleration = float(self.params.get("dy_speedlimit_jerk_acceleration", "20.0"))
+      speedlimit_jerk_deceleration = float(self.params.get("dy_speedlimit_jerk_deceleration", "20.0"))
+      speedlimit_jerk_speed = float(self.params.get("dy_speedlimit_jerk_speed", "20.0"))
+      speedlimit_jerk_speed_decrease = float(self.params.get("dy_speedlimit_jerk_speed_decrease", "30.0"))
+      speedlimit_jerk_danger = float(self.params.get("dy_speedlimit_jerk_danger", "25.0"))
 
+      # Min/Max multipliers
+      dynamic_follow = [
+        float(self.params.get("dy_dynamic_follow_min", "0.40")),
+        float(self.params.get("dy_dynamic_follow_max", "1.75"))
+      ]
+      dynamic_jerk_acceleration = [
+        float(self.params.get("dy_dynamic_jerk_acceleration_min", "0.65")),
+        float(self.params.get("dy_dynamic_jerk_acceleration_max", "1.0"))
+      ]
+      dynamic_jerk_deceleration = [
+        float(self.params.get("dy_dynamic_jerk_deceleration_min", "0.65")),
+        float(self.params.get("dy_dynamic_jerk_deceleration_max", "1.0"))
+      ]
+      dynamic_jerk_speed = [
+        float(self.params.get("dy_dynamic_jerk_speed_min", "0.5")),
+        float(self.params.get("dy_dynamic_jerk_speed_max", "1.0"))
+      ]
+      dynamic_jerk_speed_decrease = [
+        float(self.params.get("dy_dynamic_jerk_speed_decrease_min", "0.5")),
+        float(self.params.get("dy_dynamic_jerk_speed_decrease_max", "1.0"))
+      ]
+      dynamic_jerk_danger = [
+        float(self.params.get("dy_dynamic_jerk_danger_min", "0.85")),
+        float(self.params.get("dy_dynamic_jerk_danger_max", "1.0"))
+      ]
 
-      # multipliers [Traffic Mode default, Relaxed Mode default]
-      dynamic_follow                = [0.40, 1.75]    #[0.5, 1.75]
-      dynamic_jerk_acceleration     = [0.65, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_deceleration     = [0.65, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_speed            = [0.5, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_speed_decrease   = [0.5, 1.0]    #[0.5, 1.0]
-      dynamic_jerk_danger           = [0.85, 1.0]    #[1, 1.0]
-
-      
-      # The "steepness" of the curve. > 1.0 = slower start, < 1.0 = faster start
-      #curve_factor = 3.0 #2.0
-      cf_follow                =  1.15#2.0
-      cf_jerk_acceleration     =  0.6 #2.0
-      cf_jerk_deceleration     =  0.6 #2.0
-      cf_jerk_speed            =  0.45#2.0
-      cf_jerk_speed_decrease   =  1.2 #2.0
-      cf_jerk_danger           =  1.5 #2.0
-
-
+      # Curve Factors
+      cf_follow = float(self.params.get("dy_cf_follow", "1.15"))
+      cf_jerk_acceleration = float(self.params.get("dy_cf_jerk_acceleration", "0.6"))
+      cf_jerk_deceleration = float(self.params.get("dy_cf_jerk_deceleration", "0.6"))
+      cf_jerk_speed = float(self.params.get("dy_cf_jerk_speed", "0.45"))
+      cf_jerk_speed_decrease = float(self.params.get("dy_cf_jerk_speed_decrease", "1.2"))
+      cf_jerk_danger = float(self.params.get("dy_cf_jerk_danger", "1.5"))
       
       # ======================================================================
       # ======================= END OF CUSTOM VALUES =========================
