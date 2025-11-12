@@ -45,6 +45,14 @@ private:
   QSet<QString> conditionalExperimentalKeys = {"CESpeed", "CESpeedLead", "CECurves", "CELead", "CEModelStopTime", "CENavigation", "CESignalSpeed", "ShowCEMStatus"};
   QSet<QString> curveSpeedKeys = {"CalibratedLateralAcceleration", "CalibrationProgress", "ResetCurveData", "ShowCSCStatus"};
   QSet<QString> customDrivingPersonalityKeys = {"AutoPersonalityProfile", "AggressivePersonalityProfile", "DynamicPersonality" , "RelaxedPersonalityProfile", "StandardPersonalityProfile", "TrafficPersonalityProfile"};
+
+  QSet<QString> dynamicPersonalityKeys = {
+      "dy_speedlimit_follow", "dy_speedlimit_jerk_acceleration", "dy_speedlimit_jerk_deceleration", "dy_speedlimit_jerk_speed", "dy_speedlimit_jerk_speed_decrease", "dy_speedlimit_jerk_danger",
+      "dy_dynamic_follow_min", "dy_dynamic_follow_max", "dy_dynamic_jerk_acceleration_min", "dy_dynamic_jerk_acceleration_max", "dy_dynamic_jerk_deceleration_min", "dy_dynamic_jerk_deceleration_max",
+      "dy_dynamic_jerk_speed_min", "dy_dynamic_jerk_speed_max", "dy_dynamic_jerk_speed_decrease_min", "dy_dynamic_jerk_speed_decrease_max", "dy_dynamic_jerk_danger_min", "dy_dynamic_jerk_danger_max",
+      "dy_cf_follow", "dy_cf_jerk_acceleration", "dy_cf_jerk_deceleration", "dy_cf_jerk_speed", "dy_cf_jerk_speed_decrease", "dy_cf_jerk_danger"
+    };
+
   QSet<QString> longitudinalTuneKeys = {"AccelerationProfile", "DecelerationProfile", "HumanAcceleration", "HumanFollowing", "LeadDetectionThreshold", "MaxDesiredAcceleration", "TacoTune"};
   QSet<QString> qolKeys = {"CustomCruise", "CustomCruiseLong", "ForceStops", "IncreasedStoppedDistance", "MapGears", "ReverseCruise", "SetSpeedOffset"};
   QSet<QString> relaxedPersonalityKeys = {"RelaxedFollow", "RelaxedJerkAcceleration", "RelaxedJerkDeceleration", "RelaxedJerkDanger", "RelaxedJerkSpeed", "RelaxedJerkSpeedDecrease", "ResetRelaxedPersonality"};
@@ -76,4 +84,5 @@ private:
   Params params_default{"/dev/shm/params_default"};
   Params params_memory{"/dev/shm/params"};
 };
+
 
