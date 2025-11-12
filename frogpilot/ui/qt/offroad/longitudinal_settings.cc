@@ -24,6 +24,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotListWidget *conditionalExperimentalList = new FrogPilotListWidget(this);
   FrogPilotListWidget *curveSpeedList = new FrogPilotListWidget(this);
   FrogPilotListWidget *customDrivingPersonalityList = new FrogPilotListWidget(this);
+  FrogPilotListWidget *dynamicPersonalityList = new FrogPilotListWidget(this); // ADDED
   FrogPilotListWidget *longitudinalTuneList = new FrogPilotListWidget(this);
   FrogPilotListWidget *qolList = new FrogPilotListWidget(this);
   FrogPilotListWidget *relaxedPersonalityList = new FrogPilotListWidget(this);
@@ -39,6 +40,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   ScrollView *conditionalExperimentalPanel = new ScrollView(conditionalExperimentalList, this);
   ScrollView *curveSpeedPanel = new ScrollView(curveSpeedList, this);
   ScrollView *customDrivingPersonalityPanel = new ScrollView(customDrivingPersonalityList, this);
+  ScrollView *dynamicPersonalityPanel = new ScrollView(dynamicPersonalityList, this); // ADDED
   ScrollView *longitudinalTunePanel = new ScrollView(longitudinalTuneList, this);
   ScrollView *qolPanel = new ScrollView(qolList, this);
   ScrollView *relaxedPersonalityPanel = new ScrollView(relaxedPersonalityList, this);
@@ -54,6 +56,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   longitudinalLayout->addWidget(conditionalExperimentalPanel);
   longitudinalLayout->addWidget(curveSpeedPanel);
   longitudinalLayout->addWidget(customDrivingPersonalityPanel);
+  longitudinalLayout->addWidget(dynamicPersonalityPanel); // ADDED
   longitudinalLayout->addWidget(longitudinalTunePanel);
   longitudinalLayout->addWidget(qolPanel);
   longitudinalLayout->addWidget(relaxedPersonalityPanel);
@@ -128,6 +131,30 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
 
     {"AutoPersonalityProfile", tr("Auto Personality"), tr("Automatically switch between personality profiles based on your speed."), "../../frogpilot/assets/stock_theme/distance_icons/auto.png"},
     {"DynamicPersonality", tr("Dynamic Personality"), tr("Dynamicly adjust personality parameters based on your speed."), "../../frogpilot/assets/stock_theme/distance_icons/auto.png"},
+
+    // ADDED: Dynamic Personality Submenu Toggles
+    {"dy_speedlimit_follow", tr("Follow Speed Limit"), tr("<b>Upper speed limit for 'Follow'.</b><br><br>Default: 40 m/s"), ""},
+    {"dy_speedlimit_jerk_acceleration", tr("Accel Jerk Speed Limit"), tr("<b>Upper speed limit for 'Acceleration Jerk'.</b><br><br>Default: 20 m/s"), ""},
+    {"dy_speedlimit_jerk_deceleration", tr("Decel Jerk Speed Limit"), tr("<b>Upper speed limit for 'Deceleration Jerk'.</b><br><br>Default: 20 m/s"), ""},
+    {"dy_speedlimit_jerk_speed", tr("Speed Jerk Speed Limit"), tr("<b>Upper speed limit for 'Speed Jerk'.</b><br><br>Default: 20 m/s"), ""},
+    {"dy_speedlimit_jerk_speed_decrease", tr("Speed Decel Jerk Speed Limit"), tr("<b>Upper speed limit for 'Speed Decrease Jerk'.</b><br><br>Default: 30 m/s"), ""},
+    {"dy_speedlimit_jerk_danger", tr("Danger Jerk Speed Limit"), tr("<b>Upper speed limit for 'Danger Jerk'.</b><br><br>Default: 25 m/s"), ""},
+
+    {"dy_dynamic_follow_min", tr("Dynamic Follow (Min/Max)"), tr("<b>Min/Max 'Follow' values.</b><br><br>Default: 0.40s / 1.75s"), ""},
+    {"dy_dynamic_jerk_acceleration_min", tr("Dynamic Accel Jerk (Min/Max)"), tr("<b>Min/Max 'Acceleration Jerk' values.</b><br><br>Default: 0.65 / 1.0"), ""},
+    {"dy_dynamic_jerk_deceleration_min", tr("Dynamic Decel Jerk (Min/Max)"), tr("<b>Min/Max 'Deceleration Jerk' values.</b><br><br>Default: 0.65 / 1.0"), ""},
+    {"dy_dynamic_jerk_speed_min", tr("Dynamic Speed Jerk (Min/Max)"), tr("<b>Min/Max 'Speed Jerk' values.</b><br><br>Default: 0.5 / 1.0"), ""},
+    {"dy_dynamic_jerk_speed_decrease_min", tr("Dynamic Speed Decel Jerk (Min/Max)"), tr("<b>Min/Max 'Speed Decrease Jerk' values.</b><br><br>Default: 0.5 / 1.0"), ""},
+    {"dy_dynamic_jerk_danger_min", tr("Dynamic Danger Jerk (Min/Max)"), tr("<b>Min/Max 'Danger Jerk' values.</b><br><br>Default: 0.85 / 1.0"), ""},
+
+    {"dy_cf_follow", tr("Follow Curve Factor"), tr("<b>Curve factor for 'Follow'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 1.15"), ""},
+    {"dy_cf_jerk_acceleration", tr("Accel Jerk Curve Factor"), tr("<b>Curve factor for 'Acceleration Jerk'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 0.6"), ""},
+    {"dy_cf_jerk_deceleration", tr("Decel Jerk Curve Factor"), tr("<b>Curve factor for 'Deceleration Jerk'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 0.6"), ""},
+    {"dy_cf_jerk_speed", tr("Speed Jerk Curve Factor"), tr("<b>Curve factor for 'Speed Jerk'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 0.45"), ""},
+    {"dy_cf_jerk_speed_decrease", tr("Speed Decel Jerk Curve Factor"), tr("<b>Curve factor for 'Speed Decrease Jerk'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 1.2"), ""},
+    {"dy_cf_jerk_danger", tr("Danger Jerk Curve Factor"), tr("<b>Curve factor for 'Danger Jerk'.</b><br><br>< 1: faster progression, 1: linear, > 1: slower progression.<br><br>Default: 1.5"), ""},
+    // END ADDED
+    
 
 
     {"LongitudinalTune", tr("Longitudinal Tuning"), tr("<b>Acceleration and braking control changes</b> to fine-tune how openpilot drives."), "../../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
@@ -319,6 +346,73 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
         customPersonalityOpen = true;
       });
       longitudinalToggle = relaxedPersonalityToggle;
+
+    // ADDED: Handle DynamicPersonality Manage Button
+    } else if (param == "DynamicPersonality") {
+      FrogPilotManageControl *dynamicPersonalityToggle = new FrogPilotManageControl(param, title, desc, icon);
+      QObject::connect(dynamicPersonalityToggle, &FrogPilotManageControl::manageButtonClicked, [longitudinalLayout, dynamicPersonalityPanel, this]() {
+        openSubSubPanel();
+        longitudinalLayout->setCurrentWidget(dynamicPersonalityPanel);
+        customPersonalityOpen = true;
+      });
+      longitudinalToggle = dynamicPersonalityToggle;
+    // END ADDED
+
+    // ADDED: Create Dynamic Personality Controls
+    } else if (param == "dy_speedlimit_follow") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+    } else if (param == "dy_speedlimit_jerk_acceleration") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+    } else if (param == "dy_speedlimit_jerk_deceleration") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+    } else if (param == "dy_speedlimit_jerk_speed") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+    } else if (param == "dy_speedlimit_jerk_speed_decrease") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+    } else if (param == "dy_speedlimit_jerk_danger") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+
+    } else if (param == "dy_dynamic_follow_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_follow_max", tr("Max"), tr("Maximum 'Follow' value."), "", 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+    } else if (param == "dy_dynamic_jerk_acceleration_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_jerk_acceleration_max", tr("Max"), tr("Maximum 'Accel Jerk' value."), "", 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+    } else if (param == "dy_dynamic_jerk_deceleration_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_jerk_deceleration_max", tr("Max"), tr("Maximum 'Decel Jerk' value."), "", 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+    } else if (param == "dy_dynamic_jerk_speed_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_jerk_speed_max", tr("Max"), tr("Maximum 'Speed Jerk' value."), "", 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+    } else if (param == "dy_dynamic_jerk_speed_decrease_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_jerk_speed_decrease_max", tr("Max"), tr("Maximum 'Speed Decel Jerk' value."), "", 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+    } else if (param == "dy_dynamic_jerk_danger_min") {
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_jerk_danger_max", tr("Max"), tr("Maximum 'Danger Jerk' value."), "", 0.1, 3.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotDualParamValueControl(minControl, maxControl);
+
+    } else if (param == "dy_cf_follow") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    } else if (param == "dy_cf_jerk_acceleration") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    } else if (param == "dy_cf_jerk_deceleration") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    } else if (param == "dy_cf_jerk_speed") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    } else if (param == "dy_cf_jerk_speed_decrease") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    } else if (param == "dy_cf_jerk_danger") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+    // END ADDED
+      
+
+      
     } else if (aggressivePersonalityKeys.contains(param) || standardPersonalityKeys.contains(param) || relaxedPersonalityKeys.contains(param) || trafficPersonalityKeys.contains(param)) {
       if (param == "TrafficFollow" || param == "AggressiveFollow" || param == "StandardFollow" || param == "RelaxedFollow") {
         std::map<float, QString> followTimeLabels;
@@ -497,6 +591,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       curveSpeedList->addItem(longitudinalToggle);
     } else if (customDrivingPersonalityKeys.contains(param)) {
       customDrivingPersonalityList->addItem(longitudinalToggle);
+    } else if (dynamicPersonalityKeys.contains(param)) { // ADDED
+      dynamicPersonalityList->addItem(longitudinalToggle); // ADDED
     } else if (longitudinalTuneKeys.contains(param)) {
       longitudinalTuneList->addItem(longitudinalToggle);
     } else if (qolKeys.contains(param)) {
@@ -878,6 +974,8 @@ void FrogPilotLongitudinalPanel::updateToggles() {
         toggles["CurveSpeedController"]->setVisible(true);
       } else if (customDrivingPersonalityKeys.contains(key)) {
         toggles["CustomPersonalities"]->setVisible(true);
+      } else if (dynamicPersonalityKeys.contains(key)) { // ADDED
+        toggles["DynamicPersonality"]->setVisible(true); // ADDED
       } else if (longitudinalTuneKeys.contains(key)) {
         toggles["LongitudinalTune"]->setVisible(true);
       } else if (qolKeys.contains(key)) {
@@ -908,4 +1006,5 @@ void FrogPilotLongitudinalPanel::updateToggles() {
 
   update();
 }
+
 
