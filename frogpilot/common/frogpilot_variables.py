@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import numpy as enga
+import numpy as np
 
 import random
 
