@@ -373,8 +373,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
 
     } else if (param == "dy_dynamic_follow_min") {
-      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, tr("Follow (Min)"), desc, icon, 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true, 200);
-      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_follow_max", tr("Max"), tr("Maximum 'Follow' value."), "", 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true, 200);
+      FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, tr("Follow (Min)"), desc, icon, 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true, 150);
+      FrogPilotParamValueControl *maxControl = new FrogPilotParamValueControl("dy_dynamic_follow_max", tr("Max"), tr("Maximum 'Follow' value."), "", 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true, 150);
       longitudinalToggle = reinterpret_cast<AbstractControl*>(new FrogPilotDualParamValueControl(minControl, maxControl));
     } else if (param == "dy_dynamic_jerk_acceleration_min") {
       FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, tr("Accel Jerk (Min)"), desc, icon, 0.1, 3.0, "", std::map<float, QString>(), 0.01, true, 150);
@@ -1006,6 +1006,7 @@ void FrogPilotLongitudinalPanel::updateToggles() {
 
   update();
 }
+
 
 
 
