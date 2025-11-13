@@ -27,7 +27,7 @@ class FrogPilotFollowing:
     #
     #
     # Dynamic Personality Mode
-dynamic_personality_mode = frogpilot_toggles.dynamic_personality
+    dynamic_personality_mode = frogpilot_toggles.dynamic_personality
 
     if sm["controlsState"].enabled and dynamic_personality_mode:
       # ======================================================================
