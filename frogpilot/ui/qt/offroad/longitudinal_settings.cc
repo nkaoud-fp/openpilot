@@ -360,17 +360,17 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
 
     // ADDED: Create Dynamic Personality Controls
     } else if (param == "dy_speedlimit_follow") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
     } else if (param == "dy_speedlimit_jerk_acceleration") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
     } else if (param == "dy_speedlimit_jerk_deceleration") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
     } else if (param == "dy_speedlimit_jerk_speed") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
     } else if (param == "dy_speedlimit_jerk_speed_decrease") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
     } else if (param == "dy_speedlimit_jerk_danger") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 50, tr(" m/s"), std::map<float, QString>(), 1, true, 175);
 
     } else if (param == "dy_dynamic_follow_min") {
       FrogPilotParamValueControl *minControl = new FrogPilotParamValueControl(param, tr("Follow (Min)"), desc, icon, 0.1, 3.0, tr("s"), std::map<float, QString>(), 0.01, true, 175);
@@ -398,17 +398,17 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = reinterpret_cast<AbstractControl*>(new FrogPilotDualParamValueControl(minControl, maxControl));
 
     } else if (param == "dy_cf_follow") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     } else if (param == "dy_cf_jerk_acceleration") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     } else if (param == "dy_cf_jerk_deceleration") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     } else if (param == "dy_cf_jerk_speed") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     } else if (param == "dy_cf_jerk_speed_decrease") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     } else if (param == "dy_cf_jerk_danger") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true);
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 2.0, "", std::map<float, QString>(), 0.01, true, 175);
     // END ADDED
       
 
@@ -1006,6 +1006,7 @@ void FrogPilotLongitudinalPanel::updateToggles() {
 
   update();
 }
+
 
 
 
