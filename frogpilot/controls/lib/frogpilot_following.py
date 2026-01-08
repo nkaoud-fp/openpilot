@@ -23,6 +23,10 @@ class FrogPilotFollowing:
     self.speed_jerk = 0
     self.t_follow = 0
 
+  # === checks for if speed changed ===
+    self.last_calc_v_ego = -1.0  # Force update on first run
+    self.skip_counter = 0        # To force periodic updates
+
   def update(self, v_ego, sm, frogpilot_toggles):
     #
     #
@@ -30,87 +34,99 @@ class FrogPilotFollowing:
     dynamic_personality_mode = frogpilot_toggles.dynamic_personality
 
     if sm["controlsState"].enabled and dynamic_personality_mode:
-      # ======================================================================
-      # ========= READ VALUES FROM frogpilot_toggles, NOT self.params =========
-      # ======================================================================
-
-      # Read tunable values from RAM (fast)
-      # Speed Limits
-      speedlimit_follow = frogpilot_toggles.dy_speedlimit_follow
-      speedlimit_jerk_acceleration = frogpilot_toggles.dy_speedlimit_jerk_acceleration
-      speedlimit_jerk_deceleration = frogpilot_toggles.dy_speedlimit_jerk_deceleration
-      speedlimit_jerk_speed = frogpilot_toggles.dy_speedlimit_jerk_speed
-      speedlimit_jerk_speed_decrease = frogpilot_toggles.dy_speedlimit_jerk_speed_decrease
-      speedlimit_jerk_danger = frogpilot_toggles.dy_speedlimit_jerk_danger
-
-      # Min/Max multipliers
-      dynamic_follow = [
-        frogpilot_toggles.dy_dynamic_follow_min,
-        frogpilot_toggles.dy_dynamic_follow_max
-      ]
-      dynamic_jerk_acceleration = [
-        frogpilot_toggles.dy_dynamic_jerk_acceleration_min,
-        frogpilot_toggles.dy_dynamic_jerk_acceleration_max
-      ]
-      dynamic_jerk_deceleration = [
-        frogpilot_toggles.dy_dynamic_jerk_deceleration_min,
-        frogpilot_toggles.dy_dynamic_jerk_deceleration_max
-      ]
-      dynamic_jerk_speed = [
-        frogpilot_toggles.dy_dynamic_jerk_speed_min,
-        frogpilot_toggles.dy_dynamic_jerk_speed_max
-      ]
-      dynamic_jerk_speed_decrease = [
-        frogpilot_toggles.dy_dynamic_jerk_speed_decrease_min,
-        frogpilot_toggles.dy_dynamic_jerk_speed_decrease_max
-      ]
-      dynamic_jerk_danger = [
-        frogpilot_toggles.dy_dynamic_jerk_danger_min,
-        frogpilot_toggles.dy_dynamic_jerk_danger_max
-      ]
-
-      # Curve Factors
-      cf_follow = frogpilot_toggles.dy_cf_follow
-      cf_jerk_acceleration = frogpilot_toggles.dy_cf_jerk_acceleration
-      cf_jerk_deceleration = frogpilot_toggles.dy_cf_jerk_deceleration
-      cf_jerk_speed = frogpilot_toggles.dy_cf_jerk_speed
-      cf_jerk_speed_decrease = frogpilot_toggles.dy_cf_jerk_speed_decrease
-      cf_jerk_danger = frogpilot_toggles.dy_cf_jerk_danger
+      # === OPTIMIZATION CHECK ===
+      # 1. Calculate speed difference
+      speed_diff = abs(v_ego - self.last_calc_v_ego)
+      # 2. Check if we should update:
+      #    - Speed changed > 0.28 m/s (~1 kph)
+      #    - OR we haven't updated in 100 frames (~5 seconds) to catch UI toggle changes
+      should_update = (speed_diff > 0.28) or (self.skip_counter > 100)
       
-      # ======================================================================
-      # ======================= END OF CUSTOM VALUES =========================
-      # ======================================================================
+      if should_update :
+        self.last_calc_v_ego = v_ego
+        self.skip_counter = 0
+        
+        # ======================================================================
+        # ========= READ VALUES FROM frogpilot_toggles, NOT self.params =========
+        # ======================================================================
 
-      # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
-      #normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
-      ns_follow = float(np.clip(v_ego / speedlimit_follow, 0.0, 1.0))
-      ns_jerk_acceleration = float(np.clip(v_ego / speedlimit_jerk_acceleration , 0.0, 1.0))
-      ns_jerk_deceleration = float(np.clip(v_ego / speedlimit_jerk_deceleration , 0.0, 1.0))
-      ns_jerk_speed = float(np.clip(v_ego / speedlimit_jerk_speed , 0.0, 1.0))
-      ns_jerk_speed_decrease = float(np.clip(v_ego / speedlimit_jerk_speed_decrease , 0.0, 1.0))
-      ns_jerk_danger = float(np.clip(v_ego / speedlimit_jerk_danger , 0.0, 1.0))
-      
-      # Apply the curve factor to create the eased transition
-      #eased_speed = normalized_speed ** curve_factor
+        # Read tunable values from RAM (fast)
+        # Speed Limits
+        speedlimit_follow = frogpilot_toggles.dy_speedlimit_follow
+        speedlimit_jerk_acceleration = frogpilot_toggles.dy_speedlimit_jerk_acceleration
+        speedlimit_jerk_deceleration = frogpilot_toggles.dy_speedlimit_jerk_deceleration
+        speedlimit_jerk_speed = frogpilot_toggles.dy_speedlimit_jerk_speed
+        speedlimit_jerk_speed_decrease = frogpilot_toggles.dy_speedlimit_jerk_speed_decrease
+        speedlimit_jerk_danger = frogpilot_toggles.dy_speedlimit_jerk_danger
 
-      es_cf_follow = ns_follow ** cf_follow
-      es_cf_jerk_acceleration   = ns_jerk_acceleration ** cf_jerk_acceleration  
-      es_cf_jerk_deceleration  = ns_jerk_deceleration ** cf_jerk_deceleration 
-      es_cf_jerk_speed   = ns_jerk_speed ** cf_jerk_speed
-      es_cf_jerk_speed_decrease = ns_jerk_speed_decrease ** cf_jerk_speed_decrease
-      es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
+        # Min/Max multipliers
+        dynamic_follow = [
+          frogpilot_toggles.dy_dynamic_follow_min,
+          frogpilot_toggles.dy_dynamic_follow_max
+        ]
+        dynamic_jerk_acceleration = [
+          frogpilot_toggles.dy_dynamic_jerk_acceleration_min,
+          frogpilot_toggles.dy_dynamic_jerk_acceleration_max
+        ]
+        dynamic_jerk_deceleration = [
+          frogpilot_toggles.dy_dynamic_jerk_deceleration_min,
+          frogpilot_toggles.dy_dynamic_jerk_deceleration_max
+        ]
+        dynamic_jerk_speed = [
+          frogpilot_toggles.dy_dynamic_jerk_speed_min,
+          frogpilot_toggles.dy_dynamic_jerk_speed_max
+        ]
+        dynamic_jerk_speed_decrease = [
+          frogpilot_toggles.dy_dynamic_jerk_speed_decrease_min,
+          frogpilot_toggles.dy_dynamic_jerk_speed_decrease_max
+        ]
+        dynamic_jerk_danger = [
+          frogpilot_toggles.dy_dynamic_jerk_danger_min,
+          frogpilot_toggles.dy_dynamic_jerk_danger_max
+        ]
 
-      # Interpolate all values using your custom curve
-      self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
+        # Curve Factors
+        cf_follow = frogpilot_toggles.dy_cf_follow
+        cf_jerk_acceleration = frogpilot_toggles.dy_cf_jerk_acceleration
+        cf_jerk_deceleration = frogpilot_toggles.dy_cf_jerk_deceleration
+        cf_jerk_speed = frogpilot_toggles.dy_cf_jerk_speed
+        cf_jerk_speed_decrease = frogpilot_toggles.dy_cf_jerk_speed_decrease
+        cf_jerk_danger = frogpilot_toggles.dy_cf_jerk_danger
+        
+        # ======================================================================
+        # ======================= END OF CUSTOM VALUES =========================
+        # ======================================================================
 
-      if sm["carState"].aEgo >= 0:
-        self.base_acceleration_jerk = float(np.interp(es_cf_jerk_acceleration, [0, 1], dynamic_jerk_acceleration))
-        self.base_speed_jerk = float(np.interp(es_cf_jerk_speed, [0, 1], dynamic_jerk_speed))
-      else:
-        self.base_acceleration_jerk = float(np.interp(es_cf_jerk_deceleration, [0, 1], dynamic_jerk_deceleration))
-        self.base_speed_jerk = float(np.interp(es_cf_jerk_speed_decrease, [0, 1], dynamic_jerk_speed_decrease))
-      
-      self.base_danger_jerk = float(np.interp(es_cf_jerk_danger, [0, 1], dynamic_jerk_danger))
+        # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
+        #normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
+        ns_follow = float(np.clip(v_ego / speedlimit_follow, 0.0, 1.0))
+        ns_jerk_acceleration = float(np.clip(v_ego / speedlimit_jerk_acceleration , 0.0, 1.0))
+        ns_jerk_deceleration = float(np.clip(v_ego / speedlimit_jerk_deceleration , 0.0, 1.0))
+        ns_jerk_speed = float(np.clip(v_ego / speedlimit_jerk_speed , 0.0, 1.0))
+        ns_jerk_speed_decrease = float(np.clip(v_ego / speedlimit_jerk_speed_decrease , 0.0, 1.0))
+        ns_jerk_danger = float(np.clip(v_ego / speedlimit_jerk_danger , 0.0, 1.0))
+        
+        # Apply the curve factor to create the eased transition
+        #eased_speed = normalized_speed ** curve_factor
+
+        es_cf_follow = ns_follow ** cf_follow
+        es_cf_jerk_acceleration   = ns_jerk_acceleration ** cf_jerk_acceleration  
+        es_cf_jerk_deceleration  = ns_jerk_deceleration ** cf_jerk_deceleration 
+        es_cf_jerk_speed   = ns_jerk_speed ** cf_jerk_speed
+        es_cf_jerk_speed_decrease = ns_jerk_speed_decrease ** cf_jerk_speed_decrease
+        es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
+
+        # Interpolate all values using your custom curve
+        self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
+
+        if sm["carState"].aEgo >= 0:  # Lead car faster or same speed
+          self.base_acceleration_jerk = float(np.interp(es_cf_jerk_acceleration, [0, 1], dynamic_jerk_acceleration))
+          self.base_speed_jerk = float(np.interp(es_cf_jerk_speed, [0, 1], dynamic_jerk_speed))
+        else:     # Lead car slowing down
+          self.base_acceleration_jerk = float(np.interp(es_cf_jerk_deceleration, [0, 1], dynamic_jerk_deceleration))
+          self.base_speed_jerk = float(np.interp(es_cf_jerk_speed_decrease, [0, 1], dynamic_jerk_speed_decrease))
+        
+        self.base_danger_jerk = float(np.interp(es_cf_jerk_danger, [0, 1], dynamic_jerk_danger))
 
     # Traffic Mode
     elif sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
