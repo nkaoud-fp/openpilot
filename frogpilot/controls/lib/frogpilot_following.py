@@ -34,23 +34,17 @@ class FrogPilotFollowing:
     dynamic_personality_mode = frogpilot_toggles.dynamic_personality
 
     if sm["controlsState"].enabled and dynamic_personality_mode:
-      # === OPTIMIZATION CHECK ===
-      # 1. Calculate speed difference
+      # Calculate speed difference
       speed_diff = abs(v_ego - self.last_calc_v_ego)
-      # 2. Check if we should update:
-      #    - Speed changed > 0.28 m/s (~1 kph)
-      #    - OR we haven't updated in 100 frames (~5 seconds) to catch UI toggle changes
+      # Check if Speed changed > 0.28 m/s (~1 kph) OR we haven't updated in 100 frames (~5 seconds) to catch UI toggle changes
       should_update = (speed_diff > 0.28) or (self.skip_counter > 100)
       
       if should_update :
         self.last_calc_v_ego = v_ego
         self.skip_counter = 0
-        
-        # ======================================================================
-        # ========= READ VALUES FROM frogpilot_toggles, NOT self.params =========
-        # ======================================================================
 
-        # Read tunable values from RAM (fast)
+        #  READ VALUES FROM frogpilot_toggles, NOT self.params from RAM (faster)
+
         # Speed Limits
         speedlimit_follow = frogpilot_toggles.dy_speedlimit_follow
         speedlimit_jerk_acceleration = frogpilot_toggles.dy_speedlimit_jerk_acceleration
@@ -93,12 +87,9 @@ class FrogPilotFollowing:
         cf_jerk_speed_decrease = frogpilot_toggles.dy_cf_jerk_speed_decrease
         cf_jerk_danger = frogpilot_toggles.dy_cf_jerk_danger
         
-        # ======================================================================
-        # ======================= END OF CUSTOM VALUES =========================
-        # ======================================================================
-
         # Calculate the normalized speed (0.0 to 1.0) based on CITY_SPEED_LIMIT_DY
         #normalized_speed = float(np.clip(v_ego / CITY_SPEED_LIMIT_DY, 0.0, 1.0))
+        
         ns_follow = float(np.clip(v_ego / speedlimit_follow, 0.0, 1.0))
         ns_jerk_acceleration = float(np.clip(v_ego / speedlimit_jerk_acceleration , 0.0, 1.0))
         ns_jerk_deceleration = float(np.clip(v_ego / speedlimit_jerk_deceleration , 0.0, 1.0))
@@ -116,7 +107,7 @@ class FrogPilotFollowing:
         es_cf_jerk_speed_decrease = ns_jerk_speed_decrease ** cf_jerk_speed_decrease
         es_cf_jerk_danger   = ns_jerk_danger ** cf_jerk_danger  
 
-        # Interpolate all values using your custom curve
+        # Interpolate all values using the custom curve
         self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
 
         if sm["carState"].aEgo >= 0:  # Lead car faster or same speed
@@ -127,7 +118,9 @@ class FrogPilotFollowing:
           self.base_speed_jerk = float(np.interp(es_cf_jerk_speed_decrease, [0, 1], dynamic_jerk_speed_decrease))
         
         self.base_danger_jerk = float(np.interp(es_cf_jerk_danger, [0, 1], dynamic_jerk_danger))
-
+        
+        # End of Dynamic Personality Mode code
+   
     # Traffic Mode
     elif sm["controlsState"].enabled and sm["frogpilotCarState"].trafficModeEnabled:
       if sm["carState"].aEgo >= 0:
