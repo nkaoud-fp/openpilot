@@ -101,7 +101,7 @@ class FrogPilotPlanner:
       # Note: This means the lead is pulling away from you.
       safe_lead_gap = False
       if self.lead_one.status:
-         if v_ego < (self.lead_one.vLead * 0.70):
+         if v_ego < (self.lead_one.vLead * 0.90):
              safe_lead_gap = True
       
       # Trigger B: Right lane is flowing faster than my model wants to go
