@@ -61,6 +61,64 @@ class FrogPilotPlanner:
 
     if sm["controlsState"].enabled and frogpilot_toggles.conditional_experimental_mode:
       self.cem.update(v_ego, sm, frogpilot_toggles)
+      
+      # ============================================================
+      # START: Custom "Conditional Chill Mode" Logic
+      # ============================================================
+      
+      # 1. Default to Experimental Mode (The "Inverse" Approach)
+      # We assume we want Experimental Mode unless proven otherwise
+      self.cem.experimental_mode = True
+
+      # 2. Calculate Data needed for the decision
+      # A. Lateral Acceleration (Curve Physics)
+      # We calculate this here because the planner usually calculates it later in the file
+      current_lat_accel = v_ego**2 * abs(self.road_curvature)
+      
+      # B. Model "Safe Speed" (Approximate what Experimental Mode would drive at for curves)
+      # We estimate this using a standard max curve comfort of ~2.5 m/s^2
+      # Avoid division by zero with max()
+      curve_speed_limit = (2.5 / max(abs(self.road_curvature), 0.001))**0.5
+      model_target_speed = min(v_cruise, curve_speed_limit)
+
+      # C. Right Lane Lead Detection
+      right_lead_speed = 0
+      has_right_lead = False
+      if sm.valid and "modelV2" in sm.data:
+        # Loop through leadsV3 to find one in the right lane (y approx -3m)
+        for l in sm["modelV2"].leadsV3:
+          if l.prob > 0.5 and -5.0 < l.y[0] < -2.0: # Check right side
+            has_right_lead = True
+            right_lead_speed = l.v[0]
+            break
+
+      # 3. Evaluate "Relax" Triggers (Reasons to switch to Chill)
+      
+      # Condition: Is the road straight enough to relax? (e.g., < 1.5 m/s^2 lat accel)
+      is_straight = current_lat_accel < 1.5
+
+      # Trigger A: Significant Speed Delta with Lead (I am >30% slower than lead)
+      # Note: This means the lead is pulling away from you.
+      safe_lead_gap = False
+      if self.lead_one.status:
+         if v_ego < (self.lead_one.vLead * 0.70):
+             safe_lead_gap = True
+      
+      # Trigger B: Right lane is flowing faster than my model wants to go
+      better_flow_right = False
+      if not self.lead_one.status and has_right_lead:
+          if right_lead_speed > model_target_speed:
+              better_flow_right = True
+
+      # 4. Final Decision
+      # If road is straight AND (Lead is pulling away OR Right lane is faster) -> CHILL MODE
+      if is_straight and (safe_lead_gap or better_flow_right):
+          self.cem.experimental_mode = False
+
+      # ============================================================
+      # END: Custom Logic
+      # ============================================================
+
     else:
       self.cem.curve_detected = False
       self.cem.stop_sign_and_light(v_ego, sm, PLANNER_TIME - 2)
