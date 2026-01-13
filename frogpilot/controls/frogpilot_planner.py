@@ -65,21 +65,26 @@ class FrogPilotPlanner:
       # ============================================================
       # START: Custom "Conditional Chill Mode" Logic
       # ============================================================
-      
       # 1. Determine Previous State
-      # We check the state from the previous frame to decide which thresholds to use.
-      # This prevents "ping-ponging" when values are right on the edge.
       currently_in_chill = not self.cem.experimental_mode
 
       # 2. Set Hysteresis Thresholds
       if currently_in_chill:
-          # STICKY: If we are already chilling, allow looser conditions to STAY chilling.
-          lat_accel_threshold = 2.0     # Allow curves up to 2.0 m/s^2
-          lead_ratio_threshold = 0.85   # Stay in chill until we catch up to 85% of lead speed
+          # STICKY (help Stay in Chill for better ecceleration):
+          # Allow curves up to 2.0 m/s^2
+          lat_accel_threshold = 1.8
+          # Stay in chill until we catch up to 85% of lead speed
+          lead_ratio_threshold = 0.90
+          # Stay in chill even if right lane slows to 2 m/s (~4.5 mph) BELOW our target
+          right_flow_offset = 0 #-2.0
       else:
-          # STRICT: If in Experimental, require strict conditions to ENTER chill.
-          lat_accel_threshold = 1.5     # Road must be very straight
-          lead_ratio_threshold = 0.70   # Must be significantly slower than lead
+          # STRICT (Enter Chill because experemental in slow):
+          # Road must be very straight (< 1.5 m/s^2)
+          lat_accel_threshold = 1.5
+          # Must be significantly slower than lead (< 70%)
+          lead_ratio_threshold = 0.85
+          # Right lane must be at least 1 m/s (~2.2 mph) FASTER than our target
+          right_flow_offset = 1.0
 
       # 3. Calculate Data
       # A. Lateral Acceleration
@@ -102,18 +107,21 @@ class FrogPilotPlanner:
       # 4. Evaluate Triggers using Dynamic Thresholds
       is_straight = current_lat_accel < lat_accel_threshold
 
+      # Trigger A: Significant Speed Delta with Lead
       safe_lead_gap = False
       if self.lead_one.status:
          if v_ego < (self.lead_one.vLead * lead_ratio_threshold):
              safe_lead_gap = True
       
+      # Trigger B: Right lane is flowing faster (with hysteresis)
       better_flow_right = False
       if not self.lead_one.status and has_right_lead:
-          if right_lead_speed > model_target_speed:
+          # If Experimental: Only switch if right lead is > (Target + 1.0)
+          # If Chill: Stay in chill as long as right lead is > (Target - 2.0)
+          if right_lead_speed > (model_target_speed + right_flow_offset):
               better_flow_right = True
 
       # 5. Final Decision
-      # If road is straight AND (Lead is pulling away OR Right lane is faster) -> CHILL MODE
       if is_straight and (safe_lead_gap or better_flow_right):
           self.cem.experimental_mode = False
       else:
