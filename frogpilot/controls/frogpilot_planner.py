@@ -27,6 +27,11 @@ class FrogPilotPlanner:
     self.frogpilot_following = FrogPilotFollowing(self)
     self.frogpilot_vcruise = FrogPilotVCruise(self)
 
+    # --- ADD THIS BLOCK for Transition Smoothing Logic ---
+    self.prev_experimental_mode = False
+    self.smoothing_timer = 0
+    # ----------------------
+
     with car.CarParams.from_bytes(params.get("CarParams", block=True)) as msg:
       self.CP = msg
 
@@ -131,6 +136,29 @@ class FrogPilotPlanner:
       # END: Custom Logic
       # ============================================================
 
+      # ============================================================
+      # START: Transition Smoothing Logic
+      # ============================================================
+      # Detect rising edge of "Chill Mode" (Experimental switching True -> False)
+      if self.prev_experimental_mode and not self.cem.experimental_mode:
+          # Start a 3.0 second timer (DT_MDL is typically 0.05s, so 3.0 / 0.05 = 60 frames)
+          self.smoothing_timer = 3.0 / DT_MDL
+
+      # If the timer is active, dampen the acceleration
+      if self.smoothing_timer > 0:
+          self.smoothing_timer -= 1
+          # Cap max acceleration to a gentle 1.0 m/s^2 (approx 2.2 mph/s)
+          # We use min() so we don't accidentally raise the limit if the planner wants to go slower
+          self.frogpilot_acceleration.max_accel = min(self.frogpilot_acceleration.max_accel, 1.0)
+
+      # Update state for the next frame
+      self.prev_experimental_mode = self.cem.experimental_mode
+      # ============================================================
+      # END: Transition Smoothing Logic
+      # ============================================================
+
+
+    
     else:
       self.cem.curve_detected = False
       self.cem.stop_sign_and_light(v_ego, sm, PLANNER_TIME - 2)
