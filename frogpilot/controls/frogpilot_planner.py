@@ -85,11 +85,11 @@ class FrogPilotPlanner:
       else:
           # STRICT (Enter Chill because experemental in slow):
           # Road must be very straight (< 1.5 m/s^2)
-          lat_accel_threshold = 1.5
+          lat_accel_threshold = 1.4 #1.5
           # Must be significantly slower than lead (< 70%)
-          lead_ratio_threshold = 0.85
+          lead_ratio_threshold = 0.8 #0.85
           # Right lane must be at least 1 m/s (~2.2 mph) FASTER than our target
-          right_flow_offset = 1.0
+          right_flow_offset = 1.5 #1.0
 
       # 3. Calculate Data
       # A. Lateral Acceleration
