@@ -78,15 +78,15 @@ class FrogPilotPlanner:
           # STICKY (help Stay in Chill for better ecceleration):
           # Allow curves up to 2.0 m/s^2
           lat_accel_threshold = 1.8  #Increasing will cause Riskier Cornering. The car will stay in Chill Mode even on sharper curves, potentially taking them too fast before realizing it needs to slow down.
-          # Stay in chill until we catch up to 85% of lead speed
-          lead_ratio_threshold = 0.90 #by Increasing The car will accelerate until it nearly matches the lead's speed. Then, it will suddenly switch to Experimental and slam on the brakes because the gap is too small.
+          # Stay in chill until we catch up to 95% of lead speed
+          lead_ratio_threshold = 0.95 #by Increasing The car will accelerate until it nearly matches the lead's speed. Then, it will suddenly switch to Experimental and slam on the brakes because the gap is too small.
           # Stay in chill even if right lane slows to 2 m/s (~4.5 mph) BELOW our target
           right_flow_offset = -2.0 #Increasing this offset means the right lane must be flying past you to keep you in Chill. You will drop out of Chill more often.
       else:
           # STRICT (Enter Chill because experemental in slow):
           # Road must be very straight (< 1.5 m/s^2)
           lat_accel_threshold = 1.5 # Reducing will make it Harder to activate. The road must be perfectly straight to enter Chill. The car will likely remain in Experimental Mode (slow) on even slight curves.
-          # Must be significantly slower than lead (< 70%)
+          # Must be significantly slower than lead (< 85%)
           lead_ratio_threshold = 0.85 #0.85 Reducing will make it Harder to activate chill mode. You must be driving significantly slower than the lead car to trigger Chill. You will likely feel "stuck" in Experimental Mode while following traffic.
           # Right lane must be at least 1 m/s (~2.2 mph) FASTER than our target
           right_flow_offset = 0.1 #1.0 Reducing the offset means the right lane only needs to be slightly faster than you to trigger Chill.
