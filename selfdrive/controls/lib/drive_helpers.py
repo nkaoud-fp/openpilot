@@ -148,6 +148,10 @@ class VCruiseHelper:
     if self.CP.pcmCruise:
       return
 
+    # Force 110 kph immediately
+    self.v_cruise_kph = 110
+    self.v_cruise_cluster_kph = self.v_cruise_kph
+    
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
     # 250kph or above probably means we never had a set speed
