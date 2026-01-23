@@ -568,6 +568,10 @@ class Controls:
         elif self.state == State.preEnabled:
           if not self.contains_event_type(ET.PRE_ENABLE):
             self.state = State.enabled
+            self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
+            self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
+
+
           else:
             self.current_alert_types.append(ET.PRE_ENABLE)
 
