@@ -597,12 +597,12 @@ class Controls:
             self.state = State.enabled
           self.current_alert_types.append(ET.ENABLE)
           self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, self.sm['frogpilotPlan'].slcSpeedLimit + self.sm['frogpilotPlan'].slcSpeedLimitOffset, self.frogpilot_toggles)
-          #-----------------------Initial speed 65---------------------#
+          #-----------------------Initial speed 110 ---------------------#
           # This forces the initial speed to be AT LEAST 125, 
           # but allows the buttons to work normally thereafter.
-          self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 65.0)
-          self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 65.0)
-          #-----------------------Initial speed 65---------------------#
+          self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
+          self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
+          #-----------------------Initial speed 110 ---------------------#
     
     
     
@@ -1052,6 +1052,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
