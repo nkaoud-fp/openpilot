@@ -149,11 +149,11 @@ class VCruiseHelper:
       return
 
     # Force 110 kph immediately
-    self.v_cruise_kph = 110
-    self.v_cruise_cluster_kph = self.v_cruise_kph
+    #self.v_cruise_kph = 110
+    #self.v_cruise_cluster_kph = self.v_cruise_kph
     # CRITICAL: Return here so the logic below doesn't overwrite your 110 with 
     # the "last set speed" or "speed limit" logic.
-    return
+    #return
     
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
