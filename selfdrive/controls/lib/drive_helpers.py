@@ -164,12 +164,13 @@ class VCruiseHelper:
       if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
         self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
       else:
-        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
         # Use 110.0 as the absolute minimum starting speed
-        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, 110.0, V_CRUISE_MAX)))
+        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, 110.0, V_CRUISE_MAX)))
         # Force set speed to 110 kph on engagement
         # self.v_cruise_kph = 110
 
+    self.v_cruise_kph = 110
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
 
