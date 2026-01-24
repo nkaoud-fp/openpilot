@@ -535,7 +535,7 @@ class Controls:
       if self.forced_kph == -1 :
         self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
         self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
-        self.forced_kph == 1
+        self.forced_kph = 1
     else:
       # Reset when you disengage so it's ready for next time
       self.forced_kph = -1
@@ -1066,6 +1066,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
