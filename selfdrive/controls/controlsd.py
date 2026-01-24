@@ -524,6 +524,13 @@ class Controls:
   def state_transition(self, CS):
     """Compute conditional state transitions and execute actions on state transitions"""
 
+    # Capture the return value from the helper
+    button_pressed = self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
+            
+    # Reset flag if Resume/Set was pressed
+    if button_pressed:
+      self.forced_kph_applied = False
+    
     self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
             
     # decrement the soft disable timer at every step, as it's reset on
@@ -603,6 +610,7 @@ class Controls:
             self.state = State.overriding
           else:
             self.state = State.enabled
+            self.forced_kph_applied = True
 
           self.current_alert_types.append(ET.ENABLE)
           self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, self.sm['frogpilotPlan'].slcSpeedLimit + self.sm['frogpilotPlan'].slcSpeedLimitOffset, self.frogpilot_toggles)
@@ -1054,6 +1062,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
