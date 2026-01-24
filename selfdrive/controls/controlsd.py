@@ -524,6 +524,10 @@ class Controls:
   def state_transition(self, CS):
     """Compute conditional state transitions and execute actions on state transitions"""
 
+    if self.forced_kph_applied :
+      self.v_cruise_helper.v_cruise_kph = 110
+      self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph
+    
     # Capture the return value from the helper
     button_pressed = self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
             
@@ -1062,6 +1066,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
