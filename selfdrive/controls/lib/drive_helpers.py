@@ -170,7 +170,8 @@ class VCruiseHelper:
         # Force set speed to 110 kph on engagement
         # self.v_cruise_kph = 110
 
-    self.v_cruise_kph = 110
+    #self.v_cruise_kph = 110
+    self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
 
