@@ -169,7 +169,7 @@ class Controls:
     self.recalibrating_seen = False
     # Add your variable here so it's ready from the start
     self.forced_kph_applied = False
-    self.forced_kph_num = 0
+    #self.forced_kph_num = 0
 
 
     self.can_log_mono_time = 0
@@ -529,15 +529,15 @@ class Controls:
         
     #-----------------------Initial speed 110 ---------------------#
     if self.enabled:
-      #if not self.forced_kph_applied:
-      if self.forced_kph_num < 50:
+      if not self.forced_kph_applied:
+      #if self.forced_kph_num < 50:
         self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
         self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
-        #self.forced_kph_applied = True
-        self.forced_kph_num = self.forced_kph_num + 1
+        self.forced_kph_applied = True
+        #self.forced_kph_num = self.forced_kph_num + 1
     else:
-      #self.forced_kph_applied = False
-      self.forced_kph_num = 0
+      self.forced_kph_applied = False
+      #self.forced_kph_num = 0
     #-----------------------Initial speed 110 ---------------------#
     
     # decrement the soft disable timer at every step, as it's reset on
@@ -1064,6 +1064,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
