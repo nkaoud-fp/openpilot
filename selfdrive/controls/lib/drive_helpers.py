@@ -56,14 +56,18 @@ class VCruiseHelper:
 
   def update_v_cruise(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     self.v_cruise_kph_last = self.v_cruise_kph
+    button_pressed = False # Initialize tracking variable  #################### 110
 
     if CS.cruiseState.available:
+      # Check for Resume or Set button presses  ################## 110
+      button_pressed = any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise, ButtonType.decelCruise, ButtonType.setCruise) for b in CS.buttonEvents if not b.pressed)
 
       if not self.CP.pcmCruise:
         ## if stock cruise is completely disabled, then we can use our own set speed logic
         self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
+
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
