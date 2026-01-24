@@ -58,29 +58,18 @@ class VCruiseHelper:
     self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
-      # ----------Force 110 kph initially------------------
-      # FORCE NON-PCM LOGIC: This makes OP ignore the car's dashboard speed
-      self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
-      self.v_cruise_cluster_kph = self.v_cruise_kph
-      self.update_button_timers(CS, enabled)
 
-      # Apply your 110 floor to the internal logic
-      if enabled:
-        self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
-        self.v_cruise_cluster_kph = self.v_cruise_kph
-      # ----------Force 110 kph initially------------------
-
-      #if not self.CP.pcmCruise:
+      if not self.CP.pcmCruise:
         ## if stock cruise is completely disabled, then we can use our own set speed logic
-        #self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
-        #self.v_cruise_cluster_kph = self.v_cruise_kph
-        #self.update_button_timers(CS, enabled)
-      #else:
-        #self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        #self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
-        #if CS.cruiseState.speed == 0:
-          #self.v_cruise_kph = V_CRUISE_UNSET
-          #self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
+        self.v_cruise_cluster_kph = self.v_cruise_kph
+        self.update_button_timers(CS, enabled)
+      else:
+        self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+        self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
     # ADD THIS HERE: This forces 110 regardless of what the PCM says
         #if enabled:
           #self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
@@ -165,12 +154,6 @@ class VCruiseHelper:
     if self.CP.pcmCruise:
       return
 
-    # Force 110 kph immediately
-    #self.v_cruise_kph = 110
-    #self.v_cruise_cluster_kph = self.v_cruise_kph
-    # CRITICAL: Return here so the logic below doesn't overwrite your 110 with 
-    # the "last set speed" or "speed limit" logic.
-    #return
     
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
@@ -182,13 +165,7 @@ class VCruiseHelper:
         self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
       else:
         self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
-        # Use 110.0 as the absolute minimum starting speed
-        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, 110.0, V_CRUISE_MAX)))
-        # Force set speed to 110 kph on engagement
-        # self.v_cruise_kph = 110
-
-    #self.v_cruise_kph = 110
-    self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
+       
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
 
