@@ -531,7 +531,7 @@ class Controls:
     if button_pressed:
       self.forced_kph_applied = False
     
-    self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
+    ##self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
             
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
@@ -1062,6 +1062,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
