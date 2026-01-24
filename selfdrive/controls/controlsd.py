@@ -529,6 +529,9 @@ class Controls:
             
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
+
+    self.v_cruise_helper.v_cruise_kph = 110
+    self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph
     self.soft_disable_timer = max(0, self.soft_disable_timer - 1)
 
     self.current_alert_types = [ET.PERMANENT]
