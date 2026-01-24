@@ -69,6 +69,11 @@ class VCruiseHelper:
         if CS.cruiseState.speed == 0:
           self.v_cruise_kph = V_CRUISE_UNSET
           self.v_cruise_cluster_kph = V_CRUISE_UNSET
+    # ADD THIS HERE: This forces 110 regardless of what the PCM says
+        if enabled:
+          self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
+          self.v_cruise_cluster_kph = self.v_cruise_kph
+    
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
