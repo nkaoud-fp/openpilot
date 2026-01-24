@@ -168,7 +168,7 @@ class Controls:
     self.v_cruise_helper = VCruiseHelper(self.CP)
     self.recalibrating_seen = False
     # Add your variable here so it's ready from the start
-    self.forced_kph_applied = False
+    #self.forced_kph_applied = False
     #self.forced_kph_num = 0
 
 
@@ -526,20 +526,7 @@ class Controls:
     """Compute conditional state transitions and execute actions on state transitions"""
 
     self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
-        
-    #-----------------------Initial speed 110 ---------------------#
-    if self.enabled:
-      #if not self.forced_kph_applied:
-      if self.forced_kph_num < 150:
-        self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
-        self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
-        #self.forced_kph_applied = True
-        self.forced_kph_num = self.forced_kph_num + 1
-    else:
-      #self.forced_kph_applied = False
-      self.forced_kph_num = 0
-    #-----------------------Initial speed 110 ---------------------#
-    
+            
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
     self.soft_disable_timer = max(0, self.soft_disable_timer - 1)
@@ -1064,6 +1051,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
