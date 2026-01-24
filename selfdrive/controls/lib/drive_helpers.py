@@ -78,6 +78,8 @@ class VCruiseHelper:
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      
+    return button_pressed # Return the status to controlsd ##############110
 
   def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
