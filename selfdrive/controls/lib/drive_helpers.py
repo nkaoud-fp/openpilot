@@ -58,7 +58,7 @@ class VCruiseHelper:
     self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
-
+      # ----------Force 110 kph initially------------------
       # FORCE NON-PCM LOGIC: This makes OP ignore the car's dashboard speed
       self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
       self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -68,7 +68,8 @@ class VCruiseHelper:
       if enabled:
         self.v_cruise_kph = max(self.v_cruise_kph, 110.0)
         self.v_cruise_cluster_kph = self.v_cruise_kph
-      
+      # ----------Force 110 kph initially------------------
+
       #if not self.CP.pcmCruise:
         ## if stock cruise is completely disabled, then we can use our own set speed logic
         #self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
