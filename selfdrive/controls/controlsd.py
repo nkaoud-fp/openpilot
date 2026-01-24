@@ -168,9 +168,8 @@ class Controls:
     self.v_cruise_helper = VCruiseHelper(self.CP)
     self.recalibrating_seen = False
     # Add your variable here so it's ready from the start
-    #self.forced_kph_applied = False
-    #self.forced_kph_num = 0
-
+    self.forced_kph_applied = False
+    self.forced_kph_num = 0
 
     self.can_log_mono_time = 0
 
@@ -530,8 +529,9 @@ class Controls:
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
 
-    self.v_cruise_helper.v_cruise_kph = 110
-    self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph
+    ##self.v_cruise_helper.v_cruise_kph = 110
+    ##self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph
+    
     self.soft_disable_timer = max(0, self.soft_disable_timer - 1)
 
     self.current_alert_types = [ET.PERMANENT]
@@ -1054,6 +1054,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
