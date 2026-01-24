@@ -522,6 +522,25 @@ class Controls:
     """Compute conditional state transitions and execute actions on state transitions"""
 
     self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
+        
+    # --- START CUSTOM MODIFICATION ---
+    #-----------------------Initial speed 110 ---------------------#
+    # This forces the initial speed to be AT LEAST 125, 
+    # but allows the buttons to work normally thereafter.
+    # Initialize our memory variable if it doesn't exist yet
+    if not hasattr(self, "forced_kph"):
+      self.forced_kph = -1
+      
+    if self.enabled:
+      if self.forced_kph == -1 :
+        self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
+        self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
+        self.forced_kph == 1
+    else:
+      # Reset when you disengage so it's ready for next time
+      self.forced_kph = -1
+    #-----------------------Initial speed 110 ---------------------#
+    # --- END CUSTOM MODIFICATION ---
     
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
@@ -568,9 +587,6 @@ class Controls:
         elif self.state == State.preEnabled:
           if not self.contains_event_type(ET.PRE_ENABLE):
             self.state = State.enabled
-            self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
-            self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
-
 
           else:
             self.current_alert_types.append(ET.PRE_ENABLE)
@@ -599,19 +615,10 @@ class Controls:
             self.state = State.overriding
           else:
             self.state = State.enabled
-            self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
-            self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
 
           self.current_alert_types.append(ET.ENABLE)
           self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, self.sm['frogpilotPlan'].slcSpeedLimit + self.sm['frogpilotPlan'].slcSpeedLimitOffset, self.frogpilot_toggles)
-          #-----------------------Initial speed 110 ---------------------#
-          # This forces the initial speed to be AT LEAST 125, 
-          # but allows the buttons to work normally thereafter.
-          self.v_cruise_helper.v_cruise_kph = max(self.v_cruise_helper.v_cruise_kph, 110.0)
-          self.v_cruise_helper.v_cruise_cluster_kph = max(self.v_cruise_helper.v_cruise_cluster_kph, 110.0)
-          #-----------------------Initial speed 110 ---------------------#
-    
-    
+
     
     # Check if openpilot is engaged and actuators are enabled
     self.enabled = self.state in ENABLED_STATES
@@ -1059,6 +1066,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
