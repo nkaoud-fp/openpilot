@@ -151,16 +151,21 @@ class VCruiseHelper:
     if self.CP.pcmCruise:
       return
 
-    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
+    # Force 65 kph on enable
+    self.v_cruise_kph = 65
+    # Sync cluster speed
+    #self.v_cruise_cluster_kph = self.v_cruise_kph
+    
+    #initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
     # 250kph or above probably means we never had a set speed
-    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
-      self.v_cruise_kph = self.v_cruise_kph_last
-    else:
-      if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
-        self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
-      else:
-        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+    #if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
+      #self.v_cruise_kph = self.v_cruise_kph_last
+    #else:
+      #if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
+        #self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
+      #else:
+        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
        
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
