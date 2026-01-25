@@ -152,7 +152,7 @@ class VCruiseHelper:
       #return
 
     # Force 65 kph on enable
-    self.v_cruise_kph = 65
+    self.v_cruise_kph = 110
     # Sync cluster speed
     #self.v_cruise_cluster_kph = self.v_cruise_kph
     
