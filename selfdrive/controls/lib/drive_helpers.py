@@ -68,13 +68,15 @@ class VCruiseHelper:
         #self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
         #self.v_cruise_cluster_kph = self.v_cruise_kph
         #self.update_button_timers(CS, enabled)
-
+    
+      #------------------------this is where car speed is forced on us-----------------------#
       #else:
         #self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         #self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
         #if CS.cruiseState.speed == 0:
           #self.v_cruise_kph = V_CRUISE_UNSET
           #self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      #------------------------this is where car speed is forced on us-----------------------#
     
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
