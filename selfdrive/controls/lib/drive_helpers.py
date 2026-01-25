@@ -15,6 +15,7 @@ V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
 V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
+INITIAL_ACC_KPH = 65  # initial speed when ACC is enabled; user-requested default
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
 MIN_SPEED = 1.0
@@ -64,11 +65,22 @@ class VCruiseHelper:
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
-        self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        # When PCM handles cruise, mirror the PCM set speed in normal operation.
+        # However, if PCM reports no set speed (speed == 0) and openpilot has just been enabled
+        # (v_cruise not initialized yet), initialize to our preferred INITIAL_ACC_KPH so the
+        # internal target is predictable. Once PCM reports a real set speed, resume mirroring it.
         if CS.cruiseState.speed == 0:
-          self.v_cruise_kph = V_CRUISE_UNSET
-          self.v_cruise_cluster_kph = V_CRUISE_UNSET
+          if enabled and not self.v_cruise_initialized:
+            # initialize internal cruise to the desired default (65 kph), bounded by allowed limits
+            self.v_cruise_kph = int(round(clip(INITIAL_ACC_KPH, V_CRUISE_MIN, V_CRUISE_MAX)))
+            self.v_cruise_cluster_kph = self.v_cruise_kph
+          else:
+            self.v_cruise_kph = V_CRUISE_UNSET
+            self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        else:
+          # PCM reports a set speed, mirror it
+          self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+          self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
@@ -154,10 +166,14 @@ class VCruiseHelper:
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
+      # If the user wants to use the vehicle speed limit as set speed, keep that behavior.
       if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
         self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
       else:
-        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+        # Always start ACC at INITIAL_ACC_KPH (65 kph) when enabling ACC.
+        # This intentionally ignores restoring the last set speed so the
+        # initial target is predictable and only changes on +RES/-SET presses.
+        self.v_cruise_kph = int(round(clip(INITIAL_ACC_KPH, V_CRUISE_MIN, V_CRUISE_MAX)))
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
