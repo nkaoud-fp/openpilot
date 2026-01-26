@@ -12,9 +12,10 @@ from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_G
 # V_CRUISE's are in kph
 V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
-V_CRUISE_UNSET = 255
+#V_CRUISE_UNSET = 255
 #V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL = 110  ###-------------initial speed 110kph
+V_CRUISE_UNSET = 112  ###-------------initial speed 110kph
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
@@ -64,7 +65,9 @@ class VCruiseHelper:
         self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
-      #else:
+      else:
+        self.v_cruise_kph = V_CRUISE_UNSET
+        self.v_cruise_cluster_kph = V_CRUISE_UNSET
         #self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         #self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
         #if CS.cruiseState.speed == 0:
