@@ -58,30 +58,21 @@ class VCruiseHelper:
     self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
-
-      self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
-      self.v_cruise_cluster_kph = self.v_cruise_kph
-      self.update_button_timers(CS, enabled)
-
-      #if not self.CP.pcmCruise:
-        ## if stock cruise is completely disabled, then we can use our own set speed logic
-        #self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
-        #self.v_cruise_cluster_kph = self.v_cruise_kph
-        #self.update_button_timers(CS, enabled)
-    
-      #------------------------this is where car speed is forced on us-----------------------#
-      #else:
-        #self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        #self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
-        #if CS.cruiseState.speed == 0:
-          #self.v_cruise_kph = V_CRUISE_UNSET
-          #self.v_cruise_cluster_kph = V_CRUISE_UNSET
-      #------------------------this is where car speed is forced on us-----------------------#
-    
+      if not self.CP.pcmCruise:
+        # if stock cruise is completely disabled, then we can use our own set speed logic
+        self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
+        self.v_cruise_cluster_kph = self.v_cruise_kph
+        self.update_button_timers(CS, enabled)
+      else:
+        self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+        self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
-      
+
   def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
     # would have the effect of both enabling and changing speed is checked after the state transition
@@ -154,25 +145,20 @@ class VCruiseHelper:
 
   def initialize_v_cruise(self, CS, experimental_mode: bool, desired_speed_limit, frogpilot_toggles) -> None:
     # initializing is handled by the PCM
-    #if self.CP.pcmCruise:
-      #return
+    if self.CP.pcmCruise:
+      return
 
-    # Force 65 kph on enable
-    self.v_cruise_kph = 110
-    # Sync cluster speed
-    #self.v_cruise_cluster_kph = self.v_cruise_kph
-    
-    #initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
+    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
     # 250kph or above probably means we never had a set speed
-    #if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
-      #self.v_cruise_kph = self.v_cruise_kph_last
-    #else:
-      #if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
-        #self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
-      #else:
-        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
-       
+    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
+      self.v_cruise_kph = self.v_cruise_kph_last
+    else:
+      if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
+        self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
+      else:
+        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
 
