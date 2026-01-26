@@ -66,10 +66,9 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
-    
+
     self.personality_timer = 0  ### Dynamic personality
     self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
-
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -97,7 +96,6 @@ class Controls:
 
     self.log_sock = messaging.sub_sock('androidLog')
 
-    # TODO: de-couple controlsd with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
     ignore = self.sensor_packets + ['testJoystick']
@@ -166,7 +164,10 @@ class Controls:
     self.experimental_mode = False
     self.personality = self.read_personality_param()
     self.v_cruise_helper = VCruiseHelper(self.CP)
+    self.v_cruise_helper.v_cruise_kph = 110  # Set default cruise speed
+    self.v_cruise_helper.v_cruise_cluster_kph = 110  # Set default cruise cluster speed
     self.recalibrating_seen = False
+
     # Add your variable here so it's ready from the start
     self.forced_kph_applied = False
     self.forced_kph_num = 0
@@ -1054,6 +1055,7 @@ def main():
 
 if __name__ == "__main__":
   main()
+
 
 
 
