@@ -66,9 +66,10 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
-
+    
     self.personality_timer = 0  ### Dynamic personality
     self.traffic_mode_request_sent = True #### Dynamic traffic mode tracking
+
 
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
@@ -96,6 +97,7 @@ class Controls:
 
     self.log_sock = messaging.sub_sock('androidLog')
 
+    # TODO: de-couple controlsd with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
     ignore = self.sensor_packets + ['testJoystick']
@@ -164,13 +166,7 @@ class Controls:
     self.experimental_mode = False
     self.personality = self.read_personality_param()
     self.v_cruise_helper = VCruiseHelper(self.CP)
-    self.v_cruise_helper.v_cruise_kph = 110  # Set default cruise speed
-    self.v_cruise_helper.v_cruise_cluster_kph = 110  # Set default cruise cluster speed
     self.recalibrating_seen = False
-
-    # Add your variable here so it's ready from the start
-    self.forced_kph_applied = False
-    self.forced_kph_num = 0
 
     self.can_log_mono_time = 0
 
@@ -524,15 +520,11 @@ class Controls:
 
   def state_transition(self, CS):
     """Compute conditional state transitions and execute actions on state transitions"""
-    
+
     self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, self.sm['frogpilotPlan'].speedLimitChanged, self.frogpilot_toggles)
-            
+
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
-
-    self.v_cruise_helper.v_cruise_kph = 110
-    self.v_cruise_helper.v_cruise_cluster_kph = self.v_cruise_helper.v_cruise_kph
-    
     self.soft_disable_timer = max(0, self.soft_disable_timer - 1)
 
     self.current_alert_types = [ET.PERMANENT]
@@ -576,7 +568,6 @@ class Controls:
         elif self.state == State.preEnabled:
           if not self.contains_event_type(ET.PRE_ENABLE):
             self.state = State.enabled
-
           else:
             self.current_alert_types.append(ET.PRE_ENABLE)
 
@@ -604,11 +595,9 @@ class Controls:
             self.state = State.overriding
           else:
             self.state = State.enabled
-
           self.current_alert_types.append(ET.ENABLE)
           self.v_cruise_helper.initialize_v_cruise(CS, self.experimental_mode, self.sm['frogpilotPlan'].slcSpeedLimit + self.sm['frogpilotPlan'].slcSpeedLimitOffset, self.frogpilot_toggles)
 
-    
     # Check if openpilot is engaged and actuators are enabled
     self.enabled = self.state in ENABLED_STATES
     self.active = self.state in ACTIVE_STATES
@@ -1055,20 +1044,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
