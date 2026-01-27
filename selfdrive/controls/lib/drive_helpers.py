@@ -64,8 +64,8 @@ class VCruiseHelper:
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
-        self.v_cruise_kph = (CS.cruiseState.speed * CV.MS_TO_KPH) +  30  ####------------Preset initial ACC
-        self.v_cruise_cluster_kph = (CS.cruiseState.speedCluster * CV.MS_TO_KPH) + 30  ####------------Preset initial ACC
+        self.v_cruise_kph = (CS.cruiseState.speed * CV.MS_TO_KPH) +  10  ####------------Preset initial ACC
+        self.v_cruise_cluster_kph = (CS.cruiseState.speedCluster * CV.MS_TO_KPH) + 10  ####------------Preset initial ACC
         if CS.cruiseState.speed == 0:
           self.v_cruise_kph = V_CRUISE_UNSET
           self.v_cruise_cluster_kph = V_CRUISE_UNSET
