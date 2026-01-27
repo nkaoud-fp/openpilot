@@ -23,6 +23,10 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
 
+### ----------- Experimental-mode decel softening
+EXP_MODEL_DECEL_CAP = -1.5      # m/s^2 cap for model decel in experimental
+EXP_MODEL_DECEL_BLEND = 0.70    # weight for model decel; remainder comes from MPC (0.30 here)
+
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
 _A_TOTAL_MAX_BP = [20., 40.]
@@ -182,7 +186,11 @@ class LongitudinalPlanner:
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
     else:
-      output_a_target = min(output_a_target_mpc, output_a_target_e2e)
+      ### ----------- Experimental-mode decel softening
+      model_a = max(output_a_target_e2e, EXP_MODEL_DECEL_CAP)
+      blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc
+      output_a_target = min(output_a_target_mpc, blended_model_a)
+      #output_a_target = min(output_a_target_mpc, output_a_target_e2e)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
 
     for idx in range(2):
