@@ -12,10 +12,8 @@ from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_G
 # V_CRUISE's are in kph
 V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
-#V_CRUISE_UNSET = 255
-#V_CRUISE_INITIAL = 40
-V_CRUISE_INITIAL = 110  ###-------------initial speed 110kph
-V_CRUISE_UNSET = 112  ###-------------initial speed 110kph
+V_CRUISE_UNSET = 255
+V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
@@ -66,13 +64,11 @@ class VCruiseHelper:
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
-        self.v_cruise_kph = V_CRUISE_UNSET
-        self.v_cruise_cluster_kph = V_CRUISE_UNSET
-        #self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        #self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
-        #if CS.cruiseState.speed == 0:
-          #self.v_cruise_kph = V_CRUISE_UNSET
-          #self.v_cruise_cluster_kph = V_CRUISE_UNSET
+        self.v_cruise_kph = (CS.cruiseState.speed * CV.MS_TO_KPH) + 27
+        self.v_cruise_cluster_kph = (CS.cruiseState.speedCluster * CV.MS_TO_KPH) + 27
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
@@ -131,9 +127,7 @@ class VCruiseHelper:
 
     # If set is pressed while overriding, clip cruise speed to minimum of vEgo
     if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise):
-      #self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
-      self.v_cruise_kph = max(self.v_cruise_kph, V_CRUISE_INITIAL) ###-------------initial speed 110kph
-      
+      self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
 
     self.v_cruise_kph = clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
 
@@ -154,8 +148,7 @@ class VCruiseHelper:
     if self.CP.pcmCruise:
       return
 
-    #initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
-    initial = V_CRUISE_INITIAL   ###-------------initial speed 110kph
+    initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
 
     # 250kph or above probably means we never had a set speed
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
@@ -164,9 +157,7 @@ class VCruiseHelper:
       if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
         self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
       else:
-        #self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
-        self.v_cruise_kph = int(round(clip(V_CRUISE_INITIAL, initial, V_CRUISE_MAX)))  ###-------------initial speed 110kph
-
+        self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
 
