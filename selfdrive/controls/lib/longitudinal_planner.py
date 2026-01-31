@@ -27,8 +27,8 @@ MIN_ALLOW_THROTTLE_SPEED = 2.5
 #EXP_MODEL_DECEL_CAP = -1.5
 #EXP_MODEL_DECEL_BLEND = 0.70 (i.e., 70% model, 30% MPC)
 #Before this change, experimental just took min(output_a_target_mpc, output_a_target_e2e) with no cap or blend.
-EXP_MODEL_DECEL_CAP = -1.5      # m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
-EXP_MODEL_DECEL_BLEND = 0.90    # weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
+EXP_MODEL_DECEL_CAP = -1.9      # m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
+EXP_MODEL_DECEL_BLEND = 1.0    # weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
