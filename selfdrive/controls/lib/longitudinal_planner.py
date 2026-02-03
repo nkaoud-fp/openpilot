@@ -192,7 +192,8 @@ class LongitudinalPlanner:
       ### ----------- Experimental-mode decel softening
       model_a = max(output_a_target_e2e, EXP_MODEL_DECEL_CAP)
       blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc
-      output_a_target = min(output_a_target_mpc, blended_model_a)
+      ###output_a_target = min(output_a_target_mpc, blended_model_a)
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), EXP_MODEL_DECEL_CAP)
       #output_a_target = min(output_a_target_mpc, output_a_target_e2e)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
 
