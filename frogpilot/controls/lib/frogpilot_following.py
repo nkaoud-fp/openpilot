@@ -110,7 +110,10 @@ class FrogPilotFollowing:
         # Interpolate all values using the custom curve
         self.t_follow = float(np.interp(es_cf_follow, [0, 1], dynamic_follow))
 
-        if sm["carState"].aEgo >= 0:  # Lead car faster or same speed
+
+        # Check if we have a lead, and if its speed is greater than or equal to ours
+        if self.frogpilot_planner.tracking_lead and self.frogpilot_planner.lead_one.vLead >= v_ego:
+        #if sm["carState"].aEgo >= 0:  # Lead car faster or same speed
           self.base_acceleration_jerk = float(np.interp(es_cf_jerk_acceleration, [0, 1], dynamic_jerk_acceleration))
           self.base_speed_jerk = float(np.interp(es_cf_jerk_speed, [0, 1], dynamic_jerk_speed))
         else:     # Lead car slowing down
