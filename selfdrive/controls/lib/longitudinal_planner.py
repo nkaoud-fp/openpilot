@@ -23,13 +23,6 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
 
-### ----------- Experimental-mode decel softening
-#EXP_MODEL_DECEL_CAP = -1.5
-#EXP_MODEL_DECEL_BLEND = 0.70 (i.e., 70% model, 30% MPC)
-#Before this change, experimental just took min(output_a_target_mpc, output_a_target_e2e) with no cap or blend.
-EXP_MODEL_DECEL_CAP = -1.7      # m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
-EXP_MODEL_DECEL_BLEND = 1.0    # weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
-
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
 _A_TOTAL_MAX_BP = [20., 40.]
@@ -75,6 +68,9 @@ class LongitudinalPlanner:
     self.prev_accel_clip = [ACCEL_MIN, ACCEL_MAX]
     self.output_a_target = 0.0
     self.output_should_stop = False
+    ### ADD THIS: Initialize our Dynamic Experimental-mode decel softening V2 
+    self.dynamic_model_decel_cap = -1.7 ### m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
+    EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -188,14 +184,26 @@ class LongitudinalPlanner:
     if mode == 'acc':
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
-    else:
-      ### ----------- Experimental-mode decel softening
-      model_a = max(output_a_target_e2e, EXP_MODEL_DECEL_CAP)
-      blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc
-      ###output_a_target = min(output_a_target_mpc, blended_model_a)
-      output_a_target = max(min(output_a_target_mpc, blended_model_a), EXP_MODEL_DECEL_CAP)
-      #output_a_target = min(output_a_target_mpc, output_a_target_e2e)
-      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
+    else: 
+      ### ----------- Dynamic Experimental-mode decel softening V2 ---------------####   
+      # 1. Ramp-up logic: If the model wants to brake harder than the current cap
+      if output_a_target_e2e < self.dynamic_model_decel_cap:
+        # Step the cap down by 0.05 m/s^2 per frame (1.0 m/s^2 per second)
+        self.dynamic_model_decel_cap -= 0.025  # (0.1 for hard transition , 0.05 for medum transition and 0.02 for soft transition)
+        # Hard limit so the cap doesn't grow infinitely negative during a long stop
+        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, -3.5)
+      else:
+        # If the model eases up, reset the cap back to the baseline
+        self.dynamic_model_decel_cap = -1.7   ###  CAP is -1.7
+      # 2. Cap the model using the new dynamic cap
+      model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)      
+      # 3. Blend the capped model with the MPC
+      blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc      
+      # 4. Final output (Keeping your requested test logic)
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      
+      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
+      ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
+
 
     for idx in range(2):
       accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
