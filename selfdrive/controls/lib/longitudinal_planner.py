@@ -189,7 +189,7 @@ class LongitudinalPlanner:
       # 1. Ramp-up logic: If the model wants to brake harder than the current cap
       if output_a_target_e2e < self.dynamic_model_decel_cap:
         # Step the cap down by 0.05 m/s^2 per frame (1.0 m/s^2 per second)
-        self.dynamic_model_decel_cap -= 0.025  # (0.1 for hard transition , 0.05 for medum transition and 0.02 for soft transition)
+        self.dynamic_model_decel_cap -= 0.025  ### (0.1 for hard transition , 0.05 for medum transition and 0.02 for soft transition)
         # Hard limit so the cap doesn't grow infinitely negative during a long stop
         self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, -3.5)
       else:
@@ -199,8 +199,8 @@ class LongitudinalPlanner:
       model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)      
       # 3. Blend the capped model with the MPC
       blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc      
-      # 4. Final output (Keeping your requested test logic)
-      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      
+      # 4. Final output
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      ### emergency breaking is also capped
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
       ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
 
