@@ -71,7 +71,7 @@ class LongitudinalPlanner:
     self.output_should_stop = False
     ### ADD THIS: Initialize our Dynamic Experimental-mode decel softening V2 
     self.dynamic_model_decel_cap = -1.7 ### m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
-    EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
+    #EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
