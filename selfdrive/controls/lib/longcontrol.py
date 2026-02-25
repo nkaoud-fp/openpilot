@@ -9,6 +9,12 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
+# Standstill creep-to-gap constants (bumper-to-bumper follow at stops)
+CREEP_GAP_TARGET = 1.5    # meters - desired stopped gap to lead
+CREEP_GAP_DEADBAND = 0.3  # meters - hysteresis to avoid oscillation
+CREEP_ACCEL = 0.3         # m/s^2 - gentle creep acceleration
+CREEP_MAX_SPEED = 0.5     # m/s  - only creep below this ego speed (~1 mph)
+
 
 def long_control_state_trans(CP, active, long_control_state, v_ego,
                              should_stop, brake_pressed, cruise_standstill, frogpilot_toggles):
@@ -99,7 +105,7 @@ class LongControl:
   def reset(self):
     self.pid.reset()
 
-  def update(self, active, CS, a_target, should_stop, accel_limits, frogpilot_toggles):
+  def update(self, active, CS, a_target, should_stop, accel_limits, frogpilot_toggles, lead_one=None):
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
     self.pid.neg_limit = accel_limits[0]
     self.pid.pos_limit = accel_limits[1]
@@ -113,7 +119,12 @@ class LongControl:
 
     elif self.long_control_state == LongCtrlState.stopping:
       output_accel = self.last_output_accel
-      if output_accel > frogpilot_toggles.stopAccel:
+      # Standstill creep: gently close gap when lead is valid and farther than target
+      lead_valid = (lead_one is not None and lead_one.status and
+                    lead_one.dRel > CREEP_GAP_TARGET + CREEP_GAP_DEADBAND)
+      if (not CS.brakePressed and lead_valid and CS.vEgo < CREEP_MAX_SPEED):
+        output_accel = CREEP_ACCEL
+      elif output_accel > frogpilot_toggles.stopAccel:
         output_accel = min(output_accel, 0.0)
         output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
       self.reset()
