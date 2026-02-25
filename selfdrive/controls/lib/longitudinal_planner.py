@@ -22,6 +22,7 @@ A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
+EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
