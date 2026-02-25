@@ -200,7 +200,7 @@ class LongitudinalPlanner:
       # 3. Blend the capped model with the MPC
       blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc      
       # 4. Final output
-      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      ### emergency breaking is also capped
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      ### emergency breaking is also capped (output_should_stop_mpc)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
       ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
 
