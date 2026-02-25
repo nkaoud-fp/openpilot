@@ -121,6 +121,13 @@ class LongControl:
       output_accel = self.last_output_accel
       
       # --- Standstill Creep-to-Gap Logic ---
+      #CREEP_GAP_TARGET: The exact distance you want your car to stop behind the bumper of the car in front of you (e.g., 1.5 meters).
+      #CREEP_GAP_DEADBAND: The extra distance the lead car needs to pull away before your car wakes up and starts creeping, preventing stuttering (e.g., 0.3 meters).
+      #CREEP_ACCEL: The absolute hardest the car is allowed to press the gas pedal while inching forward (e.g., 0.3 m/s²).
+      #CREEP_MAX_SPEED: The strict speed limit your car is allowed to reach while in creeping mode (e.g., 0.5 m/s, which is about 1 mph).
+      #
+      #
+      #
       distance_error = 0.0
       if lead_one is not None and lead_one.status:
         distance_error = lead_one.dRel - CREEP_GAP_TARGET
