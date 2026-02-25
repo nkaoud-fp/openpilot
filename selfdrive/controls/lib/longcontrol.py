@@ -13,7 +13,7 @@ LongCtrlState = car.CarControl.Actuators.LongControlState
 CREEP_GAP_TARGET = 1.5    # meters - desired stopped gap to lead
 CREEP_GAP_DEADBAND = 0.3  # meters - hysteresis to avoid oscillation
 CREEP_ACCEL = 0.3         # m/s^2 - gentle creep acceleration cap
-CREEP_MAX_SPEED = 0.5     # m/s  - only creep below this ego speed (~1 mph)
+CREEP_MAX_SPEED = 2 #0.5  # m/s  - only creep below this ego speed (2 ~ 7 kph)
 
 
 def long_control_state_trans(CP, active, long_control_state, v_ego,
