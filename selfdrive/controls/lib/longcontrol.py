@@ -12,7 +12,7 @@ LongCtrlState = car.CarControl.Actuators.LongControlState
 # Standstill creep-to-gap constants (bumper-to-bumper follow at stops)
 CREEP_GAP_TARGET = 1.5    # meters - desired stopped gap to lead
 CREEP_GAP_DEADBAND = 0.3  # meters - hysteresis to avoid oscillation
-CREEP_ACCEL = 0.3         # m/s^2 - gentle creep acceleration
+CREEP_ACCEL = 0.3         # m/s^2 - gentle creep acceleration cap
 CREEP_MAX_SPEED = 0.5     # m/s  - only creep below this ego speed (~1 mph)
 
 
@@ -119,14 +119,38 @@ class LongControl:
 
     elif self.long_control_state == LongCtrlState.stopping:
       output_accel = self.last_output_accel
-      # Standstill creep: gently close gap when lead is valid and farther than target
-      lead_valid = (lead_one is not None and lead_one.status and
-                    lead_one.dRel > CREEP_GAP_TARGET + CREEP_GAP_DEADBAND)
-      if (not CS.brakePressed and lead_valid and CS.vEgo < CREEP_MAX_SPEED):
-        output_accel = CREEP_ACCEL
-      elif output_accel > frogpilot_toggles.stopAccel:
-        output_accel = min(output_accel, 0.0)
-        output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
+      
+      # --- Standstill Creep-to-Gap Logic ---
+      distance_error = 0.0
+      if lead_one is not None and lead_one.status:
+        distance_error = lead_one.dRel - CREEP_GAP_TARGET
+
+      if not CS.brakePressed and distance_error > CREEP_GAP_DEADBAND:
+        # 1. Proportional acceleration: farther away = more acceleration (capped at CREEP_ACCEL)
+        target_accel = clip(distance_error * 0.15, 0.0, CREEP_ACCEL)
+
+        # 2. Taper off acceleration as we approach CREEP_MAX_SPEED to prevent speed oscillation
+        speed_multiplier = clip(1.0 - (CS.vEgo / max(CREEP_MAX_SPEED, 0.01)), 0.0, 1.0)
+        target_accel *= speed_multiplier
+
+        # 3. Break stiction: Use startAccel briefly if completely stopped to release brakes
+        if CS.vEgo < 0.05:
+          target_accel = max(target_accel, frogpilot_toggles.startAccel)
+
+        # 4. Smoothly ramp up output_accel to prevent jerky throttle application
+        jerk_limit = 1.0 * DT_CTRL  # Max 1.0 m/s^2/s jerk rate
+        if output_accel < target_accel:
+          output_accel += min(target_accel - output_accel, jerk_limit)
+        else:
+          output_accel -= min(output_accel - target_accel, jerk_limit)
+
+      else:
+        # Standard stopping / creep cancellation logic
+        if output_accel > frogpilot_toggles.stopAccel:
+          # Bleed off acceleration smoothly instead of snapping immediately to 0.0
+          output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
+          output_accel = max(output_accel, frogpilot_toggles.stopAccel)
+
       self.reset()
 
     elif self.long_control_state == LongCtrlState.starting:
