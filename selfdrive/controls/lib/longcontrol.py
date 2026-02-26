@@ -153,10 +153,25 @@ class LongControl:
 
       else:
         # Standard stopping / creep cancellation logic
-        if output_accel > frogpilot_toggles.stopAccel:
+        if distance_error < 0.0:
+          # We are closer than the target gap! Brake actively!
+          # The closer we get, the harder we brake.
+          active_brake = clip(distance_error * 0.5, frogpilot_toggles.stopAccel, 0.0) 
+          # Rapidly step down to the active brake value
+          if output_accel > active_brake:
+            output_accel -= (frogpilot_toggles.stoppingDecelRate * 3.0) * DT_CTRL
+            output_accel = max(output_accel, active_brake)
+        elif output_accel > frogpilot_toggles.stopAccel:
           # Bleed off acceleration smoothly instead of snapping immediately to 0.0
           output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
           output_accel = max(output_accel, frogpilot_toggles.stopAccel)
+      # ---------------------------------------------------------
+      #else:
+        ## Standard stopping / creep cancellation logic
+        #if output_accel > frogpilot_toggles.stopAccel:
+          ## Bleed off acceleration smoothly instead of snapping immediately to 0.0
+          #output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
+          #output_accel = max(output_accel, frogpilot_toggles.stopAccel)
 
       self.reset()
 
