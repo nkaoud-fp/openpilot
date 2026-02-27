@@ -11,7 +11,7 @@ LongCtrlState = car.CarControl.Actuators.LongControlState
 
 # Standstill creep-to-gap constants (bumper-to-bumper follow at stops)
 CREEP_GAP_TARGET = 2      # meters - desired stopped gap to lead
-CREEP_GAP_DEADBAND = 0.3  # meters - hysteresis to avoid oscillation 
+CREEP_GAP_DEADBAND = 0.2  # meters - hysteresis to avoid oscillation (dflt 0.3)
 CREEP_ACCEL = 0.4         # m/s^2 - gentle creep acceleration cap  (0.3 default)
 CREEP_MAX_SPEED = 4 #0.5  # m/s  - only creep below this ego speed (2 m/s ~ 7 kph) (4 m/s ~ 14 kph)
 
