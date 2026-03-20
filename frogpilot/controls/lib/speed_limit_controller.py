@@ -47,7 +47,9 @@ class SpeedLimitController:
 
     self.session = requests.Session()
     self.session.headers.update({"Accept-Language": "en"})
-    self.session.headers.update({"User-Agent": "frogpilot-mapbox-speed-limit-retriever/1.0 (https://github.com/FrogAi/FrogPilot)"})
+    #self.session.headers.update({"User-Agent": "frogpilot-mapbox-speed-limit-retriever/1.0 (https://github.com/FrogAi/FrogPilot)"})
+    self.session.headers.update({"User-Agent": "frogpilot-mapbox-speed-limit-retriever/1.0 (https://github.com/nkaoud-fp/FrogPilot)"})
+
 
   @property
   def experimental_mode(self):
