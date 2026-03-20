@@ -45,7 +45,9 @@ THRESHOLD = 0.63                          # Requires the condition to be true fo
 
 NON_DRIVING_GEARS = [GearShifter.neutral, GearShifter.park, GearShifter.reverse, GearShifter.unknown]
 
-RESOURCES_REPO = "FrogAi/FrogPilot-Resources"
+#RESOURCES_REPO = "FrogAi/FrogPilot-Resources"
+RESOURCES_REPO = "nkaoud-fp/FrogPilot-Resources"  # changed FrogAI/frogpilot-resources to local
+
 
 ACTIVE_THEME_PATH = Path(__file__).parents[1] / "assets/active_theme"
 METADATAS_PATH = Path(__file__).parents[1] / "assets/model_metadata"
@@ -1032,6 +1034,7 @@ class FrogPilotVariables:
 
     params_memory.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     params_memory.remove("FrogPilotTogglesUpdated")
+
 
 
 
