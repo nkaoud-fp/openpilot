@@ -47,7 +47,9 @@ class ModelManager:
 
     self.session = requests.Session()
     self.session.headers.update({"Accept-Language": "en"})
-    self.session.headers.update({"User-Agent": "frogpilot-model-downloader/1.0 (https://github.com/FrogAi/FrogPilot)"})
+    #self.session.headers.update({"User-Agent": "frogpilot-model-downloader/1.0 (https://github.com/FrogAi/FrogPilot)"})
+    self.session.headers.update({"User-Agent": "frogpilot-model-downloader/1.0 (https://github.com/nkaoud-fp/FrogPilot)"})
+
 
     if boot_run:
       self.copy_default_model()
