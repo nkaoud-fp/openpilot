@@ -37,7 +37,7 @@ def compile_model(onnx_path):
 
   delete_file(onnx_path)
 
-def download_models_old():
+def download_models():
   session = requests.Session()
   session.headers.update({"Accept-Language": "en"})
   #session.headers.update({"User-Agent": "frogpilot-model-compiler/1.0 (https://github.com/FrogAi/FrogPilot)"})
@@ -60,43 +60,6 @@ def download_models_old():
     print(f"{name} downloaded!")
 
     local_paths.append(destination)
-  return local_paths
-
-def download_models():
-  session = requests.Session()
-  session.headers.update({"Accept-Language": "en"})
-  session.headers.update({"User-Agent": "frogpilot-model-compiler/1.0 (https://github.com/nkaoud-fp/FrogPilot)"})
-
-  COMPILED_DIR.mkdir(parents=True, exist_ok=True)
-  UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
-
-  local_paths = []
-  for name in list_remote_onnx_files(session):
-    # Extract the base name (e.g., "off-policy_driving_policy" from "off-policy_driving_policy.onnx")
-    stem = Path(name).stem
-    
-    # Define the expected compiled file paths
-    tinygrad_pkl = COMPILED_DIR / f"{stem}_tinygrad.pkl"
-    metadata_pkl = COMPILED_DIR / f"{stem}_metadata.pkl"
-
-    # Check if BOTH compiled files already exist
-    if tinygrad_pkl.exists() and metadata_pkl.exists():
-      print(f"[{name}] Already compiled. Skipping download.")
-      continue
-
-    url = f"{MODELS_SOURCE_RAW}/{name}"
-    destination = UNCOMPILED_DIR / name
-
-    print(f"[{name}] Missing .pkl files. Downloading...")
-    download_file(CANCEL_DOWNLOAD_PARAM, destination, DOWNLOAD_PROGRESS_PARAM, url, MODEL_DOWNLOAD_PARAM, session)
-
-    if not verify_download(destination, url, session):
-      print(f"[{name}] Download verification failed.")
-      continue
-
-    print(f"[{name}] Downloaded successfully!")
-    local_paths.append(destination)
-    
   return local_paths
 
 def list_remote_onnx_files(session):
