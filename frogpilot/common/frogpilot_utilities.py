@@ -170,7 +170,9 @@ def get_lock_status(can_parser, can_sock):
   return can_parser.vl["DOOR_LOCKS"]["LOCK_STATUS"]
 
 def is_url_pingable(url):
-  headers = {"User-Agent": "frogpilot-ping-test/1.0 (https://github.com/FrogAi/FrogPilot)"}
+  #headers = {"User-Agent": "frogpilot-ping-test/1.0 (https://github.com/FrogAi/FrogPilot)"}
+  headers = {"User-Agent": "frogpilot-ping-test/1.0 (https://github.com/nkaoud-fp/FrogPilot)"}
+
   try:
     response = requests.head(url, headers=headers, timeout=10, allow_redirects=True)
     if response.status_code in (405, 501):
