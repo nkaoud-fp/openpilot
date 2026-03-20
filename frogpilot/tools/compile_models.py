@@ -15,8 +15,12 @@ from openpilot.frogpilot.common.frogpilot_variables import MODELS_PATH
 METADATA_SCRIPT = Path(BASEDIR) / "frogpilot/tinygrad_modeld/get_model_metadata.py"
 TINYGRAD_REPO_PATH = Path(BASEDIR) / "tinygrad_repo"
 
-MODELS_SOURCE = "https://api.github.com/repos/FrogAi/FrogPilot-Resources/contents/uncompiled?ref=Models"
-MODELS_SOURCE_RAW = "https://raw.githubusercontent.com/FrogAi/FrogPilot-Resources/Models/uncompiled"
+#MODELS_SOURCE = "https://api.github.com/repos/FrogAi/FrogPilot-Resources/contents/uncompiled?ref=Models"
+#MODELS_SOURCE_RAW = "https://raw.githubusercontent.com/FrogAi/FrogPilot-Resources/Models/uncompiled"
+
+MODELS_SOURCE = "https://api.github.com/repos/nkaoud-fp/FrogPilot-Resources/contents/uncompiled?ref=Models"
+MODELS_SOURCE_RAW = "https://raw.githubusercontent.com/nkaoud-fp/FrogPilot-Resources/Models/uncompiled"
+
 
 COMPILED_DIR = Path(MODELS_PATH) / "compiled"
 UNCOMPILED_DIR = Path(MODELS_PATH) / "uncompiled_downloads"
@@ -36,7 +40,9 @@ def compile_model(onnx_path):
 def download_models():
   session = requests.Session()
   session.headers.update({"Accept-Language": "en"})
-  session.headers.update({"User-Agent": "frogpilot-model-compiler/1.0 (https://github.com/FrogAi/FrogPilot)"})
+  #session.headers.update({"User-Agent": "frogpilot-model-compiler/1.0 (https://github.com/FrogAi/FrogPilot)"})
+  session.headers.update({"User-Agent": "frogpilot-model-compiler/1.0 (https://github.com/nkaoud-fp/FrogPilot)"})
+
 
   COMPILED_DIR.mkdir(parents=True, exist_ok=True)
   UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
