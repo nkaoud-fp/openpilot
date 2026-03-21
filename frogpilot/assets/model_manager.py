@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import json
+import os       # added to compile onnx
+import sys      # added to compile onnx
 import re
 import requests
 import shutil
@@ -12,12 +14,19 @@ from urllib.parse import quote_plus
 from openpilot.common.basedir import BASEDIR
 from openpilot.frogpilot.assets.download_functions import GITLAB_URL, download_file, get_remote_file_size, get_repository_url, handle_error, handle_request_error, verify_download
 from openpilot.frogpilot.common.frogpilot_utilities import delete_file, extract_tar, load_json_file, update_json_file
-from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles
+# Add run_cmd to the end of the line below:
+from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles, run_cmd
 
 #VERSION = "v16" #v17
 VERSION = "v17"
 
 VERSION_PATH = MODELS_PATH / "model_version"
+
+# --- ADD THESE NEW CONSTANTS - added to compile onnx---
+UNCOMPILED_DIR = MODELS_PATH / "uncompiled_downloads"
+METADATA_SCRIPT = Path(BASEDIR) / "frogpilot/tinygrad_modeld/get_model_metadata.py"
+MODELS_SOURCE_RAW = "https://raw.githubusercontent.com/nkaoud-fp/FrogPilot-Resources/Models/uncompiled"
+# -------------------------------
 
 CANCEL_DOWNLOAD_PARAM = "CancelModelDownload"
 DOWNLOAD_PROGRESS_PARAM = "ModelDownloadProgress"
@@ -247,11 +256,19 @@ class ModelManager:
       file_sizes = []
       file_sources = []
 
+      #missing = [name for name in tinygrad_filenames if int(all_model_sizes.get(name, 0)) <= 0]
+      #if missing:
+      #  handle_error(None, "Missing size metadata...", f"Sizes not found for: {', '.join(missing)}...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      #  self.downloading_model = False
+      #  return
+
+      # added to compile onnx
       missing = [name for name in tinygrad_filenames if int(all_model_sizes.get(name, 0)) <= 0]
       if missing:
-        handle_error(None, "Missing size metadata...", f"Sizes not found for: {', '.join(missing)}...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
-        self.downloading_model = False
+        print(f"Compiled files missing on remote. Attempting to download and compile {model_to_download}.onnx...")
+        self.download_and_compile_onnx(model_to_download)
         return
+      ############
 
       for filename in tinygrad_filenames:
         primary_url = f"{repo_url}/Models/compiled/{filename}"
@@ -313,6 +330,78 @@ class ModelManager:
 
       self.downloading_model = False
 
+################# added to compile onnx ###############
+
+  def download_and_compile_onnx(self, model_to_download):
+    UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
+    onnx_filename = f"{model_to_download}.onnx"
+    url = f"{MODELS_SOURCE_RAW}/{onnx_filename}"
+    destination = UNCOMPILED_DIR / onnx_filename
+
+    print(f"Downloading uncompiled model: {onnx_filename}")
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Downloading {onnx_filename}...")
+    
+    download_file(CANCEL_DOWNLOAD_PARAM, destination, DOWNLOAD_PROGRESS_PARAM, url, MODEL_DOWNLOAD_PARAM, self.session)
+
+    if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
+      delete_file(destination)
+      handle_error(None, "Download cancelled...", "Download cancelled...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      self.downloading_model = False
+      return
+
+    if not verify_download(destination, url, self.session):
+      handle_error(destination, "Verification failed...", f"Verification failed for {onnx_filename}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      self.downloading_model = False
+      return
+
+    # If successful, compile it!
+    self.compile_onnx_model(destination)
+
+    # Update file sizes so the system recognizes the newly compiled files
+    print(f"Updating model sizes for {model_to_download}...")
+    for filename, _ in TINYGRAD_FILES:
+      file_path = MODELS_PATH / f"{model_to_download}_{filename}"
+      if file_path.exists():
+        self.update_model_size(file_path)
+
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, "Downloaded and Compiled!")
+    params_memory.remove(MODEL_DOWNLOAD_PARAM)
+    self.downloading_model = False
+
+
+
+  def compile_onnx_model(self, onnx_path):
+    onnx_path = Path(onnx_path).resolve()
+    
+    # We tell compile3.py to drop the primary compiled file directly into the safe MODELS_PATH
+    compiled_path = MODELS_PATH / f"{onnx_path.stem}_tinygrad.pkl"
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{env.get('PYTHONPATH','')}:{TINYGRAD_REPO_PATH}"
+
+    print(f"Compiling {onnx_path.name}... this might take a minute.")
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Compiling {onnx_path.stem}...")
+
+    run_cmd([sys.executable, str(TINYGRAD_REPO_PATH / "examples/openpilot/compile3.py"), str(onnx_path), str(compiled_path)], f"{onnx_path.name} compiled successfully!", "Failed to compile the model...", env=env)
+    
+    # The metadata script likely drops its files right next to the source .onnx file
+    run_cmd([sys.executable, str(METADATA_SCRIPT), str(onnx_path)], f"Successfully extracted metadata from {onnx_path.name}!", f"Failed to extract metadata from {onnx_path.name}...")
+
+    # Loop through the system's TINYGRAD_FILES list to catch EVERY generated .pkl file
+    for filename, _ in TINYGRAD_FILES:
+      source_file = onnx_path.parent / f"{onnx_path.stem}_{filename}"
+      dest_file = MODELS_PATH / f"{onnx_path.stem}_{filename}"
+      
+      # If the file was generated in the temporary folder, move it to the safe compiled folder
+      if source_file.exists() and source_file.resolve() != dest_file.resolve():
+        shutil.move(str(source_file), str(dest_file))
+
+    # Finally, delete the massive uncompiled .onnx file to save space
+    delete_file(onnx_path)
+
+
+################# added to compile onnx ###############    
+  
   def fetch_all_model_sizes(self, repo_url):
     is_github = "github" in repo_url
     is_gitlab = "gitlab" in repo_url
