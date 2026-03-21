@@ -333,6 +333,73 @@ class ModelManager:
 ################# added to compile onnx ###############
 
   def download_and_compile_onnx(self, model_to_download):
+    # 1. Ask GitHub exactly what files are in the uncompiled folder to avoid 404s
+    api_url = "https://api.github.com/repos/nkaoud-fp/FrogPilot-Resources/contents/uncompiled?ref=Models"
+    
+    try:
+      response = self.session.get(api_url, timeout=10)
+      response.raise_for_status()
+      entries = response.json()
+      
+      # Look for the exact filename, ignoring case sensitivity
+      onnx_filename = None
+      for entry in entries:
+        if entry["name"].lower() == f"{model_to_download.lower()}.onnx":
+          onnx_filename = entry["name"]
+          break
+          
+      if not onnx_filename:
+        print(f"Could not find {model_to_download}.onnx on GitHub.")
+        handle_error(None, "ONNX not found...", f"{model_to_download}.onnx is missing from the remote repository.", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+        self.downloading_model = False
+        return
+
+    except Exception as e:
+      handle_error(None, "API Check Failed...", f"Could not check remote ONNX files: {e}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      self.downloading_model = False
+      return
+
+    # 2. Proceed with the guaranteed correct filename
+    UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
+    url = f"{MODELS_SOURCE_RAW}/{onnx_filename}"
+    destination = UNCOMPILED_DIR / onnx_filename
+
+    # Delete any corrupted or partial 404 files from previous failed attempts
+    if destination.exists():
+      delete_file(destination)
+
+    print(f"Downloading uncompiled model: {onnx_filename}")
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Downloading {onnx_filename}...")
+    
+    download_file(CANCEL_DOWNLOAD_PARAM, destination, DOWNLOAD_PROGRESS_PARAM, url, MODEL_DOWNLOAD_PARAM, self.session)
+
+    if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
+      delete_file(destination)
+      handle_error(None, "Download cancelled...", "Download cancelled...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      self.downloading_model = False
+      return
+
+    if not verify_download(destination, url, self.session):
+      handle_error(destination, "Verification failed...", f"Verification failed for {onnx_filename}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      self.downloading_model = False
+      return
+
+    # If successful, compile it!
+    self.compile_onnx_model(destination)
+
+    # Update file sizes so the system recognizes the newly compiled files
+    print(f"Updating model sizes for {model_to_download}...")
+    for filename, _ in TINYGRAD_FILES:
+      file_path = MODELS_PATH / f"{model_to_download}_{filename}"
+      if file_path.exists():
+        self.update_model_size(file_path)
+
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, "Downloaded and Compiled!")
+    params_memory.remove(MODEL_DOWNLOAD_PARAM)
+    self.downloading_model = False
+
+
+  def download_and_compile_onnx_old(self, model_to_download):
     UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
     onnx_filename = f"{model_to_download}.onnx"
     url = f"{MODELS_SOURCE_RAW}/{onnx_filename}"
