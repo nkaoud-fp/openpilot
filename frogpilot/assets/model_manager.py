@@ -13,9 +13,9 @@ from urllib.parse import quote_plus
 
 from openpilot.common.basedir import BASEDIR
 from openpilot.frogpilot.assets.download_functions import GITLAB_URL, download_file, get_remote_file_size, get_repository_url, handle_error, handle_request_error, verify_download
-from openpilot.frogpilot.common.frogpilot_utilities import delete_file, extract_tar, load_json_file, update_json_file
 # Add run_cmd to the end of the line below:
-from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles, run_cmd
+from openpilot.frogpilot.common.frogpilot_utilities import delete_file, extract_tar, load_json_file, update_json_file, run_cmd
+from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles
 
 #VERSION = "v16" #v17
 VERSION = "v17"
