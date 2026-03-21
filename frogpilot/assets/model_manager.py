@@ -333,61 +333,42 @@ class ModelManager:
 ################# added to compile onnx ###############
 
   def download_and_compile_onnx(self, model_to_download):
-    # 1. Ask GitHub exactly what files are in the uncompiled folder to avoid 404s
-    api_url = "https://api.github.com/repos/nkaoud-fp/FrogPilot-Resources/contents/uncompiled?ref=Models"
-    
-    try:
-      response = self.session.get(api_url, timeout=10)
-      response.raise_for_status()
-      entries = response.json()
+    UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
+
+    # We now know each model is split into two specific files
+    onnx_filenames = [
+        f"{model_to_download}_driving_policy.onnx",
+        f"{model_to_download}_driving_vision.onnx"
+    ]
+
+    for onnx_filename in onnx_filenames:
+      url = f"{MODELS_SOURCE_RAW}/{onnx_filename}"
+      destination = UNCOMPILED_DIR / onnx_filename
+
+      # Delete any corrupted or partial 404 files from previous failed attempts
+      if destination.exists():
+        delete_file(destination)
+
+      print(f"Downloading uncompiled model part: {onnx_filename}")
+      params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Downloading {onnx_filename}...")
       
-      # Look for the exact filename, ignoring case sensitivity
-      onnx_filename = None
-      for entry in entries:
-        if entry["name"].lower() == f"{model_to_download.lower()}.onnx":
-          onnx_filename = entry["name"]
-          break
-          
-      if not onnx_filename:
-        print(f"Could not find {model_to_download}.onnx on GitHub.")
-        handle_error(None, "ONNX not found...", f"{model_to_download}.onnx is missing from the remote repository.", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+      download_file(CANCEL_DOWNLOAD_PARAM, destination, DOWNLOAD_PROGRESS_PARAM, url, MODEL_DOWNLOAD_PARAM, self.session)
+
+      if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
+        delete_file(destination)
+        handle_error(None, "Download cancelled...", "Download cancelled...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
         self.downloading_model = False
         return
 
-    except Exception as e:
-      handle_error(None, "API Check Failed...", f"Could not check remote ONNX files: {e}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
-      self.downloading_model = False
-      return
+      if not verify_download(destination, url, self.session):
+        handle_error(destination, "Verification failed...", f"Verification failed for {onnx_filename}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
+        self.downloading_model = False
+        return
 
-    # 2. Proceed with the guaranteed correct filename
-    UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
-    url = f"{MODELS_SOURCE_RAW}/{onnx_filename}"
-    destination = UNCOMPILED_DIR / onnx_filename
+      # If successful, compile this specific file before moving to the next one
+      self.compile_onnx_model(destination)
 
-    # Delete any corrupted or partial 404 files from previous failed attempts
-    if destination.exists():
-      delete_file(destination)
-
-    print(f"Downloading uncompiled model: {onnx_filename}")
-    params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Downloading {onnx_filename}...")
-    
-    download_file(CANCEL_DOWNLOAD_PARAM, destination, DOWNLOAD_PROGRESS_PARAM, url, MODEL_DOWNLOAD_PARAM, self.session)
-
-    if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
-      delete_file(destination)
-      handle_error(None, "Download cancelled...", "Download cancelled...", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
-      self.downloading_model = False
-      return
-
-    if not verify_download(destination, url, self.session):
-      handle_error(destination, "Verification failed...", f"Verification failed for {onnx_filename}", MODEL_DOWNLOAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
-      self.downloading_model = False
-      return
-
-    # If successful, compile it!
-    self.compile_onnx_model(destination)
-
-    # Update file sizes so the system recognizes the newly compiled files
+    # Update file sizes so the system recognizes all the newly compiled files
     print(f"Updating model sizes for {model_to_download}...")
     for filename, _ in TINYGRAD_FILES:
       file_path = MODELS_PATH / f"{model_to_download}_{filename}"
@@ -398,6 +379,35 @@ class ModelManager:
     params_memory.remove(MODEL_DOWNLOAD_PARAM)
     self.downloading_model = False
 
+
+  def compile_onnx_model(self, onnx_path):
+    onnx_path = Path(onnx_path).resolve()
+    
+    # We tell compile3.py to drop the compiled file directly into the safe MODELS_PATH
+    compiled_path = MODELS_PATH / f"{onnx_path.stem}_tinygrad.pkl"
+    
+    # Define metadata paths
+    source_metadata = onnx_path.parent / f"{onnx_path.stem}_metadata.pkl"
+    dest_metadata = MODELS_PATH / f"{onnx_path.stem}_metadata.pkl"
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{env.get('PYTHONPATH','')}:{TINYGRAD_REPO_PATH}"
+
+    print(f"Compiling {onnx_path.name}... this might take a minute.")
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, f"Compiling {onnx_path.stem}...")
+
+    # Run the compiler
+    run_cmd([sys.executable, str(TINYGRAD_REPO_PATH / "examples/openpilot/compile3.py"), str(onnx_path), str(compiled_path)], f"{onnx_path.name} compiled successfully!", "Failed to compile the model...", env=env)
+    
+    # Run the metadata extractor
+    run_cmd([sys.executable, str(METADATA_SCRIPT), str(onnx_path)], f"Successfully extracted metadata from {onnx_path.name}!", f"Failed to extract metadata from {onnx_path.name}...")
+
+    # Move the metadata file over to the safe compiled folder
+    if source_metadata.exists():
+      shutil.move(str(source_metadata), str(dest_metadata))
+
+    # Finally, delete the massive uncompiled .onnx file to save space
+    delete_file(onnx_path)
 
   def download_and_compile_onnx_old(self, model_to_download):
     UNCOMPILED_DIR.mkdir(parents=True, exist_ok=True)
@@ -437,7 +447,7 @@ class ModelManager:
 
 
 
-  def compile_onnx_model(self, onnx_path):
+  def compile_onnx_model_old(self, onnx_path):
     onnx_path = Path(onnx_path).resolve()
     
     # We tell compile3.py to drop the primary compiled file directly into the safe MODELS_PATH
