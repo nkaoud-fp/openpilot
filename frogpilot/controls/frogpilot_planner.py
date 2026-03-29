@@ -111,6 +111,7 @@ class FrogPilotPlanner:
 
       # 4. Evaluate Triggers using Dynamic Thresholds
       is_straight = current_lat_accel < lat_accel_threshold
+      is_stopping_for_light = self.cem.stop_light_detected # Don't override if stopping for a light!
 
       # Trigger A: Significant Speed Delta with Lead
       safe_lead_gap = False
@@ -125,9 +126,9 @@ class FrogPilotPlanner:
           # If Chill: Stay in chill as long as right lead is > (Target - 2.0)
           if right_lead_speed > (model_target_speed + right_flow_offset):
               better_flow_right = True
-
+            
       # 5. Final Decision
-      if is_straight and (safe_lead_gap or better_flow_right):
+      if is_straight and (safe_lead_gap or (better_flow_right and not is_stopping_for_light)):
           self.cem.experimental_mode = False
       else:
           self.cem.experimental_mode = True
