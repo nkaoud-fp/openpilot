@@ -30,6 +30,10 @@ class FrogPilotPlanner:
     # --- ADD THIS BLOCK for Transition Smoothing Logic ---
     self.prev_experimental_mode = False
     self.smoothing_timer = 0
+    
+    # NEW: Timer for Green Light Auto-Resume
+    self.green_light_timer = 0
+    
     # ----------------------
 
     with car.CarParams.from_bytes(params.get("CarParams", block=True)) as msg:
@@ -130,7 +134,21 @@ class FrogPilotPlanner:
           # If Chill: Stay in chill as long as right lead is > (Target - 2.0)
           if right_lead_speed > (model_target_speed + right_flow_offset):
               better_flow_right = True
-            
+
+      # ============================================================
+      # NEW: Trigger C: Green Light Auto-Resume (Timer-based)
+      # ============================================================
+      # If stopped, no lead car, and AI model no longer sees a reason to stop
+      if sm["carState"].standstill and not self.lead_one.status and not model_wants_to_stop:
+          # Set timer for 4 seconds of forced Chill Mode (4.0s / DT_MDL)
+          self.green_light_timer = 4.0 / DT_MDL  
+
+      force_green_light_chill = False
+      if self.green_light_timer > 0:
+          force_green_light_chill = True
+          self.green_light_timer -= 1
+
+      
       # 5. Final Decision
       if is_straight and not model_wants_to_stop and (safe_lead_gap or (better_flow_right and not is_stopping_for_light)):
           self.cem.experimental_mode = False
@@ -145,7 +163,8 @@ class FrogPilotPlanner:
       # START: Gradual Transition Smoothing (Ramped)
       # ============================================================
       # 1. Detect switch from Experimental -> Chill
-      if self.prev_experimental_mode and not self.cem.experimental_mode:
+      #if self.prev_experimental_mode and not self.cem.experimental_mode:
+      if self.prev_experimental_mode and not self.cem.experimental_mode and not force_green_light_chill:
           self.smoothing_timer = 3.0 / DT_MDL  # 3 seconds (60 frames)
           self.initial_v_ego = v_ego           # Record speed at start of transition
 
