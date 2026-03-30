@@ -159,6 +159,7 @@ class FrogPilotPlanner:
       # END: Custom Logic
       # ============================================================
 
+      """
       # ============================================================
       # START: Gradual Transition Smoothing (Ramped)
       # ============================================================
@@ -168,7 +169,7 @@ class FrogPilotPlanner:
           self.smoothing_timer = 5.0 / DT_MDL  # 5 seconds 
           self.initial_v_ego = v_ego           # Record speed at start of transition
 
-      """
+      
       # 2. If timer is active, ramp the acceleration limit up
       if self.smoothing_timer > 0:
           # total_frames = 60
@@ -183,30 +184,48 @@ class FrogPilotPlanner:
           self.frogpilot_acceleration.max_accel = min(self.frogpilot_acceleration.max_accel, ramped_accel)
           self.smoothing_timer -= 1
 
-      #self.prev_experimental_mode = self.cem.experimental_mode
+      self.prev_experimental_mode = self.cem.experimental_mode
+      
+      # ============================================================
+      # END: Transition Smoothing Logic
+      # ============================================================
       """
 
-      # impliment S-Curve instead of liner
+      # ============================================================
+      # START: Gradual Transition Smoothing (S-Curve Dynamic)
+      # ============================================================
+      # 1. Detect switch from Experimental -> Chill
+      if self.prev_experimental_mode and not self.cem.experimental_mode and not force_green_light_chill:
+          self.smoothing_timer = 5.0 / DT_MDL  # 5 seconds (100 frames)
+          self.initial_v_ego = v_ego           # Record speed at start of transition
+          
+          # NEW: Capture real-time acceleration, floored at 0.0 so we don't start from a braking state
+          self.initial_a_ego = max(sm["carState"].aEgo, 0.0)
+
+      # 2. Apply the S-Curve ramp
       if self.smoothing_timer > 0:
-          total_frames = 5.0 / DT_MDL  # 5 seconds 
+          total_frames = 5.0 / DT_MDL  # 5 seconds (100 frames)
           current_progress = 1.0 - (self.smoothing_timer / total_frames)
           
           # S-Curve using Sine: starts flat, gets steep, ends flat
-          # math.sin goes from -1 to 1; we map it to 0 to 1
           s_curve_factor = (math.sin((current_progress * math.pi) - (math.pi / 2)) + 1) / 2
           
-          ramped_accel = 0.2 + (1.0 * s_curve_factor)
+          # The target cap we want to reach is 1.2 m/s^2
+          target_max_accel = 1.2
+          
+          # Calculate the difference between where we are and where we are going
+          accel_gap = target_max_accel - self.initial_a_ego
+          
+          # Start at current acceleration, and add the S-Curve percentage of the gap
+          ramped_accel = self.initial_a_ego + (accel_gap * s_curve_factor)
           
           self.frogpilot_acceleration.max_accel = min(self.frogpilot_acceleration.max_accel, ramped_accel)
           self.smoothing_timer -= 1
 
       self.prev_experimental_mode = self.cem.experimental_mode
-
       # ============================================================
       # END: Transition Smoothing Logic
       # ============================================================
-
-
     
     else:
       self.cem.curve_detected = False
