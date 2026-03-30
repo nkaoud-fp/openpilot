@@ -148,9 +148,19 @@ class FrogPilotPlanner:
           force_green_light_chill = True
           self.green_light_timer -= 1
 
-      
+      '''
       # 5. Final Decision
       if is_straight and not model_wants_to_stop and (safe_lead_gap or (better_flow_right and not is_stopping_for_light)):
+          self.cem.experimental_mode = False
+      else:
+          self.cem.experimental_mode = True
+      '''
+
+      # 5. Final Decision
+      if force_green_light_chill:
+          # Force Chill Mode to automatically resume at the green light
+          self.cem.experimental_mode = False
+      elif is_straight and not model_wants_to_stop and (safe_lead_gap or (better_flow_right and not is_stopping_for_light)):
           self.cem.experimental_mode = False
       else:
           self.cem.experimental_mode = True
