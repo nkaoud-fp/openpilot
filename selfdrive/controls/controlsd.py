@@ -833,10 +833,26 @@ class Controls:
     CC.cruiseControl.cancel = CS.cruiseState.enabled and (not self.enabled or not self.CP.pcmCruise)
     if self.joystick_mode and self.sm.recv_frame['testJoystick'] > 0 and self.sm['testJoystick'].buttons[0]:
       CC.cruiseControl.cancel = True
-
+      
+    '''
     speeds = self.sm['longitudinalPlan'].speeds
     if len(speeds):
       CC.cruiseControl.resume = self.enabled and CS.cruiseState.standstill and speeds[-1] > 0.1
+    '''
+    
+    #------------------  Start: Go on Green light  ----------------------
+    speeds = self.sm['longitudinalPlan'].speeds
+    if len(speeds):
+      # --- NEW: Check for Green Light Auto-Resume ---
+      green_light_auto_resume = params_memory.get_bool("GreenLightAutoResume")
+
+      if green_light_auto_resume:
+          # Force resume instantly if enabled and at a standstill
+          CC.cruiseControl.resume = self.enabled and CS.cruiseState.standstill
+      else:
+          # Standard openpilot resume logic
+          CC.cruiseControl.resume = self.enabled and CS.cruiseState.standstill and speeds[-1] > 0.1
+    #------------------  End: Go on Green light  ----------------------
 
     hudControl = CC.hudControl
     hudControl.setSpeed = float(self.v_cruise_helper.v_cruise_cluster_kph * CV.KPH_TO_MS)
