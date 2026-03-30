@@ -136,12 +136,21 @@ class FrogPilotPlanner:
               better_flow_right = True
 
       # ============================================================
-      # NEW: Trigger C: Green Light Auto-Resume (Timer-based)
+      # NEW: Trigger C: Green Light Auto-Resume (State Transition)
       # ============================================================
-      # If stopped, no lead car, and AI model no longer sees a reason to stop
-      if sm["carState"].standstill and not self.lead_one.status and not model_wants_to_stop:
-          # Set timer for 4 seconds of forced Chill Mode (4.0s / DT_MDL)
-          self.green_light_timer = 4.0 / DT_MDL  
+      # 1. Initialize our memory variable (runs once)
+      if not hasattr(self, 'was_stopped_for_light'):
+          self.was_stopped_for_light = False
+
+      # 2. Track if we are actively stopped for a red light
+      if sm["carState"].standstill and self.cem.stop_light_detected:
+          self.was_stopped_for_light = True
+          self.green_light_timer = 0 # Keep timer at 0 while waiting
+          
+      # 3. Detect the Green Light (we were stopped, but the light is no longer red)
+      elif self.was_stopped_for_light and not self.cem.stop_light_detected:
+          self.green_light_timer = 4.0 / DT_MDL  # Start the 4-second timer
+          self.was_stopped_for_light = False     # Reset memory so timer can count down
 
       force_green_light_chill = False
       if self.green_light_timer > 0:
