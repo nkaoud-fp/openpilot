@@ -165,14 +165,15 @@ class FrogPilotPlanner:
       # 1. Detect switch from Experimental -> Chill
       #if self.prev_experimental_mode and not self.cem.experimental_mode:
       if self.prev_experimental_mode and not self.cem.experimental_mode and not force_green_light_chill:
-          self.smoothing_timer = 3.0 / DT_MDL  # 3 seconds (60 frames)
+          self.smoothing_timer = 5.0 / DT_MDL  # 5 seconds (60 frames)
           self.initial_v_ego = v_ego           # Record speed at start of transition
 
+      """
       # 2. If timer is active, ramp the acceleration limit up
       if self.smoothing_timer > 0:
           # total_frames = 60
           # current_progress goes from 0.0 (start) to 1.0 (end)
-          total_frames = 3.0 / DT_MDL
+          total_frames = 5.0 / DT_MDL # 5 seconds (60 frames)
           current_progress = 1.0 - (self.smoothing_timer / total_frames)
           
           # Ramp max_accel from 0.2 m/s^2 up to 1.2 m/s^2 over 3 seconds
@@ -182,7 +183,25 @@ class FrogPilotPlanner:
           self.frogpilot_acceleration.max_accel = min(self.frogpilot_acceleration.max_accel, ramped_accel)
           self.smoothing_timer -= 1
 
+      #self.prev_experimental_mode = self.cem.experimental_mode
+      """
+
+      # impliment S-Curve instead of liner
+      if self.smoothing_timer > 0:
+          total_frames = 5.0 / DT_MDL  # 5 seconds (60 frames)
+          current_progress = 1.0 - (self.smoothing_timer / total_frames)
+          
+          # S-Curve using Sine: starts flat, gets steep, ends flat
+          # math.sin goes from -1 to 1; we map it to 0 to 1
+          s_curve_factor = (math.sin((current_progress * math.pi) - (math.pi / 2)) + 1) / 2
+          
+          ramped_accel = 0.2 + (1.0 * s_curve_factor)
+          
+          self.frogpilot_acceleration.max_accel = min(self.frogpilot_acceleration.max_accel, ramped_accel)
+          self.smoothing_timer -= 1
+
       self.prev_experimental_mode = self.cem.experimental_mode
+
       # ============================================================
       # END: Transition Smoothing Logic
       # ============================================================
