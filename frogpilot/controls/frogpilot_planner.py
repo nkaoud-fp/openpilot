@@ -165,7 +165,7 @@ class FrogPilotPlanner:
       # 1. Detect switch from Experimental -> Chill
       #if self.prev_experimental_mode and not self.cem.experimental_mode:
       if self.prev_experimental_mode and not self.cem.experimental_mode and not force_green_light_chill:
-          self.smoothing_timer = 5.0 / DT_MDL  # 5 seconds (60 frames)
+          self.smoothing_timer = 5.0 / DT_MDL  # 5 seconds 
           self.initial_v_ego = v_ego           # Record speed at start of transition
 
       """
@@ -173,7 +173,7 @@ class FrogPilotPlanner:
       if self.smoothing_timer > 0:
           # total_frames = 60
           # current_progress goes from 0.0 (start) to 1.0 (end)
-          total_frames = 5.0 / DT_MDL # 5 seconds (60 frames)
+          total_frames = 5.0 / DT_MDL # 5 seconds 
           current_progress = 1.0 - (self.smoothing_timer / total_frames)
           
           # Ramp max_accel from 0.2 m/s^2 up to 1.2 m/s^2 over 3 seconds
@@ -188,7 +188,7 @@ class FrogPilotPlanner:
 
       # impliment S-Curve instead of liner
       if self.smoothing_timer > 0:
-          total_frames = 5.0 / DT_MDL  # 5 seconds (60 frames)
+          total_frames = 5.0 / DT_MDL  # 5 seconds 
           current_progress = 1.0 - (self.smoothing_timer / total_frames)
           
           # S-Curve using Sine: starts flat, gets steep, ends flat
