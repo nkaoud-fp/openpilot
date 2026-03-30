@@ -844,7 +844,7 @@ class Controls:
     speeds = self.sm['longitudinalPlan'].speeds
     if len(speeds):
       # --- NEW: Check for Green Light Auto-Resume ---
-      green_light_auto_resume = params_memory.get_bool("GreenLightAutoResume")
+      green_light_auto_resume = False # params_memory.get_bool("GreenLightAutoResume")
 
       if green_light_auto_resume:
           # Force resume instantly if enabled and at a standstill
