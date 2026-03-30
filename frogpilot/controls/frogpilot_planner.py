@@ -158,7 +158,7 @@ class FrogPilotPlanner:
           self.green_light_timer -= 1
 
       # --- NEW: Broadcast a "Force Resume" flag to the car's hardware ---
-      params_memory.put_bool("GreenLightAutoResume", force_green_light_chill)
+      #params_memory.put_bool("GreenLightAutoResume", force_green_light_chill)
       # ------------------------------------------------------------------
 
       '''
