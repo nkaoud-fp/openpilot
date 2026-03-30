@@ -157,6 +157,10 @@ class FrogPilotPlanner:
           force_green_light_chill = True
           self.green_light_timer -= 1
 
+      # --- NEW: Broadcast a "Force Resume" flag to the car's hardware ---
+      params_memory.put_bool("GreenLightAutoResume", force_green_light_chill)
+      # ------------------------------------------------------------------
+
       '''
       # 5. Final Decision
       if is_straight and not model_wants_to_stop and (safe_lead_gap or (better_flow_right and not is_stopping_for_light)):
