@@ -764,7 +764,7 @@ class Controls:
           target_curvature = self.desired_curvature
           
           # TUNE THIS: 0.05 = 5% per frame (Smooth). 0.02 = 2% (Luxurious).
-          alpha = 0.08  
+          alpha = 0.09  
           
           self.desired_curvature = (
               self.prev_desired_curvature +
