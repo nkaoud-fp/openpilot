@@ -161,8 +161,8 @@ class FrogPilotPlanner:
       # --- NEW: Broadcast a "Force Resume" flag to the car's hardware ---
       #params_memory.put_bool("GreenLightAutoResume", force_green_light_chill)
       # --- NEW: Broadcast a "Force Resume" flag via RAM disk ---
-      resume_flag_path = "/dev/shm/green_light_resume"
       if force_green_light_chill:
+          resume_flag_path = "/dev/shm/green_light_resume"
           try:
               # Only create the file if it isn't already there!
               if not os.path.exists(resume_flag_path):
