@@ -726,7 +726,12 @@ class Controls:
         self.prev_desired_curvature = self.desired_curvature
 
       # 2. Ask the AI if we are currently executing a lane change
-      is_lane_changing = self.sm['modelV2'].meta.laneChangeState != log.LaneChangeState.off
+      # is_lane_changing = self.sm['modelV2'].meta.laneChangeState != log.LaneChangeState.off
+      
+      # 2. Ask the AI if we are in the EARLY phases of a lane change
+      current_lc_state = self.sm['modelV2'].meta.laneChangeState
+      is_lane_changing = current_lc_state in (log.LaneChangeState.preLaneChange, log.LaneChangeState.laneChangeStarting) 
+      #is_lane_changing = current_lc_state in (log.LaneChangeState.preLaneChange, log.LaneChangeState.laneChangeStarting, log.LaneChangeState.laneChangeFinishing)
 
       # 3. If changing lanes, clamp how fast the steering wheel can move per frame
       if is_lane_changing:
