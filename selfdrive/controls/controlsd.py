@@ -719,6 +719,28 @@ class Controls:
       self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
 
       actuators.curvature = self.desired_curvature
+      
+      # -----------  Lane-Change Steering Softener --------------- #
+    	# 1. Initialize memory if it doesn't exist yet
+	    if not hasattr(self, 'prev_desired_curvature'):
+		    self.prev_desired_curvature = self.desired_curvature
+
+	    # 2. Ask the AI if we are currently executing a lane change
+	    is_lane_changing = self.sm['modelV2'].meta.laneChangeState != log.LaneChangeState.off
+
+	    # 3. If changing lanes, clamp how fast the steering wheel can move per frame
+	    if is_lane_changing:
+		    max_curvature_step = 0.0001  # default 0.0001, TUNE THIS: Smaller = softer/slower steering
+           #If the lane change feels too stiff and slow (taking too long to move over), increase the number slightly (e.g., 0.0002 or 0.0003).
+           #If it still feels too aggressive and jerky, decrease the number slightly (e.g., 0.00005).
+
+        self.desired_curvature = clip(self.desired_curvature,self.prev_desired_curvature - max_curvature_step,self.prev_desired_curvature + max_curvature_step)
+
+	    # 4. Save this frame's curvature to use for the math on the next frame
+	    self.prev_desired_curvature = self.desired_curvature
+	    # ----------------------------------------------------------------- #
+
+      
       steer, steeringAngleDeg, lac_log = self.LaC.update(CC.latActive, CS, self.VM, lp,
                                                          self.steer_limited_by_safety, self.desired_curvature,
                                                          curvature_limited,
