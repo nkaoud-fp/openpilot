@@ -719,7 +719,7 @@ class Controls:
       self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
 
       actuators.curvature = self.desired_curvature
-      
+      '''
       # -----------  Lane-Change Steering Softener --------------- #
       # 1. Initialize memory if it doesn't exist yet
       if not hasattr(self, 'prev_desired_curvature'):
@@ -747,6 +747,30 @@ class Controls:
         )
 
       # 4. Save this frame's curvature to use for the math on the next frame
+      self.prev_desired_curvature = self.desired_curvature
+      # ----------------------------------------------------------------- #
+      '''
+      # -----------  Lane-Change Steering Softener --------------- #
+      if not hasattr(self, 'prev_desired_curvature'):
+          self.prev_desired_curvature = self.desired_curvature
+
+      current_lc_state = self.sm['modelV2'].meta.laneChangeState
+      is_lane_changing = current_lc_state in (
+          log.LaneChangeState.preLaneChange,
+          log.LaneChangeState.laneChangeStarting
+      )
+
+      if is_lane_changing:
+          target_curvature = self.desired_curvature
+          
+          # TUNE THIS: 0.05 = 5% per frame (Smooth). 0.02 = 2% (Luxurious).
+          alpha = 0.05  
+          
+          self.desired_curvature = (
+              self.prev_desired_curvature +
+              alpha * (target_curvature - self.prev_desired_curvature)
+          )
+
       self.prev_desired_curvature = self.desired_curvature
       # ----------------------------------------------------------------- #
 
