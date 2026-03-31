@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import math
+import os ### only needed for greenlight hack
 
 import cereal.messaging as messaging
 
@@ -159,6 +160,22 @@ class FrogPilotPlanner:
 
       # --- NEW: Broadcast a "Force Resume" flag to the car's hardware ---
       #params_memory.put_bool("GreenLightAutoResume", force_green_light_chill)
+      # --- NEW: Broadcast a "Force Resume" flag via RAM disk ---
+      resume_flag_path = "/dev/shm/green_light_resume"
+      if force_green_light_chill:
+          try:
+              # Only create the file if it isn't already there!
+              if not os.path.exists(resume_flag_path):
+                  open(resume_flag_path, 'w').close()
+          except Exception:
+              pass
+      else:
+          try:
+              if os.path.exists(resume_flag_path):
+                  os.remove(resume_flag_path)       # Delete the flag when timer ends
+          except Exception:
+              pass
+      # ------------------------------------------------------------------
       # ------------------------------------------------------------------
 
       '''
