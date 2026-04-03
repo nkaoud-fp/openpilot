@@ -764,7 +764,7 @@ class Controls:
           target_curvature = self.desired_curvature
           
           # TUNE THIS: 0.05 = 5% per frame (Smooth). 0.02 = 2% (Luxurious).
-          alpha = 0.2  # alpha = 0.099 is smooth, higher is closer to AI model aggressevness alpha = 1.0 is AI aggressivness
+          alpha = 0.15  # alpha = 0.099 is smooth, higher is closer to AI model aggressevness alpha = 1.0 is AI aggressivness
           
           self.desired_curvature = (
               self.prev_desired_curvature +
