@@ -143,7 +143,7 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
       recovery_power = getattr(frogpilot_toggles, "recovery_power", 1.0)
       plan = plan + recovery_power * model_output['planplus'][0]
       cloudlog.error(f"planplus applied: shape {model_output['planplus'].shape}, RECOVERY_POWER {recovery_power}")
-    desired_accel, should_stop = get_accel_from_plan_tomb_raider(plan[:,Plan.VELOCITY][:,0],
+    desired_accel, should_stop = get_accel_from_plan(plan[:,Plan.VELOCITY][:,0],
                                                                  plan[:,Plan.ACCELERATION][:,0],
                                                                  ModelConstants.T_IDXS,
                                                                  action_t=long_action_t)
