@@ -26,7 +26,11 @@ from openpilot.selfdrive.car.car_helpers import get_demo_car_params
 #from opendbc.car.car_helpers import get_demo_car_params
 
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
-from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan_tomb_raider, smooth_value
+
+from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value
+
+#from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan_tomb_raider, smooth_value
+
 from openpilot.frogpilot.tinygrad_modeld.parse_model_outputs import Parser
 from openpilot.frogpilot.tinygrad_modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState, get_curvature_from_output
 from openpilot.frogpilot.tinygrad_modeld.constants import ModelConstants, Plan
