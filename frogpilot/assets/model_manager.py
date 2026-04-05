@@ -193,11 +193,24 @@ class ModelManager:
 
     return models
 
+
+  def _url_exists(self, url):
+  try:
+    response = self.session.get(url, stream=True, timeout=10, allow_redirects=True)
+    ok = response.status_code == 200
+    response.close()
+    return ok
+  except requests.exceptions.RequestException:
+    return False
+
+
+  
   def _detect_remote_onnx_layout(self, model_to_download):
     split_on_policy_urls = [f"{MODELS_SOURCE_RAW}/{model_to_download}_{name}" for name in SPLIT_ONNX_FILES_ON_POLICY]
     split_urls = [f"{MODELS_SOURCE_RAW}/{model_to_download}_{name}" for name in SPLIT_ONNX_FILES]
     legacy_urls = [f"{MODELS_SOURCE_RAW}/{model_to_download}_{name}" for name in LEGACY_ONNX_FILES]
 
+    '''
     split_on_policy_ok = all(get_remote_file_size(url, self.session) > 0 for url in split_on_policy_urls)
     if split_on_policy_ok:
       return SPLIT_ONNX_FILES_ON_POLICY
@@ -209,6 +222,17 @@ class ModelManager:
     legacy_ok = all(get_remote_file_size(url, self.session) > 0 for url in legacy_urls)
     if legacy_ok:
       return LEGACY_ONNX_FILES
+    '''
+
+    if all(self._url_exists(url) for url in split_on_policy_urls):
+      return SPLIT_ONNX_FILES_ON_POLICY
+
+    if all(self._url_exists(url) for url in split_urls):
+      return SPLIT_ONNX_FILES
+
+    if all(self._url_exists(url) for url in legacy_urls):
+      return LEGACY_ONNX_FILES
+
 
     return None
 
