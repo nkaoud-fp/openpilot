@@ -19,6 +19,9 @@ class ModelConstants:
   TEMPORAL_SKIP = MODEL_FREQ // HISTORY_FREQ
   FULL_HISTORY_BUFFER_LEN = MODEL_FREQ * HISTORY_LEN_SECONDS
   INPUT_HISTORY_BUFFER_LEN = HISTORY_FREQ * HISTORY_LEN_SECONDS
+  N_FRAMES = 2
+  MODEL_RUN_FREQ = 20
+  MODEL_CONTEXT_FREQ = 5  # "model_trained_fps"
 
   FEATURE_LEN = 512
 
@@ -66,7 +69,6 @@ class ModelConstants:
 
   POLY_PATH_DEGREE = 4
 
-# model outputs slices
 class Plan:
   POSITION = slice(0, 3)
   VELOCITY = slice(3, 6)
@@ -76,14 +78,12 @@ class Plan:
 
 class Meta:
   ENGAGED = slice(0, 1)
-  # next 2, 4, 6, 8, 10 seconds
   GAS_DISENGAGE = slice(1, 31, 6)
   BRAKE_DISENGAGE = slice(2, 31, 6)
   STEER_OVERRIDE = slice(3, 31, 6)
   HARD_BRAKE_3 = slice(4, 31, 6)
   HARD_BRAKE_4 = slice(5, 31, 6)
   HARD_BRAKE_5 = slice(6, 31, 6)
-  # next 0, 2, 4, 6, 8, 10 seconds
   GAS_PRESS = slice(31, 55, 4)
   BRAKE_PRESS = slice(32, 55, 4)
   LEFT_BLINKER = slice(33, 55, 4)
