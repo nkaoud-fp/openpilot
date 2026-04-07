@@ -572,8 +572,11 @@ def main(demo=False):
   if demo:
     CP = get_demo_car_params()
   else:
-    CP = car.CarParams.from_bytes(params.get("CarParams", block=True))
+    msg_bytes = params.get("CarParams", block=True)
+    with car.CarParams.from_bytes(msg_bytes) as cp_reader:
+      CP = cp_reader.as_builder()
   cloudlog.info("tinygrad_modeld got CarParams: %s", CP.brand)
+  
 
   # TODO this needs more thought, use .2s extra for now to estimate other delays
   # TODO Move smooth seconds to action function
