@@ -243,7 +243,9 @@ class LongitudinalPlanner:
       ttc = lead.dRel / max(closing_speed, 0.1) if lead.status else 99.0
 
       # Don't keep emergency or very short-TTC braking artificially softened
-      urgent_override = self.fcw or output_should_stop_mpc or (lead.status and ttc < 1.4)
+      #urgent_override = self.fcw or output_should_stop_mpc or (lead.status and ttc < 1.4)
+      #urgent_override = self.fcw or (lead.status and ttc < 1.4) # only for lead cars
+      urgent_override = False
 
       if urgent_override:
         output_a_target = output_a_target_mpc
