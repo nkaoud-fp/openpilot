@@ -16,13 +16,28 @@ from openpilot.common.swaglog import cloudlog
 
 from openpilot.frogpilot.common.frogpilot_variables import MINIMUM_LATERAL_ACCELERATION
 
+# ==========================================================
+# --- USER TUNING PARAMETERS FOR DYNAMIC SOFT BRAKING ---
+# ==========================================================
+USER_TUNING = {
+    "distance_buffer": 5.0,        # [3.0 - 8.0] Meters left behind lead car bumper in physics calculation
+    "base_step_slow": 0.038,       # [0.02 - 0.05] Decel ramp step (m/s^2) for slow/no-lead stops
+    "base_step_fast": 0.15,        # [0.10 - 0.20] Decel ramp step (m/s^2) for high closing speeds
+    "boost_multiplier": 4.0,       # [2.0 - 6.0] Proportional gain for emergency catch-up
+    "boost_ceiling": 0.08,         # [0.05 - 0.12] Max extra ramp step allowed per frame in emergencies
+    "baseline_cap": -1.7,          # [-1.2 to -2.0] Default decel limit before softening kicks in
+    "hard_limit_cap": -4.0,        # [-3.5 to -4.5] Absolute max braking force allowed in a panic stop
+    "recovery_step": 0.008         # [0.005 - 0.02] How quickly the cap resets to baseline
+}
+# ==========================================================
+
 LON_MPC_STEP = 0.2  # first step is 0.2s
 A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
-EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
+EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
@@ -33,16 +48,10 @@ def get_max_accel(v_ego):
   return float(np.interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS))
 
 def get_coast_accel(pitch):
-  return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
+  return np.sin(pitch) * -5.65 - 0.3  
 
 
 def limit_accel_in_turns(v_ego, angle_steers, a_target, CP):
-  """
-  This function returns a limited long acceleration allowed, depending on the existing lateral acceleration
-  this should avoid accelerating when losing the target in turns
-  """
-  # FIXME: This function to calculate lateral accel is incorrect and should use the VehicleModel
-  # The lookup table for turns should also be updated if we do this
   a_total_max = np.interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V)
   a_y = v_ego ** 2 * angle_steers * CV.DEG_TO_RAD / (CP.steerRatio * CP.wheelbase)
 
@@ -58,7 +67,6 @@ class LongitudinalPlanner:
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
     self.CP = CP
     self.mpc = LongitudinalMpc(dt=dt)
-    # TODO remove mpc modes when TR released
     self.mpc.mode = 'acc'
     self.fcw = False
     self.dt = dt
@@ -69,10 +77,9 @@ class LongitudinalPlanner:
     self.prev_accel_clip = [ACCEL_MIN, ACCEL_MAX]
     self.output_a_target = 0.0
     self.output_should_stop = False
-    ### ADD THIS: Initialize our Dynamic Experimental-mode decel softening V2 
-    self.dynamic_model_decel_cap = -1.7 ### m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
-    self.dynamic_model_decel_recovery_step = 0.008   # lower is slower return to baseline cap higher is faster return to cap (use from 0.01 to 1)
-    #EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
+    
+    ### Initialize Dynamic Experimental-mode decel softening V2 
+    self.dynamic_model_decel_cap = USER_TUNING["baseline_cap"] 
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -123,12 +130,9 @@ class LongitudinalPlanner:
     long_control_off = sm['controlsState'].longControlState == LongCtrlState.off
     force_slow_decel = sm['controlsState'].forceDecel
 
-    # Reset current state when not engaged, or user is controlling the speed
     reset_state = long_control_off if self.CP.openpilotLongitudinalControl else not sm['controlsState'].enabled
-    # PCM cruise speed may be updated a few cycles later, check if initialized
     reset_state = reset_state or not v_cruise_initialized
 
-    # No change cost when user is controlling the speed, or when standstill
     prev_accel_constraint = not (reset_state or sm['carState'].standstill)
 
     if mode == 'acc':
@@ -141,13 +145,10 @@ class LongitudinalPlanner:
 
     if reset_state:
       self.v_desired_filter.x = v_ego
-      # Clip aEgo to cruise limits to prevent large accelerations when becoming active
       self.a_desired = np.clip(sm['carState'].aEgo, accel_clip[0], accel_clip[1])
 
-    # Prevent divergence, smooth in current v_ego
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
     x, v, a, j, throttle_prob = self.parse_model(sm['modelV2'], v_ego, frogpilot_toggles.taco_tune)
-    # Don't clip at low speeds since throttle_prob doesn't account for creep
     self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
 
     if not self.allow_throttle:
@@ -167,12 +168,10 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.j_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC[:-1], self.mpc.j_solution)
 
-    # TODO counter is only needed because radar is glitchy, remove once radar is gone
     self.fcw = self.mpc.crash_cnt > 2 and not sm['carState'].standstill
     if self.fcw:
       cloudlog.info("FCW triggered")
 
-    # Interpolate 0.05 seconds and save as starting point for next iteration
     a_prev = self.a_desired
     self.a_desired = float(np.interp(self.dt, CONTROL_N_T_IDX, self.a_desired_trajectory))
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.a_desired + a_prev) / 2.0
@@ -188,24 +187,49 @@ class LongitudinalPlanner:
       self.output_should_stop = output_should_stop_mpc
     else: 
       ### ----------- Dynamic Experimental-mode decel softening V2 ---------------####   
-      # 1. Ramp-up logic: If the model wants to brake harder than the current cap
+      
+      has_lead = sm['radarState'].leadOne.status
+      if has_lead:
+        v_rel = sm['radarState'].leadOne.vRel
+        d_rel = sm['radarState'].leadOne.dRel
+      else:
+        v_rel = 0.0
+        d_rel = 100.0
+
+      # 1. Base dynamic ramp step based on closing speed
+      dynamic_ramp_step = float(np.interp(v_rel, [-10.0, 0.0], [USER_TUNING["base_step_fast"], USER_TUNING["base_step_slow"]]))
+
+      # 2. Kinematic Safety Check
+      required_decel = 0.0
+      if v_rel < -0.5 and d_rel > USER_TUNING["distance_buffer"]:
+        required_decel = -((v_rel ** 2) / (2 * max(d_rel - USER_TUNING["distance_buffer"], 1.0)))
+
+      # 3. Ramp-up logic with dt-scaled accelerated stepping
       if output_a_target_e2e < self.dynamic_model_decel_cap:
-        # Step the cap down by 0.05 m/s^2 per frame (1.0 m/s^2 per second)
-        self.dynamic_model_decel_cap -= 0.038  ### "was 0.025" (0.1 for hard transition , 0.05 for medum transition and 0.02 for soft transition)
-        # Hard limit so the cap doesn't grow infinitely negative during a long stop
-        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, -3.5)
+        
+        # SMART BOOST: If physics requires harder braking, accelerate the ramp step safely
+        if required_decel < self.dynamic_model_decel_cap:
+          decel_deficit = self.dynamic_model_decel_cap - required_decel
+          boost = np.clip(decel_deficit * self.dt * USER_TUNING["boost_multiplier"], 0.0, USER_TUNING["boost_ceiling"])
+          dynamic_ramp_step += boost
+
+        # Step down using the dynamic step
+        self.dynamic_model_decel_cap -= dynamic_ramp_step 
+        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, USER_TUNING["hard_limit_cap"])
+        
       else:
         # If the model eases up, reset the cap back to the baseline
-        #self.dynamic_model_decel_cap = -1.7   ###  CAP is -1.7
-        self.dynamic_model_decel_cap += self.dynamic_model_decel_recovery_step
-        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap, -1.7) ######### soft return to cap #############
+        self.dynamic_model_decel_cap += USER_TUNING["recovery_step"]
+        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap, USER_TUNING["baseline_cap"]) 
 
-      # 2. Cap the model using the new dynamic cap
+      # 4. Cap the model using the new dynamic cap
       model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)      
-      # 3. Blend the capped model with the MPC
+      
+      # 5. Blend the capped model with the MPC
       blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc      
-      # 4. Final output
-      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      ### emergency breaking is also capped (output_should_stop_mpc)
+      
+      # 6. Final output
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
       ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
 
