@@ -22,10 +22,6 @@ A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
-
-EXP_BASE_DECEL_CAP = -1.7
-EXP_HARD_DECEL_CAP = -3.3
-
 EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
 # Lookup table for turns
@@ -74,11 +70,7 @@ class LongitudinalPlanner:
     self.output_a_target = 0.0
     self.output_should_stop = False
     ### ADD THIS: Initialize our Dynamic Experimental-mode decel softening V2 
-    # self.dynamic_model_decel_cap = -1.7 ### m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
-    # Scenario-aware experimental braking softening
-    self.dynamic_model_decel_cap = EXP_BASE_DECEL_CAP
-    self.exp_softening_urgency = 0.0
-    
+    self.dynamic_model_decel_cap = -1.7 ### m/s^2 cap for model decel in experimental, Limits how hard the model is allowed to brake in experimental mode. More negative = allows stronger braking. Less negative (e.g., -1.2) = softer, longer stops. (from -2.5 to -1.0)
     self.dynamic_model_decel_recovery_step = 0.01   # lower is slower return to baseline cap higher is faster return to cap (use from 0.01 to 1)
     #EXP_MODEL_DECEL_BLEND = 1.0 ### weight for model decel; remainder comes from MPC (0.30 here), Mix between model and ACC MPC decel. 1.0 = use model fully (sharper). 0.0 = use MPC only (more like chill). Lowering this makes experimental behave more like ACC. (from 0.4 and 0.85 )
 
@@ -114,30 +106,6 @@ class LongitudinalPlanner:
       throttle_prob = 1.0
     return x, v, a, j, throttle_prob
 
-
-  @staticmethod
-  def get_lead_softening_urgency(lead):
-    if not lead.status:
-      return 0.0
-
-    closing_speed = max(0.0, -lead.vRel)
-    dist = max(lead.dRel, 1.0)
-    ttc = dist / max(closing_speed, 0.1)
-
-    # Decel required to bleed off the closure within the available gap
-    effective_gap = max(dist - 6.0, 1.0)
-    req_decel = (closing_speed * closing_speed) / max(2.0 * effective_gap, 1.0)
-
-    lead_braking = max(0.0, -lead.aLeadK)
-
-    closing_u = np.interp(closing_speed, [0.0, 2.0, 5.0, 8.0], [0.0, 0.15, 0.65, 1.0])
-    ttc_u = np.interp(ttc, [6.0, 4.0, 2.5, 1.4], [0.0, 0.15, 0.70, 1.0])
-    req_u = np.interp(req_decel, [0.2, 0.8, 1.6, 2.8], [0.0, 0.35, 0.75, 1.0])
-    lead_u = np.interp(lead_braking, [0.0, 0.6, 1.5, 3.0], [0.0, 0.15, 0.55, 1.0])
-
-    return float(np.clip(max(closing_u, ttc_u, req_u, lead_u), 0.0, 1.0))
-
-  
   def update(self, sm, classic_longitudinal, frogpilot_toggles):
     mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
     if classic_longitudinal:
@@ -218,43 +186,27 @@ class LongitudinalPlanner:
     if mode == 'acc':
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
-    else:
-      lead = sm['radarState'].leadOne
-
-      # Scenario-aware urgency: stronger closure or shorter TTC reduces softening sooner
-      target_urgency = self.get_lead_softening_urgency(lead)
-
-      # Hysteresis: rise fast when a situation gets more urgent, fall slower when it relaxes
-      rise_step = 0.12
-      fall_step = 0.03
-      self.exp_softening_urgency += np.clip(target_urgency - self.exp_softening_urgency, -fall_step, rise_step)
-
-      target_cap = np.interp(self.exp_softening_urgency, [0.0, 1.0], [EXP_BASE_DECEL_CAP, EXP_HARD_DECEL_CAP])
-      cap_down_step = np.interp(self.exp_softening_urgency, [0.0, 1.0], [0.012, 0.075])
-      cap_up_step = np.interp(self.exp_softening_urgency, [0.0, 1.0], [0.025, 0.008])
-      exp_model_decel_blend = np.interp(self.exp_softening_urgency, [0.0, 1.0], [0.90, 0.45])
-
-      if self.dynamic_model_decel_cap > target_cap:
-        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap - cap_down_step, target_cap)
+    else: 
+      ### ----------- Dynamic Experimental-mode decel softening V2 ---------------####   
+      # 1. Ramp-up logic: If the model wants to brake harder than the current cap
+      if output_a_target_e2e < self.dynamic_model_decel_cap:
+        # Step the cap down by 0.05 m/s^2 per frame (1.0 m/s^2 per second)
+        self.dynamic_model_decel_cap -= 0.038  ### "was 0.025" (0.1 for hard transition , 0.05 for medum transition and 0.02 for soft transition)
+        # Hard limit so the cap doesn't grow infinitely negative during a long stop
+        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, -3.5)
       else:
-        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap + cap_up_step, target_cap)
+        # If the model eases up, reset the cap back to the baseline
+        #self.dynamic_model_decel_cap = -1.7   ###  CAP is -1.7
+        self.dynamic_model_decel_cap += self.dynamic_model_decel_recovery_step
+        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap, -1.7) ######### soft return to cap #############
 
-      closing_speed = max(0.0, -lead.vRel) if lead.status else 0.0
-      ttc = lead.dRel / max(closing_speed, 0.1) if lead.status else 99.0
-
-      # Don't keep emergency or very short-TTC braking artificially softened
-      #urgent_override = self.fcw or output_should_stop_mpc or (lead.status and ttc < 1.4)
-      #urgent_override = self.fcw or (lead.status and ttc < 1.4) # only for lead cars
-      urgent_override = False
-
-      if urgent_override:
-        output_a_target = output_a_target_mpc
-      else:
-        model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)
-        blended_model_a = exp_model_decel_blend * model_a + (1.0 - exp_model_decel_blend) * output_a_target_mpc
-        output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)
-
-      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
+      # 2. Cap the model using the new dynamic cap
+      model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)      
+      # 3. Blend the capped model with the MPC
+      blended_model_a = EXP_MODEL_DECEL_BLEND * model_a + (1.0 - EXP_MODEL_DECEL_BLEND) * output_a_target_mpc      
+      # 4. Final output
+      output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)      ### emergency breaking is also capped (output_should_stop_mpc)
+      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
       ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
 
 
