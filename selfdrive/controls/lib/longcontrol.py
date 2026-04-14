@@ -117,7 +117,7 @@ class LongControl:
       self.reset()
       output_accel = 0.
 
-    elif self.long_control_state == LongCtrlState.stopping:
+    elif self.long_control_state == LongCtrlState.stopping and 1 == 2:
       output_accel = self.last_output_accel
       
       # --- Standstill Creep-to-Gap Logic ---
@@ -175,6 +175,14 @@ class LongControl:
 
       self.reset()
 
+    elif self.long_control_state == LongCtrlState.stopping:
+      output_accel = self.last_output_accel
+      if output_accel > frogpilot_toggles.stopAccel:
+        output_accel = min(output_accel, 0.0)
+        output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
+      self.reset()
+
+    
     elif self.long_control_state == LongCtrlState.starting:
       output_accel = (a_target if frogpilot_toggles.human_acceleration else frogpilot_toggles.startAccel)
       self.reset()
