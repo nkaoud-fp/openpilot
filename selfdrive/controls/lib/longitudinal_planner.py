@@ -20,7 +20,7 @@ from openpilot.frogpilot.common.frogpilot_variables import MINIMUM_LATERAL_ACCEL
 # --- USER TUNING PARAMETERS FOR DYNAMIC SOFT BRAKING ---
 # ==========================================================
 USER_TUNING = {
-    "distance_buffer": 2.0,        #5.0 [3.0 - 8.0] Meters left behind lead car bumper in physics calculation
+    "distance_buffer": 5.0,        #5.0 [3.0 - 8.0] Meters left behind lead car bumper in physics calculation
     "base_step_slow": 0.038,       # [0.02 - 0.05] Decel ramp step (m/s^2) for slow/no-lead stops
     "base_step_fast": 0.15,        # [0.10 - 0.20] Decel ramp step (m/s^2) for high closing speeds
     "boost_multiplier": 4.0,       # [2.0 - 6.0] Proportional gain for emergency catch-up
