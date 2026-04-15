@@ -22,8 +22,8 @@ from openpilot.frogpilot.common.frogpilot_variables import MINIMUM_LATERAL_ACCEL
 USER_TUNING = {
     "distance_buffer": 2.5,        #5.0 [3.0 - 8.0] Meters left behind lead car bumper in physics calculation
     "base_step_slow": 0.038,       # [0.02 - 0.05] Decel ramp step (m/s^2) for slow/no-lead stops
-    "base_step_fast": 0.1,         # 0.15 [0.10 - 0.20] Decel ramp step (m/s^2) for high closing speeds
-    "boost_multiplier": 2.0,       # 4.0 [2.0 - 6.0] Proportional gain for emergency catch-up
+    "base_step_fast": 0.15,         # 0.15 [0.10 - 0.20] Decel ramp step (m/s^2) for high closing speeds
+    "boost_multiplier": 4.0,       # 4.0 [2.0 - 6.0] Proportional gain for emergency catch-up
     "boost_ceiling": 0.08,         # [0.05 - 0.12] Max extra ramp step allowed per frame in emergencies
     "baseline_cap": -1.7,          # [-1.2 to -2.0] Default decel limit before softening kicks in
     "hard_limit_cap": -4.0,        # [-3.5 to -4.5] Absolute max braking force allowed in a panic stop
