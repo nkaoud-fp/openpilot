@@ -144,8 +144,8 @@ class LongControl:
         ###################################################################################
         ###################################################################################
         ###################################################################################
-        if CS.vEgo < 0.05:
-          target_accel = max(target_accel, frogpilot_toggles.startAccel)
+        #if CS.vEgo < 0.05:
+          #target_accel = max(target_accel, frogpilot_toggles.startAccel)
 
         # 4. Smoothly ramp up output_accel to prevent jerky throttle application
         jerk_limit = 1.0 * DT_CTRL  # Max 1.0 m/s^2/s jerk rate
