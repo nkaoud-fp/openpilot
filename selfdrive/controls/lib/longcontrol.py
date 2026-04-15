@@ -117,7 +117,7 @@ class LongControl:
       self.reset()
       output_accel = 0.
 
-    elif self.long_control_state == LongCtrlState.stopping and 1 == 2:   ###### 1 == 2 todisable the block for testing removing creep
+    elif self.long_control_state == LongCtrlState.stopping and 1 == 1:   ###### 1 == 2 todisable the block for testing removing creep
       output_accel = self.last_output_accel
       
       # --- Standstill Creep-to-Gap Logic ---
@@ -141,6 +141,9 @@ class LongControl:
         target_accel *= speed_multiplier
 
         # 3. Break stiction: Use startAccel briefly if completely stopped to release brakes
+        ###################################################################################
+        ###################################################################################
+        ###################################################################################
         if CS.vEgo < 0.05:
           target_accel = max(target_accel, frogpilot_toggles.startAccel)
 
@@ -175,7 +178,7 @@ class LongControl:
 
       self.reset()
 
-    elif self.long_control_state == LongCtrlState.stopping:
+    elif self.long_control_state == LongCtrlState.stopping and 1 == 2:
       output_accel = self.last_output_accel
       if output_accel > frogpilot_toggles.stopAccel:
         output_accel = min(output_accel, 0.0)
