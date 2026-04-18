@@ -252,6 +252,10 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
   } else if (animationTimer->isActive()) {
     animationTimer->stop();
   }
+
+  if (sm["controlsState"].getControlsState().getExperimentalMode()) {
+    paintLongDebugGraph(p, sm);
+  }
 }
 
 void FrogPilotAnnotatedCameraWidget::paintAdjacentPaths(QPainter &p, const cereal::CarState::Reader &carState, const FrogPilotUIScene &frogpilot_scene, const QJsonObject &frogpilot_toggles) {
@@ -969,6 +973,161 @@ void FrogPilotAnnotatedCameraWidget::paintTurnSignals(QPainter &p, const cereal:
       p.drawPixmap(signalXPosition, signalYPosition, signalWidth, signalHeight, signalImages[animationFrameIndex].transformed(QTransform().scale(leftBlinker ? 1 : -1, 1)));
     }
   }
+
+  p.restore();
+}
+
+// ── Longitudinal Debug Graph ────────────────────────────────────────────────
+// 20-second rolling window showing the soft-braking planner internals.
+// Signals published via shm param "LongDebugData" (comma-separated floats):
+//   cap, required_decel, mpc_accel, e2e_accel, final_accel
+// Additional signals read directly from cereal: aEgo, dRel, vRel.
+void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster &sm) {
+  // ── Collect latest values ────────────────────────────────────────────────
+  float aego = sm["carState"].getCarState().getAEgo();
+
+  auto lead = sm["radarState"].getRadarState().getLeadOne();
+  bool has_lead = lead.getStatus();
+  float drel = has_lead ? lead.getDRel() : 0.0f;
+  float vrel = has_lead ? lead.getVRel() : 0.0f;
+
+  float dbg_cap_v = 0, dbg_req_v = 0, dbg_mpc_v = 0, dbg_e2e_v = 0, dbg_final_v = 0;
+  std::string raw = params_memory.get("LongDebugData");
+  if (!raw.empty()) {
+    sscanf(raw.c_str(), "%f,%f,%f,%f,%f",
+           &dbg_cap_v, &dbg_req_v, &dbg_mpc_v, &dbg_e2e_v, &dbg_final_v);
+  }
+
+  auto push = [this](std::deque<float> &dq, float v) {
+    dq.push_back(v);
+    if ((int)dq.size() > LONG_DEBUG_SAMPLES) dq.pop_front();
+  };
+  push(dbg_cap,   dbg_cap_v);
+  push(dbg_req,   dbg_req_v);
+  push(dbg_mpc,   dbg_mpc_v);
+  push(dbg_e2e,   dbg_e2e_v);
+  push(dbg_final, dbg_final_v);
+  push(dbg_aego,  aego);
+
+  // ── Layout constants ─────────────────────────────────────────────────────
+  const int GW = 630;
+  const int GH = 370;
+  const int PAD_L = 52;
+  const int PAD_T = 28;
+  const int PAD_B = 80;
+  const int PAD_R = 10;
+  const int MARGIN = 20;
+
+  int gx = width()  - GW - MARGIN;
+  int gy = MARGIN;
+
+  QRect bgRect(gx, gy, GW, GH);
+  QRect plotRect(gx + PAD_L, gy + PAD_T,
+                 GW - PAD_L - PAD_R,
+                 GH - PAD_T - PAD_B);
+
+  p.save();
+  p.setRenderHint(QPainter::Antialiasing);
+
+  // ── Background ───────────────────────────────────────────────────────────
+  p.setPen(Qt::NoPen);
+  p.setBrush(QColor(0, 0, 0, 170));
+  p.drawRoundedRect(bgRect, 12, 12);
+
+  // ── Title ────────────────────────────────────────────────────────────────
+  p.setFont(InterFont(24, QFont::Bold));
+  p.setPen(QColor(255, 220, 80));
+  p.drawText(QRect(gx + PAD_L, gy + 5, plotRect.width(), PAD_T - 2),
+             Qt::AlignLeft | Qt::AlignVCenter, "LONG DEBUG  [exp mode]");
+
+  // ── Y-axis mapping ───────────────────────────────────────────────────────
+  const float Y_MIN = -4.8f;
+  const float Y_MAX =  2.2f;
+  const float Y_RNG = Y_MAX - Y_MIN;
+
+  auto toPixY = [&](float v) -> float {
+    float norm = (v - Y_MIN) / Y_RNG;
+    return plotRect.bottom() - norm * plotRect.height();
+  };
+
+  // ── Grid & Y labels ──────────────────────────────────────────────────────
+  p.setFont(InterFont(19));
+  for (float tick : {-4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f}) {
+    float py = toPixY(tick);
+    bool isZero = (tick == 0.0f);
+    p.setPen(QPen(isZero ? QColor(180, 180, 180) : QColor(70, 70, 70),
+                  1, isZero ? Qt::SolidLine : Qt::DashLine));
+    p.drawLine(QPointF(plotRect.left(), py), QPointF(plotRect.right(), py));
+
+    p.setPen(QColor(140, 140, 140));
+    p.drawText(QRect(gx + 2, (int)py - 10, PAD_L - 5, 20),
+               Qt::AlignRight | Qt::AlignVCenter,
+               QString::number((int)tick));
+  }
+
+  // ── Plot each signal ─────────────────────────────────────────────────────
+  auto drawSignal = [&](const std::deque<float> &data, QColor col,
+                        int lw = 2, Qt::PenStyle style = Qt::SolidLine) {
+    if (data.size() < 2) return;
+    p.setPen(QPen(col, lw, style));
+    QPainterPath path;
+    int n = (int)data.size();
+    bool first = true;
+    for (int i = 0; i < n; ++i) {
+      float fx = plotRect.left()
+                 + (float)i / (LONG_DEBUG_SAMPLES - 1) * plotRect.width();
+      float fy = toPixY(std::clamp(data[i], Y_MIN, Y_MAX));
+      if (first) { path.moveTo(fx, fy); first = false; }
+      else        path.lineTo(fx, fy);
+    }
+    p.drawPath(path);
+  };
+
+  drawSignal(dbg_req,   QColor(160,  80, 200), 2, Qt::DotLine);
+  drawSignal(dbg_mpc,   QColor( 80, 140, 255), 2);
+  drawSignal(dbg_e2e,   QColor(255, 160,   0), 2);
+  drawSignal(dbg_aego,  QColor(255, 255,   0), 2);
+  drawSignal(dbg_cap,   QColor(255,  60,  60), 3, Qt::DashLine);
+  drawSignal(dbg_final, whiteColor(),           3);
+
+  // ── Legend ───────────────────────────────────────────────────────────────
+  struct LegEntry { const char *label; QColor color; Qt::PenStyle style; int lw; };
+  const LegEntry legend[] = {
+    {"final", Qt::white,           Qt::SolidLine, 3},
+    {"e2e",   QColor(255,160,  0), Qt::SolidLine, 2},
+    {"mpc",   QColor( 80,140,255), Qt::SolidLine, 2},
+    {"cap",   QColor(255, 60, 60), Qt::DashLine,  3},
+    {"req",   QColor(160, 80,200), Qt::DotLine,   2},
+    {"aEgo",  Qt::yellow,          Qt::SolidLine, 2},
+  };
+
+  p.setFont(InterFont(20));
+  int legY = plotRect.bottom() + 8;
+  int legX = plotRect.left();
+  for (const auto &e : legend) {
+    p.setPen(QPen(e.color, e.lw, e.style));
+    p.drawLine(legX, legY + 7, legX + 22, legY + 7);
+    p.setPen(e.color);
+    QString lbl = e.label;
+    p.drawText(legX + 25, legY + 12, lbl);
+    legX += 25 + p.fontMetrics().horizontalAdvance(lbl) + 12;
+  }
+
+  // ── Live text info ───────────────────────────────────────────────────────
+  p.setFont(InterFont(23, QFont::DemiBold));
+  p.setPen(whiteColor());
+  QString info = QString("dRel: %1 m   vRel: %2 m/s   cap: %3   req: %4")
+    .arg(drel,      5, 'f', 1)
+    .arg(vrel,      5, 'f', 2)
+    .arg(dbg_cap_v, 5, 'f', 3)
+    .arg(dbg_req_v, 5, 'f', 3);
+  p.drawText(QRect(plotRect.left(), legY + 22, plotRect.width(), 28),
+             Qt::AlignLeft | Qt::AlignVCenter, info);
+
+  // ── Border ───────────────────────────────────────────────────────────────
+  p.setPen(QPen(QColor(255, 220, 80, 120), 1));
+  p.setBrush(Qt::NoBrush);
+  p.drawRoundedRect(bgRect, 12, 12);
 
   p.restore();
 }

@@ -4,6 +4,7 @@ import numpy as np
 
 import cereal.messaging as messaging
 from openpilot.common.conversions import Conversions as CV
+from openpilot.common.params import Params
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.modeld.constants import ModelConstants
@@ -85,6 +86,8 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
     self.solverExecutionTime = 0.0
+
+    self.params_memory = Params("/dev/shm/params")
 
   @staticmethod
   def parse_model(model_msg, v_ego, taco_tune):
@@ -183,6 +186,7 @@ class LongitudinalPlanner:
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
+    required_decel = 0.0  # default; overwritten in experimental mode
     if mode == 'acc':
       output_a_target = output_a_target_mpc
       self.output_should_stop = output_should_stop_mpc
@@ -231,9 +235,13 @@ class LongitudinalPlanner:
       
       # 6. Final output
       output_a_target = max(min(output_a_target_mpc, blended_model_a), self.dynamic_model_decel_cap)
-      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc        
-      ### ----------- Dynamic Experimental-mode decel softening  ---------------####   
+      self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
+      ### ----------- Dynamic Experimental-mode decel softening  ---------------####
 
+    # Publish debug telemetry for the onroad graph overlay
+    _pub_cap = self.dynamic_model_decel_cap if mode != 'acc' else 0.0
+    self.params_memory.put("LongDebugData",
+        f"{_pub_cap:.3f},{required_decel:.3f},{output_a_target_mpc:.3f},{output_a_target_e2e:.3f},{output_a_target:.3f}")
 
     for idx in range(2):
       accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)

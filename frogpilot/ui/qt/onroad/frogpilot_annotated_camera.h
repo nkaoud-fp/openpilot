@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deque>
+
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -76,6 +78,7 @@ private:
   void paintRoadName(QPainter &p);
   void paintSmartControllerTraining(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
   void paintSpeedLimitSources(QPainter &p, const cereal::FrogPilotCarState::Reader &frogpilotCarState, const cereal::FrogPilotNavigation::Reader &frogpilotNavigation, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
+  void paintLongDebugGraph(QPainter &p, SubMaster &sm);
   void paintStandstillTimer(QPainter &p);
   void paintStoppingPoint(QPainter &p, UIScene &scene, FrogPilotUIScene &frogpilot_scene, QJsonObject &frogpilot_toggles);
   void paintTurnSignals(QPainter &p, const cereal::CarState::Reader &carState);
@@ -87,6 +90,15 @@ private:
   int signalMovement;
   int signalWidth;
   int totalFrames;
+
+  // Rolling buffers for the longitudinal debug graph (20 s @ ~20 Hz)
+  static constexpr int LONG_DEBUG_SAMPLES = 400;
+  std::deque<float> dbg_cap;
+  std::deque<float> dbg_req;
+  std::deque<float> dbg_mpc;
+  std::deque<float> dbg_e2e;
+  std::deque<float> dbg_final;
+  std::deque<float> dbg_aego;
 
   Params params;
   Params params_memory{"/dev/shm/params"};
