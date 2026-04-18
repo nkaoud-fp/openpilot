@@ -1010,34 +1010,28 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   push(dbg_aego,  aego);
 
   // ── Layout constants ─────────────────────────────────────────────────────
-  const int GW = 1260;
-  const int GH = 740;
   const int PAD_L = 104;
   const int PAD_T = 56;
   const int PAD_B = 160;
   const int PAD_R = 20;
-  const int MARGIN = 20;
 
-  int gx = width()  - GW - MARGIN;
-  int gy = MARGIN;
-
-  QRect bgRect(gx, gy, GW, GH);
-  QRect plotRect(gx + PAD_L, gy + PAD_T,
-                 GW - PAD_L - PAD_R,
-                 GH - PAD_T - PAD_B);
+  QRect bgRect(0, 0, width(), height());
+  QRect plotRect(PAD_L, PAD_T,
+                 width() - PAD_L - PAD_R,
+                 height() - PAD_T - PAD_B);
 
   p.save();
   p.setRenderHint(QPainter::Antialiasing);
 
   // ── Background ───────────────────────────────────────────────────────────
   p.setPen(Qt::NoPen);
-  p.setBrush(QColor(0, 0, 0, 170));
-  p.drawRoundedRect(bgRect, 24, 24);
+  p.setBrush(QColor(0, 0, 0, 200));
+  p.drawRect(bgRect);
 
   // ── Title ────────────────────────────────────────────────────────────────
   p.setFont(InterFont(48, QFont::Bold));
   p.setPen(QColor(255, 220, 80));
-  p.drawText(QRect(gx + PAD_L, gy + 10, plotRect.width(), PAD_T - 4),
+  p.drawText(QRect(PAD_L, 10, plotRect.width(), PAD_T - 4),
              Qt::AlignLeft | Qt::AlignVCenter, "LONG DEBUG  [exp mode]");
 
   // ── Y-axis mapping ───────────────────────────────────────────────────────
@@ -1060,7 +1054,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawLine(QPointF(plotRect.left(), py), QPointF(plotRect.right(), py));
 
     p.setPen(QColor(140, 140, 140));
-    p.drawText(QRect(gx + 4, (int)py - 20, PAD_L - 8, 40),
+    p.drawText(QRect(4, (int)py - 20, PAD_L - 8, 40),
                Qt::AlignRight | Qt::AlignVCenter,
                QString::number((int)tick));
   }
@@ -1123,11 +1117,6 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     .arg(dbg_req_v, 5, 'f', 3);
   p.drawText(QRect(plotRect.left(), legY + 44, plotRect.width(), 56),
              Qt::AlignLeft | Qt::AlignVCenter, info);
-
-  // ── Border ───────────────────────────────────────────────────────────────
-  p.setPen(QPen(QColor(255, 220, 80, 120), 2));
-  p.setBrush(Qt::NoBrush);
-  p.drawRoundedRect(bgRect, 24, 24);
 
   p.restore();
 }
