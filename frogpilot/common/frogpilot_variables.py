@@ -348,6 +348,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("LongitudinalActuatorDelay", "", 3, ""),
   ("LongitudinalActuatorDelayStock", "", 3, ""),
   ("LongitudinalTune", "1", 0, "0"),
+  ("LongDebugGraph", "0", 3, "0"),
   ("LongPitch", "1", 2, "0"),
   ("LoudBlindspotAlert", "0", 0, "0"),
   ("LowVoltageShutdown", str(VBATT_PAUSE_CHARGING), 3, str(VBATT_PAUSE_CHARGING)),
@@ -847,6 +848,7 @@ class FrogPilotVariables:
     toggle.developer_sidebar_metric7 = params.get_int("DeveloperSidebarMetric7") if toggle.developer_sidebar and tuning_level >= level["DeveloperSidebarMetric7"] else 11 if toggle.debug_mode else default.get_int("DeveloperSidebarMetric7")
     developer_widgets = toggle.developer_ui and params.get_bool("DeveloperWidgets") if tuning_level >= level["DeveloperWidgets"] else default.get_bool("DeveloperWidgets")
     toggle.adjacent_lead_tracking = has_radar and ((developer_widgets and params.get_bool("AdjacentLeadsUI") if tuning_level >= level["AdjacentLeadsUI"] else default.get_bool("AdjacentLeadsUI")) or toggle.debug_mode)
+    toggle.long_debug_graph = developer_widgets and (params.get_bool("LongDebugGraph") if tuning_level >= level["LongDebugGraph"] else default.get_bool("LongDebugGraph"))
     toggle.radar_tracks = has_radar and ((developer_widgets and params.get_bool("RadarTracksUI") if tuning_level >= level["RadarTracksUI"] else default.get_bool("RadarTracksUI")) or toggle.debug_mode)
     toggle.show_stopping_point = toggle.openpilot_longitudinal and (developer_widgets and (params.get_bool("ShowStoppingPoint") if tuning_level >= level["ShowStoppingPoint"] else default.get_bool("ShowStoppingPoint")) or toggle.debug_mode)
     toggle.show_stopping_point_metrics = toggle.show_stopping_point and (params.get_bool("ShowStoppingPointMetrics") if tuning_level >= level["ShowStoppingPointMetrics"] else default.get_bool("ShowStoppingPointMetrics") or toggle.debug_mode)

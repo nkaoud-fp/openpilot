@@ -587,7 +587,9 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing);
   painter.setPen(Qt::NoPen);
 
-  if (s->scene.world_objects_visible && !frogpilot_toggles.value("headless_mode").toBool()) {
+  const bool long_debug_graph = frogpilot_toggles.value("long_debug_graph").toBool();
+
+  if (s->scene.world_objects_visible && !frogpilot_toggles.value("headless_mode").toBool() && !long_debug_graph) {
     update_model(s, fs, model, sm["uiPlan"].getUiPlan(), frogpilot_toggles);
     drawLaneLines(painter, s, fs);
 
@@ -618,12 +620,14 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   }
 
   // DMoji
-  if (!hideBottomIcons && (sm.rcv_frame("driverStateV2") > s->scene.started_frame)) {
+  if (!long_debug_graph && !hideBottomIcons && (sm.rcv_frame("driverStateV2") > s->scene.started_frame)) {
     update_dmonitoring(s, sm["driverStateV2"].getDriverStateV2(), dm_fade_state, rightHandDM);
     drawDriverState(painter, s, frogpilot_toggles);
   }
 
-  drawHud(painter, frogpilotPlan, *fs, frogpilot_toggles);
+  if (!long_debug_graph) {
+    drawHud(painter, frogpilotPlan, *fs, frogpilot_toggles);
+  }
 
   double cur_draw_t = millis_since_boot();
   double dt = cur_draw_t - prev_draw_t;

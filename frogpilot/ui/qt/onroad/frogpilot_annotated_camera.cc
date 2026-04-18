@@ -253,7 +253,7 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
     animationTimer->stop();
   }
 
-  if (sm["controlsState"].getControlsState().getExperimentalMode()) {
+  if (frogpilot_toggles.value("long_debug_graph").toBool()) {
     paintLongDebugGraph(p, sm);
   }
 }
