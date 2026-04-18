@@ -1010,12 +1010,12 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   push(dbg_aego,  aego);
 
   // ── Layout constants ─────────────────────────────────────────────────────
-  const int GW = 630;
-  const int GH = 370;
-  const int PAD_L = 52;
-  const int PAD_T = 28;
-  const int PAD_B = 80;
-  const int PAD_R = 10;
+  const int GW = 1260;
+  const int GH = 740;
+  const int PAD_L = 104;
+  const int PAD_T = 56;
+  const int PAD_B = 160;
+  const int PAD_R = 20;
   const int MARGIN = 20;
 
   int gx = width()  - GW - MARGIN;
@@ -1032,12 +1032,12 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   // ── Background ───────────────────────────────────────────────────────────
   p.setPen(Qt::NoPen);
   p.setBrush(QColor(0, 0, 0, 170));
-  p.drawRoundedRect(bgRect, 12, 12);
+  p.drawRoundedRect(bgRect, 24, 24);
 
   // ── Title ────────────────────────────────────────────────────────────────
-  p.setFont(InterFont(24, QFont::Bold));
+  p.setFont(InterFont(48, QFont::Bold));
   p.setPen(QColor(255, 220, 80));
-  p.drawText(QRect(gx + PAD_L, gy + 5, plotRect.width(), PAD_T - 2),
+  p.drawText(QRect(gx + PAD_L, gy + 10, plotRect.width(), PAD_T - 4),
              Qt::AlignLeft | Qt::AlignVCenter, "LONG DEBUG  [exp mode]");
 
   // ── Y-axis mapping ───────────────────────────────────────────────────────
@@ -1051,7 +1051,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   };
 
   // ── Grid & Y labels ──────────────────────────────────────────────────────
-  p.setFont(InterFont(19));
+  p.setFont(InterFont(38));
   for (float tick : {-4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f}) {
     float py = toPixY(tick);
     bool isZero = (tick == 0.0f);
@@ -1060,7 +1060,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawLine(QPointF(plotRect.left(), py), QPointF(plotRect.right(), py));
 
     p.setPen(QColor(140, 140, 140));
-    p.drawText(QRect(gx + 2, (int)py - 10, PAD_L - 5, 20),
+    p.drawText(QRect(gx + 4, (int)py - 20, PAD_L - 8, 40),
                Qt::AlignRight | Qt::AlignVCenter,
                QString::number((int)tick));
   }
@@ -1083,51 +1083,51 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawPath(path);
   };
 
-  drawSignal(dbg_req,   QColor(160,  80, 200), 2, Qt::DotLine);
-  drawSignal(dbg_mpc,   QColor( 80, 140, 255), 2);
-  drawSignal(dbg_e2e,   QColor(255, 160,   0), 2);
-  drawSignal(dbg_aego,  QColor(255, 255,   0), 2);
-  drawSignal(dbg_cap,   QColor(255,  60,  60), 3, Qt::DashLine);
-  drawSignal(dbg_final, whiteColor(),           3);
+  drawSignal(dbg_req,   QColor(160,  80, 200), 4, Qt::DotLine);
+  drawSignal(dbg_mpc,   QColor( 80, 140, 255), 4);
+  drawSignal(dbg_e2e,   QColor(255, 160,   0), 4);
+  drawSignal(dbg_aego,  QColor(255, 255,   0), 4);
+  drawSignal(dbg_cap,   QColor(255,  60,  60), 6, Qt::DashLine);
+  drawSignal(dbg_final, whiteColor(),           6);
 
   // ── Legend ───────────────────────────────────────────────────────────────
   struct LegEntry { const char *label; QColor color; Qt::PenStyle style; int lw; };
   const LegEntry legend[] = {
-    {"final", Qt::white,           Qt::SolidLine, 3},
-    {"e2e",   QColor(255,160,  0), Qt::SolidLine, 2},
-    {"mpc",   QColor( 80,140,255), Qt::SolidLine, 2},
-    {"cap",   QColor(255, 60, 60), Qt::DashLine,  3},
-    {"req",   QColor(160, 80,200), Qt::DotLine,   2},
-    {"aEgo",  Qt::yellow,          Qt::SolidLine, 2},
+    {"final", Qt::white,           Qt::SolidLine, 6},
+    {"e2e",   QColor(255,160,  0), Qt::SolidLine, 4},
+    {"mpc",   QColor( 80,140,255), Qt::SolidLine, 4},
+    {"cap",   QColor(255, 60, 60), Qt::DashLine,  6},
+    {"req",   QColor(160, 80,200), Qt::DotLine,   4},
+    {"aEgo",  Qt::yellow,          Qt::SolidLine, 4},
   };
 
-  p.setFont(InterFont(20));
-  int legY = plotRect.bottom() + 8;
+  p.setFont(InterFont(40));
+  int legY = plotRect.bottom() + 16;
   int legX = plotRect.left();
   for (const auto &e : legend) {
     p.setPen(QPen(e.color, e.lw, e.style));
-    p.drawLine(legX, legY + 7, legX + 22, legY + 7);
+    p.drawLine(legX, legY + 14, legX + 44, legY + 14);
     p.setPen(e.color);
     QString lbl = e.label;
-    p.drawText(legX + 25, legY + 12, lbl);
-    legX += 25 + p.fontMetrics().horizontalAdvance(lbl) + 12;
+    p.drawText(legX + 50, legY + 24, lbl);
+    legX += 50 + p.fontMetrics().horizontalAdvance(lbl) + 24;
   }
 
   // ── Live text info ───────────────────────────────────────────────────────
-  p.setFont(InterFont(23, QFont::DemiBold));
+  p.setFont(InterFont(46, QFont::DemiBold));
   p.setPen(whiteColor());
   QString info = QString("dRel: %1 m   vRel: %2 m/s   cap: %3   req: %4")
     .arg(drel,      5, 'f', 1)
     .arg(vrel,      5, 'f', 2)
     .arg(dbg_cap_v, 5, 'f', 3)
     .arg(dbg_req_v, 5, 'f', 3);
-  p.drawText(QRect(plotRect.left(), legY + 22, plotRect.width(), 28),
+  p.drawText(QRect(plotRect.left(), legY + 44, plotRect.width(), 56),
              Qt::AlignLeft | Qt::AlignVCenter, info);
 
   // ── Border ───────────────────────────────────────────────────────────────
-  p.setPen(QPen(QColor(255, 220, 80, 120), 1));
+  p.setPen(QPen(QColor(255, 220, 80, 120), 2));
   p.setBrush(Qt::NoBrush);
-  p.drawRoundedRect(bgRect, 12, 12);
+  p.drawRoundedRect(bgRect, 24, 24);
 
   p.restore();
 }
