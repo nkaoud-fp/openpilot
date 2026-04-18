@@ -998,7 +998,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
            &dbg_cap_v, &dbg_req_v, &dbg_mpc_v, &dbg_e2e_v, &dbg_final_v);
   }
 
-  auto push = [this](std::deque<float> &dq, float v) {
+  auto push = [](std::deque<float> &dq, float v) {
     dq.push_back(v);
     if ((int)dq.size() > LONG_DEBUG_SAMPLES) dq.pop_front();
   };
