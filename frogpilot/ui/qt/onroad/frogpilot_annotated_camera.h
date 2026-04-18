@@ -101,6 +101,9 @@ private:
   std::deque<float> dbg_aego;
   std::deque<float> dbg_drel;
   std::deque<float> dbg_desired_dist;
+  std::deque<float> dbg_actrl;
+  std::deque<float> dbg_max_accel;
+  std::deque<float> dbg_min_accel;
 
   Params params;
   Params params_memory{"/dev/shm/params"};

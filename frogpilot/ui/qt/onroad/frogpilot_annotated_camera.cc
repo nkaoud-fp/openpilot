@@ -991,7 +991,10 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   float drel = has_lead ? lead.getDRel() : 0.0f;
   float vrel = has_lead ? lead.getVRel() : 0.0f;
 
-  float desired_dist = fpsm["frogpilotPlan"].getFrogpilotPlan().getDesiredFollowDistance();
+  float desired_dist  = fpsm["frogpilotPlan"].getFrogpilotPlan().getDesiredFollowDistance();
+  float max_accel     = fpsm["frogpilotPlan"].getFrogpilotPlan().getMaxAcceleration();
+  float min_accel     = fpsm["frogpilotPlan"].getFrogpilotPlan().getMinAcceleration();
+  float actrl         = sm["controlsState"].getControlsState().getATarget();
 
   float dbg_cap_v = 0, dbg_req_v = 0, dbg_mpc_v = 0, dbg_e2e_v = 0, dbg_final_v = 0;
   std::string raw = params_memory.get("LongDebugData");
@@ -1012,6 +1015,9 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   push(dbg_aego,         aego);
   push(dbg_drel,         drel);
   push(dbg_desired_dist, desired_dist);
+  push(dbg_actrl,        actrl);
+  push(dbg_max_accel,    max_accel);
+  push(dbg_min_accel,    min_accel);
 
   // ── Layout constants ─────────────────────────────────────────────────────
   const int PAD_L = 104;
@@ -1123,26 +1129,32 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawPath(path);
   };
 
+  drawSignal(dbg_max_accel,    QColor(180, 255,  60), 2, Qt::DashDotLine);
+  drawSignal(dbg_min_accel,    QColor(255, 130,  60), 2, Qt::DashDotLine);
   drawSignal(dbg_req,          QColor(160,  80, 200), 4, Qt::DotLine);
   drawSignal(dbg_mpc,          QColor( 80, 140, 255), 4);
   drawSignal(dbg_e2e,          QColor(255, 160,   0), 4);
   drawSignal(dbg_aego,         QColor(255, 255,   0), 4);
   drawSignal(dbg_cap,          QColor(255,  60,  60), 6, Qt::DashLine);
   drawSignal(dbg_final,        whiteColor(),           6);
+  drawSignal(dbg_actrl,        QColor(  0, 200, 180), 5);
   drawSignalR(dbg_drel,        QColor(  0, 220, 220), 3, Qt::DashLine);
   drawSignalR(dbg_desired_dist,QColor( 80, 255,  80), 4);
 
   // ── Legend ───────────────────────────────────────────────────────────────
   struct LegEntry { const char *label; QColor color; Qt::PenStyle style; int lw; };
   const LegEntry legend[] = {
-    {"final",    Qt::white,            Qt::SolidLine, 6},
-    {"e2e",      QColor(255,160,  0),  Qt::SolidLine, 4},
-    {"mpc",      QColor( 80,140,255),  Qt::SolidLine, 4},
-    {"cap",      QColor(255, 60, 60),  Qt::DashLine,  6},
-    {"req",      QColor(160, 80,200),  Qt::DotLine,   4},
-    {"aEgo",     Qt::yellow,           Qt::SolidLine, 4},
-    {"dRel",     QColor(  0,220,220),  Qt::DashLine,  3},
-    {"desiredD", QColor( 80,255, 80),  Qt::SolidLine, 4},
+    {"final",    Qt::white,            Qt::SolidLine,    6},
+    {"aCtrl",    QColor(  0,200,180),  Qt::SolidLine,    5},
+    {"e2e",      QColor(255,160,  0),  Qt::SolidLine,    4},
+    {"mpc",      QColor( 80,140,255),  Qt::SolidLine,    4},
+    {"cap",      QColor(255, 60, 60),  Qt::DashLine,     6},
+    {"req",      QColor(160, 80,200),  Qt::DotLine,      4},
+    {"aEgo",     Qt::yellow,           Qt::SolidLine,    4},
+    {"maxA",     QColor(180,255, 60),  Qt::DashDotLine,  2},
+    {"minA",     QColor(255,130, 60),  Qt::DashDotLine,  2},
+    {"dRel",     QColor(  0,220,220),  Qt::DashLine,     3},
+    {"desiredD", QColor( 80,255, 80),  Qt::SolidLine,    4},
   };
 
   p.setFont(InterFont(40));
@@ -1160,12 +1172,15 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   // ── Live text info ───────────────────────────────────────────────────────
   p.setFont(InterFont(46, QFont::DemiBold));
   p.setPen(whiteColor());
-  QString info = QString("dRel: %1 m  desiredD: %2 m  vRel: %3 m/s  cap: %4  req: %5")
+  QString info = QString("dRel: %1 m  desiredD: %2 m  vRel: %3 m/s  aCtrl: %4  cap: %5  req: %6  maxA: %7  minA: %8")
     .arg(drel,         5, 'f', 1)
     .arg(desired_dist, 5, 'f', 1)
     .arg(vrel,         5, 'f', 2)
+    .arg(actrl,        5, 'f', 3)
     .arg(dbg_cap_v,    5, 'f', 3)
-    .arg(dbg_req_v,    5, 'f', 3);
+    .arg(dbg_req_v,    5, 'f', 3)
+    .arg(max_accel,    4, 'f', 2)
+    .arg(min_accel,    4, 'f', 2);
   p.drawText(QRect(plotRect.left(), legY + 44, plotRect.width() + PAD_R, 56),
              Qt::AlignLeft | Qt::AlignVCenter, info);
 
