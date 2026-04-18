@@ -78,7 +78,7 @@ private:
   void paintRoadName(QPainter &p);
   void paintSmartControllerTraining(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
   void paintSpeedLimitSources(QPainter &p, const cereal::FrogPilotCarState::Reader &frogpilotCarState, const cereal::FrogPilotNavigation::Reader &frogpilotNavigation, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
-  void paintLongDebugGraph(QPainter &p, SubMaster &sm);
+  void paintLongDebugGraph(QPainter &p, SubMaster &sm, SubMaster &fpsm);
   void paintStandstillTimer(QPainter &p);
   void paintStoppingPoint(QPainter &p, UIScene &scene, FrogPilotUIScene &frogpilot_scene, QJsonObject &frogpilot_toggles);
   void paintTurnSignals(QPainter &p, const cereal::CarState::Reader &carState);
@@ -99,6 +99,8 @@ private:
   std::deque<float> dbg_e2e;
   std::deque<float> dbg_final;
   std::deque<float> dbg_aego;
+  std::deque<float> dbg_drel;
+  std::deque<float> dbg_desired_dist;
 
   Params params;
   Params params_memory{"/dev/shm/params"};
