@@ -411,6 +411,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"LongitudinalActuatorDelay", PERSISTENT},
     {"LongitudinalActuatorDelayStock", PERSISTENT},
     {"LongitudinalTune", PERSISTENT},
+    {"LongDebugData", CLEAR_ON_MANAGER_START},
     {"LongPitch", PERSISTENT},
     {"LoudBlindspotAlert", PERSISTENT},
     {"LowVoltageShutdown", PERSISTENT},
