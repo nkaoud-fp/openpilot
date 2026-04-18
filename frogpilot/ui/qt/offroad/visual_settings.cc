@@ -25,6 +25,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
   FrogPilotListWidget *developerSidebarList = new FrogPilotListWidget(this);
   FrogPilotListWidget *developerUIList = new FrogPilotListWidget(this);
   FrogPilotListWidget *developerWidgetList = new FrogPilotListWidget(this);
+  FrogPilotListWidget *longDebugGraphList = new FrogPilotListWidget(this);
   FrogPilotListWidget *modelUIList = new FrogPilotListWidget(this);
   FrogPilotListWidget *navigationUIList = new FrogPilotListWidget(this);
   FrogPilotListWidget *qualityOfLifeList = new FrogPilotListWidget(this);
@@ -35,6 +36,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
   ScrollView *developerSidebarPanel = new ScrollView(developerSidebarList, this);
   ScrollView *developerUIPanel = new ScrollView(developerUIList, this);
   ScrollView *developerWidgetPanel = new ScrollView(developerWidgetList, this);
+  ScrollView *longDebugGraphPanel = new ScrollView(longDebugGraphList, this);
   ScrollView *modelUIPanel = new ScrollView(modelUIList, this);
   ScrollView *navigationUIPanel = new ScrollView(navigationUIList, this);
   ScrollView *qualityOfLifePanel = new ScrollView(qualityOfLifeList, this);
@@ -45,6 +47,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
   visualsLayout->addWidget(developerSidebarPanel);
   visualsLayout->addWidget(developerUIPanel);
   visualsLayout->addWidget(developerWidgetPanel);
+  visualsLayout->addWidget(longDebugGraphPanel);
   visualsLayout->addWidget(modelUIPanel);
   visualsLayout->addWidget(navigationUIPanel);
   visualsLayout->addWidget(qualityOfLifePanel);
@@ -79,7 +82,18 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
     {"DeveloperWidgets", tr("Developer Widgets"), tr("<b>Overlays for debugging visuals, internal states, and model predictions</b> on the driving screen."), ""},
     {"AdjacentLeadsUI", tr("Adjacent Leads Tracking"), tr("<b>Display adjacent leads detected by the car's radar</b> to the left and right of the current driving path."), ""},
     {"ShowStoppingPoint", tr("Model Stopping Point"), tr("<b>Show a stop-sign marker where the model intends to stop.</b>"), ""},
-    {"LongDebugGraph", tr("Longitudinal Debug Graph"), tr("<b>Show a 20-second rolling graph of soft-braking planner internals</b> (decel cap, E2E accel, MPC, required decel, aEgo) in the top-right corner.<br><br>Hides the standard onroad UI while active so the graph is easy to read."), ""},
+    {"LongDebugGraph", tr("Longitudinal Debug Graph"), tr("<b>Show a 20-second rolling graph of soft-braking planner internals.</b><br><br>Hides the standard onroad UI while active. Use the MANAGE button to choose which signals are visible."), ""},
+    {"LongDebugShowFinal", tr("Final Accel (white)"), tr("<b>Show the final blended acceleration output</b> — the value sent to the longitudinal controller after all blending and capping."), ""},
+    {"LongDebugShowACtrl", tr("Controller Target — aCtrl (teal)"), tr("<b>Show the longitudinal controller's acceleration target</b> from <i>controlsState</i>. Reveals any gap between the planner output and what longcontrol is executing."), ""},
+    {"LongDebugShowE2e", tr("E2E Accel (orange)"), tr("<b>Show the end-to-end model's raw acceleration request</b> before blending with MPC."), ""},
+    {"LongDebugShowMpc", tr("MPC Accel (blue)"), tr("<b>Show the model-predictive controller's acceleration request</b> before blending with E2E."), ""},
+    {"LongDebugShowCap", tr("Decel Cap (red dashed)"), tr("<b>Show the dynamic soft-braking decel cap</b> — the ceiling applied to the model's acceleration requests. Ramps down on hard braking, recovers slowly."), ""},
+    {"LongDebugShowReq", tr("Required Decel (purple dotted)"), tr("<b>Show the required deceleration</b> computed from the blended MPC/E2E output before the soft-braking cap is applied."), ""},
+    {"LongDebugShowAEgo", tr("Measured Accel — aEgo (yellow)"), tr("<b>Show the car's measured acceleration</b> from <i>carState</i>. Compare with Final and aCtrl to spot lag or overshoot."), ""},
+    {"LongDebugShowMaxA", tr("Max Accel Bound (chartreuse)"), tr("<b>Show FrogPilot's upper acceleration limit</b> for the current context (speed, mode). The planner cannot request more than this."), ""},
+    {"LongDebugShowMinA", tr("Min Accel Bound (coral)"), tr("<b>Show FrogPilot's lower acceleration limit</b> — the soft-braking floor. When Final hits this, it's being constrained."), ""},
+    {"LongDebugShowDRel", tr("Lead Distance — dRel (cyan, right axis)"), tr("<b>Show the actual distance to the lead vehicle</b> in metres on the right axis (0–80 m)."), ""},
+    {"LongDebugShowDesiredD", tr("Desired Follow Distance (green, right axis)"), tr("<b>Show FrogPilot's target follow distance</b> in metres on the right axis. Compare with dRel to see how far from the desired gap the car is."), ""},
     {"RadarTracksUI", tr("Radar Tracks"), tr("<b>Display all radar points</b> produced by the car's radar."), ""},
 
     {"CustomUI", tr("Driving Screen Widgets"), tr("<b>Custom FrogPilot widgets</b> for the driving screen."), "../assets/offroad/icon_road.png"},
@@ -243,6 +257,16 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
         developerUIOpen = true;
       });
       visualToggle = developerWidgetsToggle;
+    } else if (param == "LongDebugGraph") {
+      FrogPilotManageControl *longDebugGraphToggle = new FrogPilotManageControl(param, title, desc, icon);
+      QObject::connect(longDebugGraphToggle, &FrogPilotManageControl::manageButtonClicked, [visualsLayout, longDebugGraphPanel, this]() {
+        openSubSubPanel();
+
+        visualsLayout->setCurrentWidget(longDebugGraphPanel);
+
+        developerUIOpen = true;
+      });
+      visualToggle = longDebugGraphToggle;
     } else if (param == "ShowStoppingPoint") {
       std::vector<QString> stoppingPointToggles{"ShowStoppingPointMetrics"};
       std::vector<QString> stoppingPointToggleNames{tr("Show Distance")};
@@ -355,6 +379,8 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       developerUIList->addItem(visualToggle);
     } else if (developerWidgetKeys.contains(param)) {
       developerWidgetList->addItem(visualToggle);
+    } else if (longDebugGraphKeys.contains(param)) {
+      longDebugGraphList->addItem(visualToggle);
     } else if (modelUIKeys.contains(param)) {
       modelUIList->addItem(visualToggle);
     } else if (navigationUIKeys.contains(param)) {

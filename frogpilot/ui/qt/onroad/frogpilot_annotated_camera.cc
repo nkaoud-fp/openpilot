@@ -254,7 +254,7 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
   }
 
   if (frogpilot_toggles.value("long_debug_graph").toBool()) {
-    paintLongDebugGraph(p, sm, fpsm);
+    paintLongDebugGraph(p, sm, fpsm, frogpilot_toggles);
   }
 }
 
@@ -982,7 +982,7 @@ void FrogPilotAnnotatedCameraWidget::paintTurnSignals(QPainter &p, const cereal:
 // Signals published via shm param "LongDebugData" (comma-separated floats):
 //   cap, required_decel, mpc_accel, e2e_accel, final_accel
 // Additional signals read directly from cereal: aEgo, dRel, vRel.
-void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster &sm, SubMaster &fpsm) {
+void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster &sm, SubMaster &fpsm, const QJsonObject &frogpilot_toggles) {
   // ── Collect latest values ────────────────────────────────────────────────
   float aego = sm["carState"].getCarState().getAEgo();
 
@@ -1129,38 +1129,51 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawPath(path);
   };
 
-  drawSignal(dbg_max_accel,    QColor(180, 255,  60), 2, Qt::DashDotLine);
-  drawSignal(dbg_min_accel,    QColor(255, 130,  60), 2, Qt::DashDotLine);
-  drawSignal(dbg_req,          QColor(160,  80, 200), 4, Qt::DotLine);
-  drawSignal(dbg_mpc,          QColor( 80, 140, 255), 4);
-  drawSignal(dbg_e2e,          QColor(255, 160,   0), 4);
-  drawSignal(dbg_aego,         QColor(255, 255,   0), 4);
-  drawSignal(dbg_cap,          QColor(255,  60,  60), 6, Qt::DashLine);
-  drawSignal(dbg_final,        whiteColor(),           6);
-  drawSignal(dbg_actrl,        QColor(  0, 200, 180), 5);
-  drawSignalR(dbg_drel,        QColor(  0, 220, 220), 3, Qt::DashLine);
-  drawSignalR(dbg_desired_dist,QColor( 80, 255,  80), 4);
+  const bool show_cap      = frogpilot_toggles.value("long_debug_show_cap").toBool();
+  const bool show_req      = frogpilot_toggles.value("long_debug_show_req").toBool();
+  const bool show_mpc      = frogpilot_toggles.value("long_debug_show_mpc").toBool();
+  const bool show_e2e      = frogpilot_toggles.value("long_debug_show_e2e").toBool();
+  const bool show_final    = frogpilot_toggles.value("long_debug_show_final").toBool();
+  const bool show_aego     = frogpilot_toggles.value("long_debug_show_aego").toBool();
+  const bool show_actrl    = frogpilot_toggles.value("long_debug_show_actrl").toBool();
+  const bool show_max_a    = frogpilot_toggles.value("long_debug_show_max_a").toBool();
+  const bool show_min_a    = frogpilot_toggles.value("long_debug_show_min_a").toBool();
+  const bool show_drel     = frogpilot_toggles.value("long_debug_show_drel").toBool();
+  const bool show_desired  = frogpilot_toggles.value("long_debug_show_desired_d").toBool();
 
-  // ── Legend ───────────────────────────────────────────────────────────────
-  struct LegEntry { const char *label; QColor color; Qt::PenStyle style; int lw; };
+  if (show_max_a)   drawSignal(dbg_max_accel,    QColor(180, 255,  60), 2, Qt::DashDotLine);
+  if (show_min_a)   drawSignal(dbg_min_accel,    QColor(255, 130,  60), 2, Qt::DashDotLine);
+  if (show_req)     drawSignal(dbg_req,           QColor(160,  80, 200), 4, Qt::DotLine);
+  if (show_mpc)     drawSignal(dbg_mpc,           QColor( 80, 140, 255), 4);
+  if (show_e2e)     drawSignal(dbg_e2e,           QColor(255, 160,   0), 4);
+  if (show_aego)    drawSignal(dbg_aego,          QColor(255, 255,   0), 4);
+  if (show_cap)     drawSignal(dbg_cap,           QColor(255,  60,  60), 6, Qt::DashLine);
+  if (show_final)   drawSignal(dbg_final,         whiteColor(),           6);
+  if (show_actrl)   drawSignal(dbg_actrl,         QColor(  0, 200, 180), 5);
+  if (show_drel)    drawSignalR(dbg_drel,         QColor(  0, 220, 220), 3, Qt::DashLine);
+  if (show_desired) drawSignalR(dbg_desired_dist, QColor( 80, 255,  80), 4);
+
+  // ── Legend (only visible signals) ────────────────────────────────────────
+  struct LegEntry { bool show; const char *label; QColor color; Qt::PenStyle style; int lw; };
   const LegEntry legend[] = {
-    {"final",    Qt::white,            Qt::SolidLine,    6},
-    {"aCtrl",    QColor(  0,200,180),  Qt::SolidLine,    5},
-    {"e2e",      QColor(255,160,  0),  Qt::SolidLine,    4},
-    {"mpc",      QColor( 80,140,255),  Qt::SolidLine,    4},
-    {"cap",      QColor(255, 60, 60),  Qt::DashLine,     6},
-    {"req",      QColor(160, 80,200),  Qt::DotLine,      4},
-    {"aEgo",     Qt::yellow,           Qt::SolidLine,    4},
-    {"maxA",     QColor(180,255, 60),  Qt::DashDotLine,  2},
-    {"minA",     QColor(255,130, 60),  Qt::DashDotLine,  2},
-    {"dRel",     QColor(  0,220,220),  Qt::DashLine,     3},
-    {"desiredD", QColor( 80,255, 80),  Qt::SolidLine,    4},
+    {show_final,   "final",    Qt::white,            Qt::SolidLine,   6},
+    {show_actrl,   "aCtrl",    QColor(  0,200,180),  Qt::SolidLine,   5},
+    {show_e2e,     "e2e",      QColor(255,160,  0),  Qt::SolidLine,   4},
+    {show_mpc,     "mpc",      QColor( 80,140,255),  Qt::SolidLine,   4},
+    {show_cap,     "cap",      QColor(255, 60, 60),  Qt::DashLine,    6},
+    {show_req,     "req",      QColor(160, 80,200),  Qt::DotLine,     4},
+    {show_aego,    "aEgo",     Qt::yellow,           Qt::SolidLine,   4},
+    {show_max_a,   "maxA",     QColor(180,255, 60),  Qt::DashDotLine, 2},
+    {show_min_a,   "minA",     QColor(255,130, 60),  Qt::DashDotLine, 2},
+    {show_drel,    "dRel",     QColor(  0,220,220),  Qt::DashLine,    3},
+    {show_desired, "desiredD", QColor( 80,255, 80),  Qt::SolidLine,   4},
   };
 
   p.setFont(InterFont(40));
   int legY = plotRect.bottom() + 16;
   int legX = plotRect.left();
   for (const auto &e : legend) {
+    if (!e.show) continue;
     p.setPen(QPen(e.color, e.lw, e.style));
     p.drawLine(legX, legY + 14, legX + 44, legY + 14);
     p.setPen(e.color);

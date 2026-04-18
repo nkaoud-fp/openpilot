@@ -349,6 +349,17 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("LongitudinalActuatorDelayStock", "", 3, ""),
   ("LongitudinalTune", "1", 0, "0"),
   ("LongDebugGraph", "0", 3, "0"),
+  ("LongDebugShowACtrl", "1", 3, "0"),
+  ("LongDebugShowAEgo", "1", 3, "0"),
+  ("LongDebugShowCap", "1", 3, "0"),
+  ("LongDebugShowDesiredD", "1", 3, "0"),
+  ("LongDebugShowDRel", "1", 3, "0"),
+  ("LongDebugShowE2e", "1", 3, "0"),
+  ("LongDebugShowFinal", "1", 3, "0"),
+  ("LongDebugShowMaxA", "1", 3, "0"),
+  ("LongDebugShowMinA", "1", 3, "0"),
+  ("LongDebugShowMpc", "1", 3, "0"),
+  ("LongDebugShowReq", "1", 3, "0"),
   ("LongPitch", "1", 2, "0"),
   ("LoudBlindspotAlert", "0", 0, "0"),
   ("LowVoltageShutdown", str(VBATT_PAUSE_CHARGING), 3, str(VBATT_PAUSE_CHARGING)),
@@ -849,6 +860,17 @@ class FrogPilotVariables:
     developer_widgets = toggle.developer_ui and params.get_bool("DeveloperWidgets") if tuning_level >= level["DeveloperWidgets"] else default.get_bool("DeveloperWidgets")
     toggle.adjacent_lead_tracking = has_radar and ((developer_widgets and params.get_bool("AdjacentLeadsUI") if tuning_level >= level["AdjacentLeadsUI"] else default.get_bool("AdjacentLeadsUI")) or toggle.debug_mode)
     toggle.long_debug_graph = developer_widgets and (params.get_bool("LongDebugGraph") if tuning_level >= level["LongDebugGraph"] else default.get_bool("LongDebugGraph"))
+    toggle.long_debug_show_actrl = toggle.long_debug_graph and params.get_bool("LongDebugShowACtrl")
+    toggle.long_debug_show_aego = toggle.long_debug_graph and params.get_bool("LongDebugShowAEgo")
+    toggle.long_debug_show_cap = toggle.long_debug_graph and params.get_bool("LongDebugShowCap")
+    toggle.long_debug_show_desired_d = toggle.long_debug_graph and params.get_bool("LongDebugShowDesiredD")
+    toggle.long_debug_show_drel = toggle.long_debug_graph and params.get_bool("LongDebugShowDRel")
+    toggle.long_debug_show_e2e = toggle.long_debug_graph and params.get_bool("LongDebugShowE2e")
+    toggle.long_debug_show_final = toggle.long_debug_graph and params.get_bool("LongDebugShowFinal")
+    toggle.long_debug_show_max_a = toggle.long_debug_graph and params.get_bool("LongDebugShowMaxA")
+    toggle.long_debug_show_min_a = toggle.long_debug_graph and params.get_bool("LongDebugShowMinA")
+    toggle.long_debug_show_mpc = toggle.long_debug_graph and params.get_bool("LongDebugShowMpc")
+    toggle.long_debug_show_req = toggle.long_debug_graph and params.get_bool("LongDebugShowReq")
     toggle.radar_tracks = has_radar and ((developer_widgets and params.get_bool("RadarTracksUI") if tuning_level >= level["RadarTracksUI"] else default.get_bool("RadarTracksUI")) or toggle.debug_mode)
     toggle.show_stopping_point = toggle.openpilot_longitudinal and (developer_widgets and (params.get_bool("ShowStoppingPoint") if tuning_level >= level["ShowStoppingPoint"] else default.get_bool("ShowStoppingPoint")) or toggle.debug_mode)
     toggle.show_stopping_point_metrics = toggle.show_stopping_point and (params.get_bool("ShowStoppingPointMetrics") if tuning_level >= level["ShowStoppingPointMetrics"] else default.get_bool("ShowStoppingPointMetrics") or toggle.debug_mode)

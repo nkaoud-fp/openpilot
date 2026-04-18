@@ -78,7 +78,7 @@ private:
   void paintRoadName(QPainter &p);
   void paintSmartControllerTraining(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
   void paintSpeedLimitSources(QPainter &p, const cereal::FrogPilotCarState::Reader &frogpilotCarState, const cereal::FrogPilotNavigation::Reader &frogpilotNavigation, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
-  void paintLongDebugGraph(QPainter &p, SubMaster &sm, SubMaster &fpsm);
+  void paintLongDebugGraph(QPainter &p, SubMaster &sm, SubMaster &fpsm, const QJsonObject &frogpilot_toggles);
   void paintStandstillTimer(QPainter &p);
   void paintStoppingPoint(QPainter &p, UIScene &scene, FrogPilotUIScene &frogpilot_scene, QJsonObject &frogpilot_toggles);
   void paintTurnSignals(QPainter &p, const cereal::CarState::Reader &carState);
