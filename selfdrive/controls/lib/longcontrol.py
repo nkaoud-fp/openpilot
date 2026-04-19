@@ -117,72 +117,38 @@ class LongControl:
       self.reset()
       output_accel = 0.
 
-    elif self.long_control_state == LongCtrlState.stopping and 1 == 2:   ###### 1 == 2 todisable the block for testing removing creep
+    elif self.long_control_state == LongCtrlState.stopping:
       output_accel = self.last_output_accel
-      
-      # --- Standstill Creep-to-Gap Logic ---
-      #CREEP_GAP_TARGET: The exact distance you want your car to stop behind the bumper of the car in front of you (e.g., 1.5 meters).
-      #CREEP_GAP_DEADBAND: The extra distance the lead car needs to pull away before your car wakes up and starts creeping, preventing stuttering (e.g., 0.3 meters).
-      #CREEP_ACCEL: The absolute hardest the car is allowed to press the gas pedal while inching forward (e.g., 0.3 m/s²).
-      #CREEP_MAX_SPEED: The strict speed limit your car is allowed to reach while in creeping mode (e.g., 0.5 m/s, which is about 1 mph).
-      #
-      #
-      #
+
+      # Creep forward from standstill only — never while the car is still coming to a stop
       distance_error = 0.0
       if lead_one is not None and lead_one.status:
         distance_error = lead_one.dRel - CREEP_GAP_TARGET
 
-      if not CS.brakePressed and distance_error > CREEP_GAP_DEADBAND:
-        # 1. Proportional acceleration: farther away = more acceleration (capped at CREEP_ACCEL)
+      already_stopped = CS.vEgo < 0.1
+      if (not CS.brakePressed and
+          already_stopped and
+          distance_error > CREEP_GAP_DEADBAND):
+        # Proportional acceleration: farther = more gas, capped at CREEP_ACCEL
         target_accel = clip(distance_error * 0.15, 0.0, CREEP_ACCEL)
-
-        # 2. Taper off acceleration as we approach CREEP_MAX_SPEED to prevent speed oscillation
+        # Taper off as we approach CREEP_MAX_SPEED
         speed_multiplier = clip(1.0 - (CS.vEgo / max(CREEP_MAX_SPEED, 0.01)), 0.0, 1.0)
         target_accel *= speed_multiplier
-
-        # 3. Break stiction: Use startAccel briefly if completely stopped to release brakes
-        ####################################################################################
-        ####################################################################################
-        ####################################################################################
+        # Break stiction: apply startAccel briefly when fully stationary
         if CS.vEgo < 0.05:
           target_accel = max(target_accel, frogpilot_toggles.startAccel)
-
-        # 4. Smoothly ramp up output_accel to prevent jerky throttle application
-        jerk_limit = 1.0 * DT_CTRL  # Max 1.0 m/s^2/s jerk rate
+        # Jerk-limited ramp to avoid jerky throttle
+        jerk_limit = 1.0 * DT_CTRL
         if output_accel < target_accel:
           output_accel += min(target_accel - output_accel, jerk_limit)
         else:
           output_accel -= min(output_accel - target_accel, jerk_limit)
-
       else:
-        # Standard stopping / creep cancellation logic
-        if distance_error < 0.0:
-          # We are closer than the target gap! Brake actively!
-          # The closer we get, the harder we brake.
-          active_brake = clip(distance_error * 0.5, frogpilot_toggles.stopAccel, 0.0) 
-          # Rapidly step down to the active brake value
-          if output_accel > active_brake:
-            output_accel -= (frogpilot_toggles.stoppingDecelRate * 3.0) * DT_CTRL
-            output_accel = max(output_accel, active_brake)
-        elif output_accel > frogpilot_toggles.stopAccel:
-          # Bleed off acceleration smoothly instead of snapping immediately to 0.0
+        # Standard stopping: bleed to stopAccel — creep never interferes with deceleration
+        if output_accel > frogpilot_toggles.stopAccel:
+          output_accel = min(output_accel, 0.0)
           output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
-          output_accel = max(output_accel, frogpilot_toggles.stopAccel)
-      # ---------------------------------------------------------
-      #else:
-        ## Standard stopping / creep cancellation logic
-        #if output_accel > frogpilot_toggles.stopAccel:
-          ## Bleed off acceleration smoothly instead of snapping immediately to 0.0
-          #output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
-          #output_accel = max(output_accel, frogpilot_toggles.stopAccel)
 
-      self.reset()
-
-    elif self.long_control_state == LongCtrlState.stopping and 1 == 1:
-      output_accel = self.last_output_accel
-      if output_accel > frogpilot_toggles.stopAccel:
-        output_accel = min(output_accel, 0.0)
-        output_accel -= frogpilot_toggles.stoppingDecelRate * DT_CTRL
       self.reset()
 
     
