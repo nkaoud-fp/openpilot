@@ -996,6 +996,10 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   float min_accel     = fpsm["frogpilotPlan"].getFrogpilotPlan().getMinAcceleration();
   float actrl         = sm["controlsState"].getControlsState().getATarget();
 
+  auto modelData    = sm["modelV2"].getModelV2();
+  float engaged_prob = modelData.getMeta().getEngagedProb();
+  int   conf_class   = (int)modelData.getConfidence(); // 0=red 1=yellow 2=green
+
   float dbg_cap_v = 0, dbg_req_v = 0, dbg_mpc_v = 0, dbg_e2e_v = 0, dbg_final_v = 0;
   std::string raw = params_memory.get("LongDebugData");
   if (!raw.empty()) {
@@ -1018,6 +1022,10 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   push(dbg_actrl,        actrl);
   push(dbg_max_accel,    max_accel);
   push(dbg_min_accel,    min_accel);
+  push(dbg_engaged_prob, engaged_prob);
+
+  dbg_conf_class.push_back(conf_class);
+  if ((int)dbg_conf_class.size() > LONG_DEBUG_SAMPLES) dbg_conf_class.pop_front();
 
   // ── Layout constants ─────────────────────────────────────────────────────
   const int PAD_L = 104;
@@ -1093,6 +1101,25 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawLine(QPointF(plotRect.right() - 6, py), QPointF(plotRect.right(), py));
   }
 
+  // ── Model confidence strip (top of plot, 10px high) ─────────────────────
+  const bool show_confidence = frogpilot_toggles.value("long_debug_show_confidence").toBool();
+  if (show_confidence && !dbg_conf_class.empty()) {
+    int n = (int)dbg_conf_class.size();
+    float fw = plotRect.width() / (float)(LONG_DEBUG_SAMPLES - 1);
+    p.setPen(Qt::NoPen);
+    for (int i = 0; i < n; ++i) {
+      float fx = plotRect.left() + (float)i / (LONG_DEBUG_SAMPLES - 1) * plotRect.width();
+      QColor col;
+      switch (dbg_conf_class[i]) {
+        case 0:  col = QColor(220,  50,  50, 200); break; // red
+        case 1:  col = QColor(220, 180,   0, 200); break; // yellow
+        default: col = QColor( 50, 200,  50, 200); break; // green
+      }
+      p.setBrush(col);
+      p.drawRect(QRectF(fx, plotRect.top(), fw + 1.0f, 10));
+    }
+  }
+
   // ── Plot acceleration signals (left axis) ─────────────────────────────────
   auto drawSignal = [&](const std::deque<float> &data, QColor col,
                         int lw = 2, Qt::PenStyle style = Qt::SolidLine) {
@@ -1129,6 +1156,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     p.drawPath(path);
   };
 
+  const bool show_eng_prob = frogpilot_toggles.value("long_debug_show_eng_prob").toBool();
   const bool show_cap      = frogpilot_toggles.value("long_debug_show_cap").toBool();
   const bool show_req      = frogpilot_toggles.value("long_debug_show_req").toBool();
   const bool show_mpc      = frogpilot_toggles.value("long_debug_show_mpc").toBool();
@@ -1141,6 +1169,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   const bool show_drel     = frogpilot_toggles.value("long_debug_show_drel").toBool();
   const bool show_desired  = frogpilot_toggles.value("long_debug_show_desired_d").toBool();
 
+  if (show_eng_prob) drawSignal(dbg_engaged_prob, QColor(255,  80, 200), 3);
   if (show_max_a)   drawSignal(dbg_max_accel,    QColor(180, 255,  60), 2, Qt::DashDotLine);
   if (show_min_a)   drawSignal(dbg_min_accel,    QColor(255, 130,  60), 2, Qt::DashDotLine);
   if (show_req)     drawSignal(dbg_req,           QColor(160,  80, 200), 4, Qt::DotLine);
@@ -1156,6 +1185,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
   // ── Legend (only visible signals) ────────────────────────────────────────
   struct LegEntry { bool show; const char *label; QColor color; Qt::PenStyle style; int lw; };
   const LegEntry legend[] = {
+    {show_eng_prob, "engP",    QColor(255, 80,200),  Qt::SolidLine,   3},
     {show_final,   "final",    Qt::white,            Qt::SolidLine,   6},
     {show_actrl,   "aCtrl",    QColor(  0,200,180),  Qt::SolidLine,   5},
     {show_e2e,     "e2e",      QColor(255,160,  0),  Qt::SolidLine,   4},
@@ -1182,7 +1212,7 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     legX += 50 + p.fontMetrics().horizontalAdvance(lbl) + 24;
   }
 
-  // ── Live text info ───────────────────────────────────────────────────────
+  // ── Live text info (row 1) ───────────────────────────────────────────────
   p.setFont(InterFont(46, QFont::DemiBold));
   p.setPen(whiteColor());
   QString info = QString("dRel: %1 m  desiredD: %2 m  vRel: %3 m/s  aCtrl: %4  cap: %5  req: %6  maxA: %7  minA: %8")
@@ -1196,6 +1226,18 @@ void FrogPilotAnnotatedCameraWidget::paintLongDebugGraph(QPainter &p, SubMaster 
     .arg(min_accel,    4, 'f', 2);
   p.drawText(QRect(plotRect.left(), legY + 44, plotRect.width() + PAD_R, 56),
              Qt::AlignLeft | Qt::AlignVCenter, info);
+
+  // ── Live text info (row 2: model confidence) ────────────────────────────
+  static const char *conf_labels[] = {"RED", "YLW", "GRN"};
+  static const QColor conf_colors[] = {QColor(255,80,80), QColor(255,200,0), QColor(80,220,80)};
+  int cc = std::clamp(conf_class, 0, 2);
+  p.setFont(InterFont(44, QFont::DemiBold));
+  p.setPen(conf_colors[cc]);
+  QString conf_str = QString("conf: %1  engP: %2")
+    .arg(conf_labels[cc])
+    .arg(engaged_prob, 4, 'f', 2);
+  p.drawText(QRect(plotRect.left(), legY + 100, plotRect.width() + PAD_R, 52),
+             Qt::AlignLeft | Qt::AlignVCenter, conf_str);
 
   p.restore();
 }

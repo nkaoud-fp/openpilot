@@ -104,6 +104,8 @@ private:
   std::deque<float> dbg_actrl;
   std::deque<float> dbg_max_accel;
   std::deque<float> dbg_min_accel;
+  std::deque<float> dbg_engaged_prob;
+  std::deque<int>   dbg_conf_class;   // 0=red 1=yellow 2=green
 
   Params params;
   Params params_memory{"/dev/shm/params"};

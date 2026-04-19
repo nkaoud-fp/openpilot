@@ -352,9 +352,11 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("LongDebugShowACtrl", "1", 3, "0"),
   ("LongDebugShowAEgo", "1", 3, "0"),
   ("LongDebugShowCap", "1", 3, "0"),
+  ("LongDebugShowConfidence", "1", 3, "0"),
   ("LongDebugShowDesiredD", "1", 3, "0"),
   ("LongDebugShowDRel", "1", 3, "0"),
   ("LongDebugShowE2e", "1", 3, "0"),
+  ("LongDebugShowEngProb", "1", 3, "0"),
   ("LongDebugShowFinal", "1", 3, "0"),
   ("LongDebugShowMaxA", "1", 3, "0"),
   ("LongDebugShowMinA", "1", 3, "0"),
@@ -866,6 +868,8 @@ class FrogPilotVariables:
     toggle.long_debug_show_desired_d = toggle.long_debug_graph and params.get_bool("LongDebugShowDesiredD")
     toggle.long_debug_show_drel = toggle.long_debug_graph and params.get_bool("LongDebugShowDRel")
     toggle.long_debug_show_e2e = toggle.long_debug_graph and params.get_bool("LongDebugShowE2e")
+    toggle.long_debug_show_eng_prob = toggle.long_debug_graph and params.get_bool("LongDebugShowEngProb")
+    toggle.long_debug_show_confidence = toggle.long_debug_graph and params.get_bool("LongDebugShowConfidence")
     toggle.long_debug_show_final = toggle.long_debug_graph and params.get_bool("LongDebugShowFinal")
     toggle.long_debug_show_max_a = toggle.long_debug_graph and params.get_bool("LongDebugShowMaxA")
     toggle.long_debug_show_min_a = toggle.long_debug_graph and params.get_bool("LongDebugShowMinA")
