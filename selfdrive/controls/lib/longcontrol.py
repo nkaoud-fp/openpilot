@@ -122,17 +122,18 @@ class LongControl:
 
       # Creep forward from standstill only — never while the car is still coming to a stop
       distance_error = 0.0
-      if lead_one is not None and lead_one.status:
-        distance_error = lead_one.dRel - CREEP_GAP_TARGET
+      if frogpilot_toggles.creep_to_gap and lead_one is not None and lead_one.status:
+        distance_error = lead_one.dRel - frogpilot_toggles.creep_gap_target
 
       already_stopped = CS.vEgo < 0.1
-      if (not CS.brakePressed and
+      if (frogpilot_toggles.creep_to_gap and
+          not CS.brakePressed and
           already_stopped and
           distance_error > CREEP_GAP_DEADBAND):
-        # Proportional acceleration: farther = more gas, capped at CREEP_ACCEL
-        target_accel = clip(distance_error * 0.15, 0.0, CREEP_ACCEL)
-        # Taper off as we approach CREEP_MAX_SPEED
-        speed_multiplier = clip(1.0 - (CS.vEgo / max(CREEP_MAX_SPEED, 0.01)), 0.0, 1.0)
+        # Proportional acceleration: farther = more gas, capped at creep_accel
+        target_accel = clip(distance_error * 0.15, 0.0, frogpilot_toggles.creep_accel)
+        # Taper off as we approach creep_max_speed
+        speed_multiplier = clip(1.0 - (CS.vEgo / max(frogpilot_toggles.creep_max_speed, 0.01)), 0.0, 1.0)
         target_accel *= speed_multiplier
         # Break stiction: apply startAccel briefly when fully stationary
         if CS.vEgo < 0.05:

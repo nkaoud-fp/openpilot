@@ -227,6 +227,10 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("CloseWindows", "0", 2, "0"),  
 
   ("Compass", "0", 1, "0"),
+  ("CreepAccel", "0.1", 0, "0.1"),
+  ("CreepGapTarget", "5.5", 0, "5.5"),
+  ("CreepMaxSpeed", "0.4", 0, "0.4"),
+  ("CreepToGap", "0", 0, "0"),
   ("ConditionalExperimental", "1", 1, "0"),
   ("CurvatureData", "", 2, ""),
   ("CurveSpeedController", "1", 1, "0"),
@@ -705,6 +709,10 @@ class FrogPilotVariables:
     advanced_longitudinal_tuning = params.get_bool("AdvancedLongitudinalTune") if tuning_level >= level["AdvancedLongitudinalTune"] else default.get_bool("AdvancedLongitudinalTune")
     toggle.longitudinalActuatorDelay = np.clip(params.get_float("LongitudinalActuatorDelay"), 0, 1) if advanced_longitudinal_tuning and tuning_level >= level["LongitudinalActuatorDelay"] else longitudinalActuatorDelay
     toggle.startAccel = np.clip(params.get_float("StartAccel"), 0, 4) if advanced_longitudinal_tuning and tuning_level >= level["StartAccel"] else startAccel
+    toggle.creep_to_gap = params.get_bool("CreepToGap")
+    toggle.creep_gap_target = params.get_float("CreepGapTarget")
+    toggle.creep_accel = params.get_float("CreepAccel")
+    toggle.creep_max_speed = params.get_float("CreepMaxSpeed")
     toggle.stopAccel = np.clip(params.get_float("StopAccel"), -4, 0) if advanced_longitudinal_tuning and tuning_level >= level["StopAccel"] else stopAccel
     toggle.stoppingDecelRate = np.clip(params.get_float("StoppingDecelRate"), 0.001, 1) if advanced_longitudinal_tuning and tuning_level >= level["StoppingDecelRate"] else toggle.stoppingDecelRate
     toggle.vEgoStarting = np.clip(params.get_float("VEgoStarting"), 0.01, 1) if advanced_longitudinal_tuning and tuning_level >= level["VEgoStarting"] else toggle.vEgoStarting

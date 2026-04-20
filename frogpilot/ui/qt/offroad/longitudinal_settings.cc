@@ -25,6 +25,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotListWidget *curveSpeedList = new FrogPilotListWidget(this);
   FrogPilotListWidget *customDrivingPersonalityList = new FrogPilotListWidget(this);
   FrogPilotListWidget *dynamicPersonalityList = new FrogPilotListWidget(this); // ADDED
+  FrogPilotListWidget *creepToGapList = new FrogPilotListWidget(this);
   FrogPilotListWidget *longitudinalTuneList = new FrogPilotListWidget(this);
   FrogPilotListWidget *qolList = new FrogPilotListWidget(this);
   FrogPilotListWidget *relaxedPersonalityList = new FrogPilotListWidget(this);
@@ -41,6 +42,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   ScrollView *curveSpeedPanel = new ScrollView(curveSpeedList, this);
   ScrollView *customDrivingPersonalityPanel = new ScrollView(customDrivingPersonalityList, this);
   ScrollView *dynamicPersonalityPanel = new ScrollView(dynamicPersonalityList, this); // ADDED
+  ScrollView *creepToGapPanel = new ScrollView(creepToGapList, this);
   ScrollView *longitudinalTunePanel = new ScrollView(longitudinalTuneList, this);
   ScrollView *qolPanel = new ScrollView(qolList, this);
   ScrollView *relaxedPersonalityPanel = new ScrollView(relaxedPersonalityList, this);
@@ -57,6 +59,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   longitudinalLayout->addWidget(curveSpeedPanel);
   longitudinalLayout->addWidget(customDrivingPersonalityPanel);
   longitudinalLayout->addWidget(dynamicPersonalityPanel); // ADDED
+  longitudinalLayout->addWidget(creepToGapPanel);
   longitudinalLayout->addWidget(longitudinalTunePanel);
   longitudinalLayout->addWidget(qolPanel);
   longitudinalLayout->addWidget(relaxedPersonalityPanel);
@@ -165,6 +168,11 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"LeadDetectionThreshold", tr("Lead Detection Sensitivity"), tr("<b>How sensitive openpilot is to detecting vehicles.</b> Higher sensitivity allows quicker detection at longer distances but may react to non-vehicle objects; lower sensitivity is more conservative and reduces false detections."), ""},
     {"MaxDesiredAcceleration", tr("Maximum Acceleration"), tr("<b>Limit the strongest acceleration</b> openpilot can command."), ""},
     {"TacoTune", tr("\"Taco Bell Run\" Turn Speed Hack"), tr("<b>The turn-speed hack from comma's 2022 \"Taco Bell Run\".</b> Designed to slow down for left and right turns."), ""},
+
+    {"CreepToGap", tr("Creep to Gap at Stops"), tr("<b>Gently creep forward when stopped if the lead vehicle is farther away than the target gap.</b> Helps maintain a consistent bumper-to-bumper distance at traffic lights and in stop-and-go traffic."), ""},
+    {"CreepGapTarget", tr("Target Gap"), tr("<b>The desired bumper-to-bumper gap when creeping from a stop.</b> Increase for more space; decrease for a tighter stop."), ""},
+    {"CreepAccel", tr("Creep Acceleration"), tr("<b>The maximum acceleration while creeping to the target gap.</b> Increase for quicker movement; decrease for a slower, more gentle creep."), ""},
+    {"CreepMaxSpeed", tr("Max Creep Speed"), tr("<b>The maximum speed allowed while creeping to close the gap.</b> Increase to allow faster gap closing; decrease to limit movement to a crawl."), ""},
 
     {"QOLLongitudinal", tr("Quality of Life"), tr("<b>Miscellaneous acceleration and braking control changes</b> to fine-tune how openpilot drives."), "../../frogpilot/assets/toggle_icons/icon_quality_of_life.png"},
     {"CustomCruise", tr("Cruise Interval"), tr("<b>How much the set speed increases or decreases</b> for each + or – cruise control button press."), ""},
@@ -447,6 +455,21 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "MaxDesiredAcceleration") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 4.0, tr(" m/s²"), std::map<float, QString>(), 0.1);
 
+    } else if (param == "CreepToGap") {
+      FrogPilotManageControl *creepToGapToggle = new FrogPilotManageControl(param, title, desc, icon);
+      QObject::connect(creepToGapToggle, &FrogPilotManageControl::manageButtonClicked, [longitudinalLayout, creepToGapPanel, this]() {
+        emit openSubSubPanel();
+        longitudinalLayout->setCurrentWidget(creepToGapPanel);
+        longitudinalTuneOpen = true;
+      });
+      longitudinalToggle = creepToGapToggle;
+    } else if (param == "CreepGapTarget") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 1.0, 10.0, tr(" m"), std::map<float, QString>(), 0.5);
+    } else if (param == "CreepAccel") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.05, 0.50, tr(" m/s²"), std::map<float, QString>(), 0.05);
+    } else if (param == "CreepMaxSpeed") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.1, 2.0, tr(" m/s"), std::map<float, QString>(), 0.1);
+
     } else if (param == "QOLLongitudinal") {
       FrogPilotManageControl *qolLongitudinalToggle = new FrogPilotManageControl(param, title, desc, icon);
       QObject::connect(qolLongitudinalToggle, &FrogPilotManageControl::manageButtonClicked, [longitudinalLayout, qolPanel]() {
@@ -593,6 +616,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       customDrivingPersonalityList->addItem(longitudinalToggle);
     } else if (dynamicPersonalityKeys.contains(param)) { // ADDED
       dynamicPersonalityList->addItem(longitudinalToggle); // ADDED
+    } else if (creepToGapKeys.contains(param)) {
+      creepToGapList->addItem(longitudinalToggle);
     } else if (longitudinalTuneKeys.contains(param)) {
       longitudinalTuneList->addItem(longitudinalToggle);
     } else if (qolKeys.contains(param)) {
@@ -743,7 +768,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     openDescriptions(forceOpenDescriptions, toggles);
     longitudinalLayout->setCurrentWidget(longitudinalPanel);
   });
-  QObject::connect(parent, &FrogPilotSettingsWindow::closeSubSubPanel, [longitudinalLayout, customDrivingPersonalityPanel, speedLimitControllerPanel, this]() {
+  QObject::connect(parent, &FrogPilotSettingsWindow::closeSubSubPanel, [longitudinalLayout, customDrivingPersonalityPanel, longitudinalTunePanel, speedLimitControllerPanel, this]() {
     openDescriptions(forceOpenDescriptions, toggles);
 
     if (customPersonalityOpen) {
@@ -754,6 +779,10 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalLayout->setCurrentWidget(speedLimitControllerPanel);
 
       slcOpen = false;
+    } else if (longitudinalTuneOpen) {
+      longitudinalLayout->setCurrentWidget(longitudinalTunePanel);
+
+      longitudinalTuneOpen = false;
     }
   });
   QObject::connect(parent, &FrogPilotSettingsWindow::updateMetric, this, &FrogPilotLongitudinalPanel::updateMetric);

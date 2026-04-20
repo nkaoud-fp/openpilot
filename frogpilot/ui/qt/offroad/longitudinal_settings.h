@@ -22,6 +22,7 @@ private:
   bool customPersonalityOpen;
   bool forceOpenDescriptions;
   bool hasDashSpeedLimits;
+  bool longitudinalTuneOpen;
   bool hasPCMCruise;
   bool isGM;
   bool isHKGCanFd;
@@ -53,7 +54,8 @@ private:
       "dy_cf_follow", "dy_cf_jerk_acceleration", "dy_cf_jerk_deceleration", "dy_cf_jerk_speed", "dy_cf_jerk_speed_decrease", "dy_cf_jerk_danger"
     };
 
-  QSet<QString> longitudinalTuneKeys = {"AccelerationProfile", "DecelerationProfile", "HumanAcceleration", "HumanFollowing", "LeadDetectionThreshold", "MaxDesiredAcceleration", "TacoTune"};
+  QSet<QString> creepToGapKeys = {"CreepGapTarget", "CreepAccel", "CreepMaxSpeed"};
+  QSet<QString> longitudinalTuneKeys = {"AccelerationProfile", "CreepToGap", "DecelerationProfile", "HumanAcceleration", "HumanFollowing", "LeadDetectionThreshold", "MaxDesiredAcceleration", "TacoTune"};
   QSet<QString> qolKeys = {"CustomCruise", "CustomCruiseLong", "ForceStops", "IncreasedStoppedDistance", "MapGears", "ReverseCruise", "SetSpeedOffset"};
   QSet<QString> relaxedPersonalityKeys = {"RelaxedFollow", "RelaxedJerkAcceleration", "RelaxedJerkDeceleration", "RelaxedJerkDanger", "RelaxedJerkSpeed", "RelaxedJerkSpeedDecrease", "ResetRelaxedPersonality"};
   QSet<QString> speedLimitControllerKeys = {"SLCOffsets", "SLCFallback", "SLCOverride", "SLCPriority", "SLCQOL", "SLCVisuals"};
