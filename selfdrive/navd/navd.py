@@ -17,6 +17,7 @@ from openpilot.selfdrive.navd.helpers import (Coordinate, coordinate_from_param,
                                     distance_along_geometry, maxspeed_to_ms,
                                     minimum_distance,
                                     parse_banner_instructions)
+from openpilot.selfdrive.navd.osrm import request_osrm_route
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.frogpilot.common.frogpilot_variables import get_frogpilot_toggles
@@ -24,6 +25,9 @@ from openpilot.frogpilot.common.frogpilot_variables import get_frogpilot_toggles
 REROUTE_DISTANCE = 25
 MANEUVER_TRANSITION_THRESHOLD = 10
 REROUTE_COUNTER_MIN = 3
+NAVIGATION_TEST_DESTINATION = Coordinate(24.675764, 46.581478)
+NAVIGATION_TEST_COMMAND_DISTANCE = 35
+NAVIGATION_TEST_COMMAND_SECONDS = 8
 
 
 class RouteEngine:
@@ -51,6 +55,7 @@ class RouteEngine:
     self.ui_pid = None
 
     self.reroute_counter = 0
+    self.navigation_test_command = None
 
 
     self.api = None
@@ -86,6 +91,7 @@ class RouteEngine:
 
     self.update_location()
     try:
+      self.update_navigation_test_destination()
       self.recompute_route()
       self.send_instruction()
     except Exception:
@@ -104,6 +110,40 @@ class RouteEngine:
     if self.localizer_valid:
       self.last_bearing = math.degrees(location.calibratedOrientationNED.value[2])
       self.last_position = Coordinate(location.positionGeodetic.value[0], location.positionGeodetic.value[1])
+
+  def update_navigation_test_destination(self):
+    if not self.params.get_bool("NavigationTestControl"):
+      self.update_navigation_test_command("none", 0.0)
+      return
+
+    destination = coordinate_from_param("NavDestination", self.params)
+    if destination == NAVIGATION_TEST_DESTINATION:
+      return
+
+    self.params.put("NavDestination", json.dumps({
+      "latitude": NAVIGATION_TEST_DESTINATION.latitude,
+      "longitude": NAVIGATION_TEST_DESTINATION.longitude,
+      "place_name": "Navigation test destination",
+    }))
+
+  def update_navigation_test_command(self, direction, distance):
+    command = json.dumps({"direction": direction, "distance": max(distance, 0.0)})
+    if command != self.navigation_test_command:
+      self.params.put("NavigationTestTurnCommand", command)
+      self.navigation_test_command = command
+
+  def navigation_test_maneuver_direction(self, instruction):
+    if instruction is None:
+      return "none"
+
+    modifier = instruction.get("maneuverModifier", "").lower()
+    maneuver_type = instruction.get("maneuverType", "").lower()
+    direction_text = f"{maneuver_type} {modifier}"
+    if "left" in direction_text:
+      return "left"
+    if "right" in direction_text:
+      return "right"
+    return "none"
 
   def recompute_route(self):
     if self.last_position is None:
@@ -173,14 +213,23 @@ class RouteEngine:
     coords_str = ';'.join([f'{lon},{lat}' for lon, lat in coords])
     url = self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords_str
     try:
-      resp = requests.get(url, params=params, timeout=10)
-      if resp.status_code != 200:
-        cloudlog.event("API request failed", status_code=resp.status_code, text=resp.text, error=True)
-      resp.raise_for_status()
+      if self.params.get_bool("NavigationTestControl"):
+        chosen_route, r = request_osrm_route(self.last_position, destination)
+        if chosen_route is None:
+          cloudlog.warning("Got empty OSRM route response")
+          self.clear_route()
+          self.send_route()
+          return
+        r1 = r
+      else:
+        resp = requests.get(url, params=params, timeout=10)
+        if resp.status_code != 200:
+          cloudlog.event("API request failed", status_code=resp.status_code, text=resp.text, error=True)
+        resp.raise_for_status()
 
-      r = resp.json()
-      r1 = resp.json()
-      chosen_route = r['routes'][0]
+        r = resp.json()
+        r1 = resp.json()
+        chosen_route = r['routes'][0]
 
       # Function to remove specified keys recursively unnessary for display
       def remove_keys(obj, keys_to_remove):
@@ -218,7 +267,7 @@ class RouteEngine:
           first_route['Destination'] = place_name
           first_route['Metric'] = self.params.get_bool("IsMetric")
           self.r3['CurrentStep'] = 0
-          self.r3['uuid'] = self.r2['uuid']
+          self.r3['uuid'] = self.r2.get('uuid', 'osrm-navigation-test')
         except json.JSONDecodeError as e:
           print(f"Error decoding JSON: {e}")
 
@@ -244,7 +293,7 @@ class RouteEngine:
                 self.stop_coord.append(Coordinate.from_mapbox_tuple(intersection["location"]))
 
         maxspeed_idx = 0
-        maxspeeds = chosen_route['legs'][0]['annotation']['maxspeed']
+        maxspeeds = chosen_route['legs'][0].get('annotation', {}).get('maxspeed', [])
 
         # Convert coordinates
         for step in self.route:
@@ -290,6 +339,7 @@ class RouteEngine:
 
       fp_msg.frogpilotNavigation.navigationSpeedLimit = 0
       self.pm.send('frogpilotNavigation', fp_msg)
+      self.update_navigation_test_command("none", 0.0)
       return
 
     step = self.route[self.step_idx]
@@ -308,6 +358,14 @@ class RouteEngine:
     if instruction is not None:
       for k,v in instruction.items():
         setattr(msg.navInstruction, k, v)
+
+    if self.params.get_bool("NavigationTestControl"):
+      v_ego = self.sm['carState'].vEgo
+      command_distance = max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
+      direction = self.navigation_test_maneuver_direction(instruction)
+      if direction == "none" or distance_to_maneuver_along_geometry > command_distance:
+        direction = "none"
+      self.update_navigation_test_command(direction, distance_to_maneuver_along_geometry)
 
     # All instructions
     maneuvers = []
@@ -396,6 +454,8 @@ class RouteEngine:
         if dist > REROUTE_DISTANCE:
           self.params.remove("NavDestination")
           self.clear_route()
+        else:
+          self.update_navigation_test_command("none", 0.0)
 
     if self.frogpilot_toggles.conditional_navigation:
       v_ego = self.sm['carState'].vEgo

@@ -1,5 +1,8 @@
+import json
+
 from cereal import log
 from openpilot.common.conversions import Conversions as CV
+from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL
 
 LaneChangeState = log.LaneChangeState
@@ -36,8 +39,15 @@ TURN_DESIRES = {
   TurnDirection.turnRight: log.Desire.turnRight,
 }
 
+NAVIGATION_TEST_DIRECTIONS = {
+  "left": TurnDirection.turnLeft,
+  "right": TurnDirection.turnRight,
+}
+
 class DesireHelper:
   def __init__(self):
+    self.params = Params()
+
     self.lane_change_state = LaneChangeState.off
     self.lane_change_direction = LaneChangeDirection.none
     self.lane_change_timer = 0.0
@@ -50,6 +60,21 @@ class DesireHelper:
     self.lane_change_completed = False
 
     self.lane_change_wait_timer = 0
+
+  def navigation_test_turn_direction(self):
+    if not self.params.get_bool("NavigationTestControl"):
+      return TurnDirection.none
+
+    command = self.params.get("NavigationTestTurnCommand", encoding="utf-8")
+    if command is None:
+      return TurnDirection.none
+
+    try:
+      direction = json.loads(command).get("direction")
+    except json.JSONDecodeError:
+      return TurnDirection.none
+
+    return NAVIGATION_TEST_DIRECTIONS.get(direction, TurnDirection.none)
 
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilot_toggles):
     v_ego = carstate.vEgo
@@ -125,7 +150,13 @@ class DesireHelper:
     self.lane_change_completed &= one_blinker
     self.prev_one_blinker = one_blinker
 
-    if one_blinker and below_lane_change_speed and not carstate.standstill and frogpilot_toggles.use_turn_desires:
+    navigation_test_turn_direction = self.navigation_test_turn_direction()
+    navigation_test_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
+
+    if navigation_test_active:
+      self.turn_direction = navigation_test_turn_direction
+      self.desire = TURN_DESIRES[self.turn_direction]
+    elif one_blinker and below_lane_change_speed and not carstate.standstill and frogpilot_toggles.use_turn_desires:
       self.turn_direction = TurnDirection.turnLeft if carstate.leftBlinker else TurnDirection.turnRight
       self.desire = TURN_DESIRES[self.turn_direction]
     else:
