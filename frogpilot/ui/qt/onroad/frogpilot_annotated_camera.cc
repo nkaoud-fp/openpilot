@@ -1,4 +1,5 @@
 #include <QMovie>
+#include <QTime>
 
 #include "frogpilot/ui/qt/onroad/frogpilot_annotated_camera.h"
 
@@ -717,6 +718,7 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   QString action = command.value("action").toString("none");
   QString direction = command.value("direction").toString("none");
   double distance = command.value("distance").toDouble(0.0);
+  double etaSeconds = command.value("etaSeconds").toDouble(0.0);
 
   QString actionText = tr("Nav test: idle");
   QColor borderColor = blackColor();
@@ -746,6 +748,9 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   if (distance > 0.0) {
     QString distanceText = distance >= 1000.0 ? QString::number(distance / 1000.0, 'f', 1) + tr(" km") : QString::number(qRound(distance)) + tr(" m");
     actionText += "  " + distanceText;
+  }
+  if (etaSeconds > 0.0) {
+    actionText += "  " + tr("ETA %1").arg(QTime::currentTime().addSecs(qRound(etaSeconds)).toString("h:mm AP"));
   }
 
   p.save();

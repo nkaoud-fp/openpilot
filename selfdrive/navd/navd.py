@@ -134,8 +134,13 @@ class RouteEngine:
       "place_name": "Navigation test destination",
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0):
-    command = json.dumps({"action": action, "direction": direction, "distance": max(distance, 0.0)})
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0):
+    command = json.dumps({
+      "action": action,
+      "direction": direction,
+      "distance": max(distance, 0.0),
+      "etaSeconds": max(eta_seconds, 0.0),
+    })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
       self.navigation_test_command = command
@@ -381,21 +386,20 @@ class RouteEngine:
       for k,v in instruction.items():
         setattr(msg.navInstruction, k, v)
 
+    navigation_test_action = "none"
+    navigation_test_direction = "none"
     if self.params.get_bool("NavigationTestControl"):
       v_ego = self.sm['carState'].vEgo
       command_distance = max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
-      direction = self.navigation_test_maneuver_direction(instruction)
-      action = "none"
+      navigation_test_direction = self.navigation_test_maneuver_direction(instruction)
 
-      if direction != "none":
+      if navigation_test_direction != "none":
         if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_EXIT_PREP_DISTANCE:
-          action = "laneChange"
+          navigation_test_action = "laneChange"
         elif distance_to_maneuver_along_geometry <= command_distance:
-          action = "turn"
+          navigation_test_action = "turn"
         else:
-          action = "upcoming"
-
-      self.update_navigation_test_command(action, direction if action != "none" else "none", distance_to_maneuver_along_geometry)
+          navigation_test_action = "upcoming"
 
     # All instructions
     maneuvers = []
@@ -441,6 +445,14 @@ class RouteEngine:
     msg.navInstruction.distanceRemaining = total_distance
     msg.navInstruction.timeRemaining = total_time
     msg.navInstruction.timeRemainingTypical = total_time_typical
+
+    if self.params.get_bool("NavigationTestControl"):
+      self.update_navigation_test_command(
+        navigation_test_action,
+        navigation_test_direction if navigation_test_action != "none" else "none",
+        distance_to_maneuver_along_geometry,
+        total_time,
+      )
 
     # Speed limit
     closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
