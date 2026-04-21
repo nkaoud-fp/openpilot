@@ -44,6 +44,11 @@ NAVIGATION_TEST_DIRECTIONS = {
   "right": TurnDirection.turnRight,
 }
 
+NAVIGATION_TEST_LANE_CHANGE_DESIRES = {
+  "left": log.Desire.laneChangeLeft,
+  "right": log.Desire.laneChangeRight,
+}
+
 class DesireHelper:
   def __init__(self):
     self.params = Params()
@@ -61,20 +66,33 @@ class DesireHelper:
 
     self.lane_change_wait_timer = 0
 
-  def navigation_test_turn_direction(self):
+  def navigation_test_command(self):
     if not self.params.get_bool("NavigationTestControl"):
-      return TurnDirection.none
+      return "none", "none"
 
     command = self.params.get("NavigationTestTurnCommand", encoding="utf-8")
     if command is None:
-      return TurnDirection.none
+      return "none", "none"
 
     try:
-      direction = json.loads(command).get("direction")
+      command_json = json.loads(command)
     except json.JSONDecodeError:
-      return TurnDirection.none
+      return "none", "none"
 
-    return NAVIGATION_TEST_DIRECTIONS.get(direction, TurnDirection.none)
+    direction = command_json.get("direction", "none")
+    action = command_json.get("action", "turn" if direction in NAVIGATION_TEST_DIRECTIONS else "none")
+    if direction not in NAVIGATION_TEST_DIRECTIONS:
+      return "none", "none"
+    return action, direction
+
+  def navigation_test_lane_change_allowed(self, direction, carstate, frogpilotPlan, frogpilot_toggles, below_lane_change_speed):
+    if below_lane_change_speed or not frogpilot_toggles.lane_changes:
+      return False
+
+    desired_lane_width = frogpilotPlan.laneWidthLeft if direction == "left" else frogpilotPlan.laneWidthRight
+    lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
+    blindspot_detected = (carstate.leftBlindspot and direction == "left") or (carstate.rightBlindspot and direction == "right")
+    return lane_available and not blindspot_detected
 
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilot_toggles):
     v_ego = carstate.vEgo
@@ -150,10 +168,17 @@ class DesireHelper:
     self.lane_change_completed &= one_blinker
     self.prev_one_blinker = one_blinker
 
-    navigation_test_turn_direction = self.navigation_test_turn_direction()
-    navigation_test_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
+    navigation_test_action, navigation_test_direction = self.navigation_test_command()
+    navigation_test_turn_direction = NAVIGATION_TEST_DIRECTIONS.get(navigation_test_direction, TurnDirection.none) if navigation_test_action == "turn" else TurnDirection.none
+    navigation_test_lane_change_desire = NAVIGATION_TEST_LANE_CHANGE_DESIRES.get(navigation_test_direction, log.Desire.none) if navigation_test_action == "laneChange" else log.Desire.none
+    navigation_test_lane_change_active = navigation_test_lane_change_desire != log.Desire.none and lateral_active and not carstate.standstill
+    navigation_test_lane_change_active &= self.navigation_test_lane_change_allowed(navigation_test_direction, carstate, frogpilotPlan, frogpilot_toggles, below_lane_change_speed)
+    navigation_test_turn_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
 
-    if navigation_test_active:
+    if navigation_test_lane_change_active:
+      self.turn_direction = TurnDirection.none
+      self.desire = navigation_test_lane_change_desire
+    elif navigation_test_turn_active:
       self.turn_direction = navigation_test_turn_direction
       self.desire = TURN_DESIRES[self.turn_direction]
     elif one_blinker and below_lane_change_speed and not carstate.standstill and frogpilot_toggles.use_turn_desires:

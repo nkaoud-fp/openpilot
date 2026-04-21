@@ -28,6 +28,7 @@ REROUTE_COUNTER_MIN = 3
 NAVIGATION_TEST_DESTINATION = Coordinate(24.675764, 46.581478)
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
+NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
 
 
 class RouteEngine:
@@ -113,7 +114,7 @@ class RouteEngine:
 
   def update_navigation_test_destination(self):
     if not self.params.get_bool("NavigationTestControl"):
-      self.update_navigation_test_command("none", 0.0)
+      self.update_navigation_test_command("none")
       return
 
     destination = coordinate_from_param("NavDestination", self.params)
@@ -126,8 +127,8 @@ class RouteEngine:
       "place_name": "Navigation test destination",
     }))
 
-  def update_navigation_test_command(self, direction, distance):
-    command = json.dumps({"direction": direction, "distance": max(distance, 0.0)})
+  def update_navigation_test_command(self, action, direction="none", distance=0.0):
+    command = json.dumps({"action": action, "direction": direction, "distance": max(distance, 0.0)})
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
       self.navigation_test_command = command
@@ -144,6 +145,14 @@ class RouteEngine:
     if "right" in direction_text:
       return "right"
     return "none"
+
+  def navigation_test_is_exit_maneuver(self, instruction):
+    if instruction is None:
+      return False
+
+    maneuver_type = instruction.get("maneuverType", "").lower()
+    primary_text = instruction.get("maneuverPrimaryText", "").lower()
+    return "ramp" in maneuver_type or "exit" in primary_text
 
   def recompute_route(self):
     if self.last_position is None:
@@ -339,7 +348,7 @@ class RouteEngine:
 
       fp_msg.frogpilotNavigation.navigationSpeedLimit = 0
       self.pm.send('frogpilotNavigation', fp_msg)
-      self.update_navigation_test_command("none", 0.0)
+      self.update_navigation_test_command("none")
       return
 
     step = self.route[self.step_idx]
@@ -363,9 +372,15 @@ class RouteEngine:
       v_ego = self.sm['carState'].vEgo
       command_distance = max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
       direction = self.navigation_test_maneuver_direction(instruction)
-      if direction == "none" or distance_to_maneuver_along_geometry > command_distance:
-        direction = "none"
-      self.update_navigation_test_command(direction, distance_to_maneuver_along_geometry)
+      action = "none"
+
+      if direction != "none":
+        if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_EXIT_PREP_DISTANCE:
+          action = "laneChange"
+        elif distance_to_maneuver_along_geometry <= command_distance:
+          action = "turn"
+
+      self.update_navigation_test_command(action, direction if action != "none" else "none", distance_to_maneuver_along_geometry)
 
     # All instructions
     maneuvers = []
@@ -455,7 +470,7 @@ class RouteEngine:
           self.params.remove("NavDestination")
           self.clear_route()
         else:
-          self.update_navigation_test_command("none", 0.0)
+          self.update_navigation_test_command("none")
 
     if self.frogpilot_toggles.conditional_navigation:
       v_ego = self.sm['carState'].vEgo

@@ -6,7 +6,7 @@ from openpilot.selfdrive.navd.helpers import Coordinate
 OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving/{coords}"
 
 
-def _banner_from_osrm_step(step):
+def _banner_from_osrm_step(step, distance_along_geometry):
   maneuver = step.get("maneuver", {})
   modifier = maneuver.get("modifier", "")
   maneuver_type = maneuver.get("type", "")
@@ -19,12 +19,12 @@ def _banner_from_osrm_step(step):
     primary["modifier"] = modifier
 
   return [{
-    "distanceAlongGeometry": max(min(step.get("distance", 0.0), 80.0), 20.0),
+    "distanceAlongGeometry": distance_along_geometry,
     "primary": primary,
   }]
 
 
-def _normalize_osrm_step(step):
+def _normalize_osrm_step(step, next_step):
   geometry = step.get("geometry", {})
   coords = geometry.get("coordinates", [])
   if len(coords) < 2:
@@ -34,7 +34,7 @@ def _normalize_osrm_step(step):
       coords = [location, location]
 
   return {
-    "bannerInstructions": _banner_from_osrm_step(step),
+    "bannerInstructions": _banner_from_osrm_step(next_step, step.get("distance", 0.0)) if next_step is not None else [],
     "distance": step.get("distance", 0.0),
     "duration": step.get("duration", 0.0),
     "duration_typical": step.get("duration", 0.0),
@@ -68,8 +68,10 @@ def request_osrm_route(origin: Coordinate, destination: Coordinate):
     return None, data
 
   steps = []
-  for step in legs[0].get("steps", []):
-    normalized = _normalize_osrm_step(step)
+  osrm_steps = legs[0].get("steps", [])
+  for idx, step in enumerate(osrm_steps):
+    next_step = osrm_steps[idx + 1] if idx + 1 < len(osrm_steps) else None
+    normalized = _normalize_osrm_step(step, next_step)
     if normalized["geometry"]["coordinates"]:
       steps.append(normalized)
 
