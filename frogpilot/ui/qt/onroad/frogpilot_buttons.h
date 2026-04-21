@@ -25,3 +25,19 @@ private:
 
   QMap<int, QPair<QPixmap, QSharedPointer<QMovie>>> icon_map;
 };
+
+class NavigationTestButton : public QPushButton {
+  Q_OBJECT
+
+public:
+  explicit NavigationTestButton(QWidget *parent = 0);
+
+  void updateState();
+
+private:
+  void paintEvent(QPaintEvent *event) override;
+
+  Params params;
+
+  bool navigation_test_enabled = false;
+};

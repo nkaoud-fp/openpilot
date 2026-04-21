@@ -57,6 +57,7 @@ private:
   void resizeEvent(QResizeEvent *event);
 
   DistanceButton *distance_btn;
+  NavigationTestButton *navigation_test_btn;
 
 protected:
   void paintGL() override;

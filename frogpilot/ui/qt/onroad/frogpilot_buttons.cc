@@ -1,5 +1,7 @@
 #include "frogpilot/ui/qt/onroad/frogpilot_buttons.h"
 
+#include "selfdrive/ui/qt/util.h"
+
 DistanceButton::DistanceButton(QWidget *parent) : QPushButton(parent) {
   setFixedSize(btn_size + UI_BORDER_SIZE, btn_size);
 
@@ -60,4 +62,47 @@ void DistanceButton::paintEvent(QPaintEvent *event) {
   QMovie *gif = icon.second.data();
 
   drawIcon(p, rect().center() + QPoint(UI_BORDER_SIZE / 2, 0), gif ? gif->currentPixmap() : img, Qt::transparent, 1.0);
+}
+
+NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent) {
+  setFixedSize(btn_size, btn_size);
+
+  QObject::connect(this, &QPushButton::clicked, [this] {
+    const bool enabled = !params.getBool("NavigationTestControl");
+    params.putBool("NavigationTestControl", enabled);
+
+    if (!enabled) {
+      params.remove("NavDestination");
+      params.remove("NavDestinationWaypoints");
+      params.remove("NavigationTestTurnCommand");
+    }
+
+    updateState();
+  });
+}
+
+void NavigationTestButton::updateState() {
+  const bool enabled = params.getBool("NavigationTestControl");
+  if (navigation_test_enabled == enabled) {
+    return;
+  }
+
+  navigation_test_enabled = enabled;
+  update();
+}
+
+void NavigationTestButton::paintEvent(QPaintEvent *event) {
+  QPainter p(this);
+  p.setRenderHint(QPainter::Antialiasing);
+
+  const QColor background = navigation_test_enabled ? QColor(0, 163, 108, 210) : QColor(0, 0, 0, 166);
+  drawIcon(p, QPoint(btn_size / 2, btn_size / 2), QPixmap(), background, isDown() ? 0.6 : 1.0);
+
+  p.setPen(Qt::white);
+  p.setFont(InterFont(54, QFont::Bold));
+  p.drawText(rect().adjusted(0, 18, 0, 0), Qt::AlignCenter, tr("NAV"));
+
+  p.setFont(InterFont(27, QFont::DemiBold));
+  p.setPen(QColor(255, 255, 255, navigation_test_enabled ? 240 : 175));
+  p.drawText(rect().adjusted(0, 104, 0, 0), Qt::AlignHCenter | Qt::AlignTop, navigation_test_enabled ? tr("ON") : tr("OFF"));
 }

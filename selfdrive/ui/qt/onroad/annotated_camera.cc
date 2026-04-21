@@ -30,9 +30,11 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   frogpilot_nvg->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
   distance_btn = new DistanceButton(this);
+  navigation_test_btn = new NavigationTestButton(this);
   screen_recorder = new ScreenRecorder(this);
 
   distance_btn->setVisible(false);
+  navigation_test_btn->setVisible(false);
 }
 
 void AnnotatedCameraWidget::resizeEvent(QResizeEvent *event) {
@@ -118,6 +120,22 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
   if (distance_btn->isEnabled()) {
     distance_btn->move(rightHandDM ? width() - UI_BORDER_SIZE - distance_btn->width() - (UI_BORDER_SIZE / 2) : UI_BORDER_SIZE, frogpilot_nvg->dmIconPosition.y() - distance_btn->height() / 2);
     distance_btn->updateState(s.scene, fs.frogpilot_scene);
+  }
+  navigation_test_btn->setEnabled(!hideBottomIcons && !frogpilot_nvg->bigMapOpen);
+  navigation_test_btn->setVisible(navigation_test_btn->isEnabled());
+  if (navigation_test_btn->isEnabled()) {
+    int navigation_test_x = rightHandDM ? width() - UI_BORDER_SIZE - navigation_test_btn->width() : UI_BORDER_SIZE;
+    if (distance_btn->isEnabled()) {
+      navigation_test_x = rightHandDM ? distance_btn->x() - UI_BORDER_SIZE - navigation_test_btn->width() : distance_btn->x() + distance_btn->width() + UI_BORDER_SIZE;
+    }
+
+    int navigation_test_y = height() - UI_BORDER_SIZE - navigation_test_btn->height();
+    if (frogpilot_nvg->dmIconPosition != QPoint(0, 0)) {
+      navigation_test_y = frogpilot_nvg->dmIconPosition.y() - navigation_test_btn->height() / 2;
+    }
+
+    navigation_test_btn->move(navigation_test_x, navigation_test_y);
+    navigation_test_btn->updateState();
   }
   experimental_btn->setVisible(!frogpilot_nvg->bigMapOpen);
   screen_recorder->setVisible(frogpilot_nvg->standstillDuration == 0 && !fs.frogpilot_scene.map_open && !(frogpilot_nvg->signalStyle == "static" && car_state.getRightBlinker()) && frogpilot_toggles.value("screen_recorder").toBool());
