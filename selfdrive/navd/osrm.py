@@ -4,6 +4,8 @@ from openpilot.selfdrive.navd.helpers import Coordinate
 
 
 OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving/{coords}"
+OSRM_MAX_DURATION_SLOWDOWN = 1.15
+OSRM_NON_ACTIONABLE_MANEUVERS = {"arrive", "depart", "new name"}
 
 
 def _banner_from_osrm_step(step, distance_along_geometry):
@@ -45,10 +47,27 @@ def _normalize_osrm_step(step, next_step):
   }
 
 
+def _route_maneuver_count(route):
+  count = 0
+  for leg in route.get("legs", []):
+    for step in leg.get("steps", []):
+      maneuver_type = step.get("maneuver", {}).get("type", "")
+      if maneuver_type and maneuver_type not in OSRM_NON_ACTIONABLE_MANEUVERS:
+        count += 1
+  return count
+
+
+def _choose_route(routes):
+  fastest_duration = min(route.get("duration", float("inf")) for route in routes)
+  duration_limit = fastest_duration * OSRM_MAX_DURATION_SLOWDOWN
+  candidates = [route for route in routes if route.get("duration", float("inf")) <= duration_limit]
+  return min(candidates, key=lambda route: (_route_maneuver_count(route), route.get("duration", float("inf")), route.get("distance", float("inf"))))
+
+
 def request_osrm_route(origin: Coordinate, destination: Coordinate):
   coords = f"{origin.longitude},{origin.latitude};{destination.longitude},{destination.latitude}"
   params = {
-    "alternatives": "false",
+    "alternatives": "true",
     "geometries": "geojson",
     "overview": "full",
     "steps": "true",
@@ -62,7 +81,7 @@ def request_osrm_route(origin: Coordinate, destination: Coordinate):
   if not routes:
     return None, data
 
-  route = routes[0]
+  route = _choose_route(routes)
   legs = route.get("legs") or []
   if not legs:
     return None, data
