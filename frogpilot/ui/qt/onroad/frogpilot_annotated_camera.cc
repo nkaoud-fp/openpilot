@@ -232,6 +232,8 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
     paintRoadName(p);
   }
 
+  paintNavigationTestAction(p);
+
   if (!bigMapOpen && (mutcdSpeedLimit || viennaSpeedLimit) && frogpilot_toggles.value("speed_limit_sources").toBool()) {
     paintSpeedLimitSources(p, frogpilotCarState, frogpilotNavigation, frogpilotPlan);
   }
@@ -702,6 +704,49 @@ void FrogPilotAnnotatedCameraWidget::paintPendingSpeedLimit(QPainter &p, const c
     p.setFont(InterFont((newSpeedLimitStr.size() >= 3) ? 60 : 70, QFont::Bold));
     p.drawText(newSpeedLimitRect, Qt::AlignCenter, newSpeedLimitStr);
   }
+
+  p.restore();
+}
+
+void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
+  if (!params.getBool("NavigationTestControl")) {
+    return;
+  }
+
+  QJsonObject command = QJsonDocument::fromJson(QString::fromStdString(params.get("NavigationTestTurnCommand")).toUtf8()).object();
+  QString action = command.value("action").toString("none");
+  QString direction = command.value("direction").toString("none");
+  double distance = command.value("distance").toDouble(0.0);
+
+  QString actionText = tr("Nav test: idle");
+  QColor borderColor = blackColor();
+  if (action == "laneChange") {
+    actionText = tr("Nav test: prepare lane change %1").arg(direction);
+    borderColor = blueColor();
+  } else if (action == "turn") {
+    actionText = tr("Nav test: turn %1").arg(direction);
+    borderColor = greenColor();
+  }
+
+  if (distance > 0.0) {
+    QString distanceText = distance >= 1000.0 ? QString::number(distance / 1000.0, 'f', 1) + tr(" km") : QString::number(qRound(distance)) + tr(" m");
+    actionText += "  " + distanceText;
+  }
+
+  p.save();
+
+  QFont font = InterFont(38, QFont::DemiBold);
+  QFontMetrics metrics(font);
+  int textWidth = std::min(metrics.horizontalAdvance(actionText), width() - 240);
+  QRect actionRect((width() - textWidth - 90) / 2, rect().bottom() - 135, textWidth + 90, 62);
+
+  p.setBrush(blackColor(190));
+  p.setPen(QPen(borderColor, 6));
+  p.drawRoundedRect(actionRect, 24, 24);
+
+  p.setFont(font);
+  p.setPen(QPen(whiteColor(), 6));
+  p.drawText(actionRect.adjusted(35, 0, -35, 0), Qt::AlignCenter, metrics.elidedText(actionText, Qt::ElideRight, actionRect.width() - 70));
 
   p.restore();
 }
