@@ -96,6 +96,8 @@ class RouteEngine:
       self.recompute_route()
       self.send_instruction()
     except Exception:
+      if self.params.get_bool("NavigationTestControl"):
+        self.update_navigation_test_command("routeError")
       cloudlog.exception("navd.failed_to_compute")
 
     # Update FrogPilot variables
@@ -117,10 +119,15 @@ class RouteEngine:
       self.update_navigation_test_command("none")
       return
 
+    if self.last_position is None:
+      self.update_navigation_test_command("waitingGps")
+      return
+
     destination = coordinate_from_param("NavDestination", self.params)
     if destination == NAVIGATION_TEST_DESTINATION:
       return
 
+    self.update_navigation_test_command("routing")
     self.params.put("NavDestination", json.dumps({
       "latitude": NAVIGATION_TEST_DESTINATION.latitude,
       "longitude": NAVIGATION_TEST_DESTINATION.longitude,
@@ -184,25 +191,8 @@ class RouteEngine:
   def calculate_route(self, destination):
     cloudlog.warning(f"Calculating route {self.last_position} -> {destination}")
     self.nav_destination = destination
-
-    lang = self.params.get('LanguageSetting', encoding='utf8')
-    if lang is not None:
-      lang = lang.replace('main_', '')
-
-    token = self.mapbox_token
-    if token is None:
-      token = self.api.get_token()
-
-    params = {
-      'access_token': token,
-      'annotations': 'maxspeed',
-      'geometries': 'geojson',
-      'overview': 'full',
-      'steps': 'true',
-      'banner_instructions': 'true',
-      'alternatives': 'true',
-      'language': lang,
-    }
+    if self.params.get_bool("NavigationTestControl"):
+      self.update_navigation_test_command("routing")
 
     # TODO: move waypoints into NavDestination param?
     waypoints = self.params.get('NavDestinationWaypoints', encoding='utf8')
@@ -215,9 +205,6 @@ class RouteEngine:
       *waypoint_coords,
       (destination.longitude, destination.latitude)
     ]
-    params['waypoints'] = f'0;{len(coords)-1}'
-    if self.last_bearing is not None:
-      params['bearings'] = f"{(self.last_bearing + 360) % 360:.0f},90" + (';'*(len(coords)-1))
 
     coords_str = ';'.join([f'{lon},{lat}' for lon, lat in coords])
     url = self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords_str
@@ -226,11 +213,34 @@ class RouteEngine:
         chosen_route, r = request_osrm_route(self.last_position, destination)
         if chosen_route is None:
           cloudlog.warning("Got empty OSRM route response")
+          self.update_navigation_test_command("noRoute")
           self.clear_route()
           self.send_route()
           return
         r1 = r
       else:
+        lang = self.params.get('LanguageSetting', encoding='utf8')
+        if lang is not None:
+          lang = lang.replace('main_', '')
+
+        token = self.mapbox_token
+        if token is None:
+          token = self.api.get_token()
+
+        params = {
+          'access_token': token,
+          'annotations': 'maxspeed',
+          'geometries': 'geojson',
+          'overview': 'full',
+          'steps': 'true',
+          'banner_instructions': 'true',
+          'alternatives': 'true',
+          'language': lang,
+        }
+        params['waypoints'] = f'0;{len(coords)-1}'
+        if self.last_bearing is not None:
+          params['bearings'] = f"{(self.last_bearing + 360) % 360:.0f},90" + (';'*(len(coords)-1))
+
         resp = requests.get(url, params=params, timeout=10)
         if resp.status_code != 200:
           cloudlog.event("API request failed", status_code=resp.status_code, text=resp.text, error=True)
@@ -334,6 +344,8 @@ class RouteEngine:
 
     except requests.exceptions.RequestException:
       cloudlog.exception("failed to get route")
+      if self.params.get_bool("NavigationTestControl"):
+        self.update_navigation_test_command("routeError")
       self.clear_route()
 
     self.send_route()
@@ -348,7 +360,8 @@ class RouteEngine:
 
       fp_msg.frogpilotNavigation.navigationSpeedLimit = 0
       self.pm.send('frogpilotNavigation', fp_msg)
-      self.update_navigation_test_command("none")
+      if not self.params.get_bool("NavigationTestControl"):
+        self.update_navigation_test_command("none")
       return
 
     step = self.route[self.step_idx]
@@ -379,6 +392,8 @@ class RouteEngine:
           action = "laneChange"
         elif distance_to_maneuver_along_geometry <= command_distance:
           action = "turn"
+        else:
+          action = "upcoming"
 
       self.update_navigation_test_command(action, direction if action != "none" else "none", distance_to_maneuver_along_geometry)
 

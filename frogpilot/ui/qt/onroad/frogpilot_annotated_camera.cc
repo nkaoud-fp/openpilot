@@ -720,7 +720,22 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
 
   QString actionText = tr("Nav test: idle");
   QColor borderColor = blackColor();
-  if (action == "laneChange") {
+  if (action == "waitingGps") {
+    actionText = tr("Nav test: waiting for GPS");
+    borderColor = QColor(bg_colors[STATUS_CONDITIONAL_OVERRIDDEN]);
+  } else if (action == "routing") {
+    actionText = tr("Nav test: routing");
+    borderColor = blueColor();
+  } else if (action == "noRoute") {
+    actionText = tr("Nav test: no route");
+    borderColor = redColor();
+  } else if (action == "routeError") {
+    actionText = tr("Nav test: route error");
+    borderColor = redColor();
+  } else if (action == "upcoming") {
+    actionText = tr("Nav test: upcoming %1").arg(direction);
+    borderColor = blackColor();
+  } else if (action == "laneChange") {
     actionText = tr("Nav test: prepare lane change %1").arg(direction);
     borderColor = blueColor();
   } else if (action == "turn") {
