@@ -384,6 +384,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("ModelUI", "1", 2, "0"),
   ("ModelVersions", "", 2, ""),
   ("NavigationUI", "1", 1, "0"),
+  ("NavigationTestControl", "0", 3, "0"),
   ("NavSettingLeftSide", "0", 0, "0"),
   ("NavSettingTime24h", "0", 0, "0"),
   ("NewLongAPI", "1", 3, "1"),

@@ -38,7 +38,7 @@ private:
   QSet<QString> developerWidgetKeys = {"AdjacentLeadsUI", "RadarTracksUI", "ShowStoppingPoint"};
   QSet<QString> longDebugGraphKeys = {"LongDebugShowACtrl", "LongDebugShowAEgo", "LongDebugShowCap", "LongDebugShowConfidence", "LongDebugShowDesiredD", "LongDebugShowDRel", "LongDebugShowE2e", "LongDebugShowEngProb", "LongDebugShowFinal", "LongDebugShowMaxA", "LongDebugShowMinA", "LongDebugShowMpc", "LongDebugShowReq"};
   QSet<QString> modelUIKeys = {"DynamicPathWidth", "LaneLinesWidth", "PathEdgeWidth", "PathWidth", "RoadEdgesWidth", "UnlimitedLength"};
-  QSet<QString> navigationUIKeys = {"BigMap", "MapStyle", "RoadNameUI", "ShowSpeedLimits", "SLCMapboxFiller", "UseVienna"};
+  QSet<QString> navigationUIKeys = {"BigMap", "MapStyle", "NavigationTestControl", "RoadNameUI", "ShowSpeedLimits", "SLCMapboxFiller", "UseVienna"};
   QSet<QString> qualityOfLifeKeys = {"CameraView", "DriverCamera", "HeadlessMode", "StoppedTimer"};
 
   QSet<QString> parentKeys;
