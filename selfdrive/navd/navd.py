@@ -216,10 +216,36 @@ class RouteEngine:
 
     closest_distance = None
     for geometry in self.route_geometry:
-      for i in range(len(geometry) - 1):
-        distance = minimum_distance(geometry[i], geometry[i + 1], self.last_position)
-        closest_distance = distance if closest_distance is None else min(closest_distance, distance)
+      distance = self.path_minimum_distance(geometry)
+      closest_distance = distance if closest_distance is None else min(closest_distance, distance)
     return closest_distance
+
+  def path_minimum_distance(self, path):
+    if self.last_position is None:
+      return None
+
+    closest_distance = None
+    for i in range(len(path) - 1):
+      if path[i].distance_to(path[i + 1]) < 1.0:
+        continue
+
+      distance = minimum_distance(path[i], path[i + 1], self.last_position)
+      closest_distance = distance if closest_distance is None else min(closest_distance, distance)
+    return closest_distance
+
+  def should_transition_to_next_step(self, distance_to_maneuver_along_geometry):
+    if self.step_idx + 1 >= len(self.route):
+      return distance_to_maneuver_along_geometry < -MANEUVER_TRANSITION_THRESHOLD
+
+    if distance_to_maneuver_along_geometry < -MANEUVER_TRANSITION_THRESHOLD:
+      return True
+
+    if distance_to_maneuver_along_geometry > MANEUVER_TRANSITION_THRESHOLD:
+      return False
+
+    current_distance = self.path_minimum_distance(self.route_geometry[self.step_idx])
+    next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
+    return current_distance is not None and next_distance is not None and next_distance < current_distance
 
   def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None):
     if not self.params.get_bool("NavigationTestControl"):
@@ -589,7 +615,7 @@ class RouteEngine:
     self.pm.send('navInstruction', msg)
 
     # Transition to next route segment
-    if distance_to_maneuver_along_geometry < -MANEUVER_TRANSITION_THRESHOLD:
+    if self.should_transition_to_next_step(distance_to_maneuver_along_geometry):
       if self.step_idx + 1 < len(self.route):
         self.step_idx += 1
         self.reset_recompute_limits()
@@ -686,18 +712,9 @@ class RouteEngine:
       return False
 
     # Compute closest distance to all line segments in the current path
-    min_d = REROUTE_DISTANCE + 1
-    path = self.route_geometry[self.step_idx]
-    for i in range(len(path) - 1):
-      a = path[i]
-      b = path[i + 1]
+    min_d = self.path_minimum_distance(self.route_geometry[self.step_idx])
 
-      if a.distance_to(b) < 1.0:
-        continue
-
-      min_d = min(min_d, minimum_distance(a, b, self.last_position))
-
-    if min_d > REROUTE_DISTANCE:
+    if min_d is not None and min_d > REROUTE_DISTANCE:
       self.reroute_counter += 1
     else:
       self.reroute_counter = 0
