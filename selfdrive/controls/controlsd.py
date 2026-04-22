@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import math
 import time
@@ -38,6 +39,9 @@ SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
 LANE_DEPARTURE_THRESHOLD = 0.1
 CAMERA_OFFSET = 0.04
+NAVIGATION_TEST_SHARP_TURN_LAT_ACCEL_MULTIPLIER = 1.25
+NAVIGATION_TEST_SHARP_TURN_LATERAL_JERK_MULTIPLIER = 1.25
+NAVIGATION_TEST_SHARP_TURN_MAX_SPEED = 15.0
 
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ
@@ -604,6 +608,22 @@ class Controls:
     if self.active or self.sm['frogpilotCarState'].alwaysOnLateralEnabled:
       self.current_alert_types.append(ET.WARNING)
 
+  def navigation_test_sharp_turn_limits_active(self, lat_active, v_ego):
+    if not lat_active or v_ego > NAVIGATION_TEST_SHARP_TURN_MAX_SPEED or not self.params.get_bool("NavigationTestControl"):
+      return False
+
+    command = self.params.get("NavigationTestTurnCommand", encoding="utf-8")
+    if command is None:
+      return False
+
+    try:
+      command_json = json.loads(command)
+    except json.JSONDecodeError:
+      return False
+
+    display_direction = command_json.get("displayDirection", "")
+    return command_json.get("action") == "turn" and display_direction in ("sharp_left", "sharp_right", "uturn")
+
   def state_control(self, CS):
     """Given the state, this function returns a CarControl packet"""
 
@@ -716,7 +736,10 @@ class Controls:
       # Steering PID loop and lateral MPC
       # Reset desired curvature to current to avoid violating the limits on engage
       new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
-      self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
+      nav_sharp_turn_limits = self.navigation_test_sharp_turn_limits_active(CC.latActive, CS.vEgo)
+      lat_accel_multiplier = NAVIGATION_TEST_SHARP_TURN_LAT_ACCEL_MULTIPLIER if nav_sharp_turn_limits else 1.0
+      lateral_jerk_multiplier = NAVIGATION_TEST_SHARP_TURN_LATERAL_JERK_MULTIPLIER if nav_sharp_turn_limits else 1.0
+      self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll, lat_accel_multiplier, lateral_jerk_multiplier)
 
       actuators.curvature = self.desired_curvature
       '''
