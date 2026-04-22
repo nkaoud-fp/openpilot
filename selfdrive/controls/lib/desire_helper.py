@@ -12,6 +12,7 @@ TurnDirection = log.Desire
 LANE_CHANGE_SPEED_MIN = 20 * CV.MPH_TO_MS
 LANE_CHANGE_TIME_MAX = 10.
 NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE = 30.0
+NAVIGATION_TEST_LANE_CHANGE_CONDITION_TIME = 2.0
 
 DESIRES = {
   LaneChangeDirection.none: {
@@ -66,6 +67,8 @@ class DesireHelper:
     self.lane_change_completed = False
 
     self.lane_change_wait_timer = 0
+    self.navigation_test_lane_change_condition_timer = 0.0
+    self.navigation_test_lane_change_condition_direction = "none"
 
   def navigation_test_command(self):
     if not self.params.get_bool("NavigationTestControl"):
@@ -96,6 +99,27 @@ class DesireHelper:
     adjacent_lead = frogpilotRadarState.leadLeft if direction == "left" else frogpilotRadarState.leadRight
     adjacent_lead_too_close = adjacent_lead.status and adjacent_lead.dRel < NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE
     return lane_available and not blindspot_detected and not adjacent_lead_too_close
+
+  def navigation_test_lane_change_conditions_stable(self, action, direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
+    conditions_met = (
+      action == "laneChange" and
+      direction in NAVIGATION_TEST_LANE_CHANGE_DESIRES and
+      lateral_active and
+      not carstate.standstill and
+      self.navigation_test_lane_change_allowed(direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
+    )
+
+    if not conditions_met:
+      self.navigation_test_lane_change_condition_timer = 0.0
+      self.navigation_test_lane_change_condition_direction = "none"
+      return False
+
+    if direction != self.navigation_test_lane_change_condition_direction:
+      self.navigation_test_lane_change_condition_timer = 0.0
+      self.navigation_test_lane_change_condition_direction = direction
+
+    self.navigation_test_lane_change_condition_timer += DT_MDL
+    return self.navigation_test_lane_change_condition_timer >= NAVIGATION_TEST_LANE_CHANGE_CONDITION_TIME
 
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilotRadarState, frogpilot_toggles):
     v_ego = carstate.vEgo
@@ -174,8 +198,8 @@ class DesireHelper:
     navigation_test_action, navigation_test_direction = self.navigation_test_command()
     navigation_test_turn_direction = NAVIGATION_TEST_DIRECTIONS.get(navigation_test_direction, TurnDirection.none) if navigation_test_action == "turn" else TurnDirection.none
     navigation_test_lane_change_desire = NAVIGATION_TEST_LANE_CHANGE_DESIRES.get(navigation_test_direction, log.Desire.none) if navigation_test_action == "laneChange" else log.Desire.none
-    navigation_test_lane_change_active = navigation_test_lane_change_desire != log.Desire.none and lateral_active and not carstate.standstill
-    navigation_test_lane_change_active &= self.navigation_test_lane_change_allowed(navigation_test_direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
+    navigation_test_lane_change_active = navigation_test_lane_change_desire != log.Desire.none
+    navigation_test_lane_change_active &= self.navigation_test_lane_change_conditions_stable(navigation_test_action, navigation_test_direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
     navigation_test_turn_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
 
     if navigation_test_lane_change_active:
