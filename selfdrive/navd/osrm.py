@@ -1,3 +1,5 @@
+import math
+
 import requests
 
 from openpilot.selfdrive.navd.helpers import Coordinate
@@ -7,6 +9,7 @@ OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving/{coords}"
 OSRM_MAX_DURATION_SLOWDOWN = 1.15
 OSRM_NON_ACTIONABLE_MANEUVERS = {"arrive", "depart", "new name"}
 OSRM_ORIGIN_BEARING_RANGE_DEGREES = 90
+OSRM_BEARING_RETRY_STATUS_CODES = {400, 422}
 
 
 def _banner_from_osrm_step(step, distance_along_geometry):
@@ -73,10 +76,14 @@ def request_osrm_route(origin: Coordinate, destination: Coordinate, origin_beari
     "overview": "full",
     "steps": "true",
   }
-  if origin_bearing is not None:
+  if origin_bearing is not None and math.isfinite(origin_bearing):
     params["bearings"] = f"{(origin_bearing + 360) % 360:.0f},{OSRM_ORIGIN_BEARING_RANGE_DEGREES};"
 
-  resp = requests.get(OSRM_ROUTE_URL.format(coords=coords), params=params, timeout=10)
+  url = OSRM_ROUTE_URL.format(coords=coords)
+  resp = requests.get(url, params=params, timeout=10)
+  if "bearings" in params and resp.status_code in OSRM_BEARING_RETRY_STATUS_CODES:
+    params.pop("bearings")
+    resp = requests.get(url, params=params, timeout=10)
   resp.raise_for_status()
   data = resp.json()
 
