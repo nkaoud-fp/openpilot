@@ -31,10 +31,32 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
 
   distance_btn = new DistanceButton(this);
   navigation_test_btn = new NavigationTestButton(this);
+  navigation_home_btn = new NavigationDestinationButton("HOM", "home", 24.675764, 46.581478, "Navigation test - Home", this);
+  navigation_work_btn = new NavigationDestinationButton("WRK", "work", 24.714778, 46.683775, "Navigation test - Work", this);
+  navigation_school_btn = new NavigationDestinationButton("SCH", "school", 24.781423, 46.622246, "Navigation test - School", this);
   screen_recorder = new ScreenRecorder(this);
 
   distance_btn->setVisible(false);
   navigation_test_btn->setVisible(false);
+  navigation_home_btn->setVisible(false);
+  navigation_work_btn->setVisible(false);
+  navigation_school_btn->setVisible(false);
+
+  QObject::connect(navigation_test_btn, &NavigationTestButton::destinationPickerRequested, [this] {
+    navigation_destination_picker_visible = !navigation_destination_picker_visible;
+  });
+  QObject::connect(navigation_home_btn, &NavigationDestinationButton::destinationSelected, [this] {
+    navigation_destination_picker_visible = false;
+    navigation_test_btn->updateState();
+  });
+  QObject::connect(navigation_work_btn, &NavigationDestinationButton::destinationSelected, [this] {
+    navigation_destination_picker_visible = false;
+    navigation_test_btn->updateState();
+  });
+  QObject::connect(navigation_school_btn, &NavigationDestinationButton::destinationSelected, [this] {
+    navigation_destination_picker_visible = false;
+    navigation_test_btn->updateState();
+  });
 }
 
 void AnnotatedCameraWidget::resizeEvent(QResizeEvent *event) {
@@ -137,6 +159,26 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
 
     navigation_test_btn->move(navigation_test_x, navigation_test_y);
     navigation_test_btn->updateState();
+
+    const bool show_destination_picker = navigation_destination_picker_visible && !navigation_test_btn->navigationTestEnabled();
+    NavigationDestinationButton *destination_buttons[] = {navigation_home_btn, navigation_work_btn, navigation_school_btn};
+    for (int i = 0; i < 3; ++i) {
+      const int direction = rightHandDM ? -1 : 1;
+      const int destination_x = navigation_test_x + direction * ((i + 1) * (navigation_test_btn->width() + UI_BORDER_SIZE));
+      const bool fits = destination_x >= UI_BORDER_SIZE && destination_x + destination_buttons[i]->width() <= width() - UI_BORDER_SIZE;
+      destination_buttons[i]->setEnabled(show_destination_picker && fits);
+      destination_buttons[i]->setVisible(destination_buttons[i]->isEnabled());
+      if (destination_buttons[i]->isEnabled()) {
+        destination_buttons[i]->move(destination_x, navigation_test_y);
+        destination_buttons[i]->raise();
+      }
+    }
+    navigation_test_btn->raise();
+  } else {
+    navigation_destination_picker_visible = false;
+    navigation_home_btn->setVisible(false);
+    navigation_work_btn->setVisible(false);
+    navigation_school_btn->setVisible(false);
   }
   experimental_btn->setVisible(!frogpilot_nvg->bigMapOpen);
   screen_recorder->setVisible(frogpilot_nvg->standstillDuration == 0 && !fs.frogpilot_scene.map_open && !(frogpilot_nvg->signalStyle == "static" && car_state.getRightBlinker()) && frogpilot_toggles.value("screen_recorder").toBool());

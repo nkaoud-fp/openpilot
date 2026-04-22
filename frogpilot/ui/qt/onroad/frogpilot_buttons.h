@@ -33,14 +33,40 @@ class NavigationTestButton : public QPushButton {
 public:
   explicit NavigationTestButton(QWidget *parent = 0);
 
+  bool navigationTestEnabled();
   void updateState();
 
+signals:
+  void destinationPickerRequested();
+
 private:
-  bool selectDestination();
   void paintEvent(QPaintEvent *event) override;
 
   Params params;
 
   bool navigation_test_enabled = false;
   QString navigation_test_destination;
+};
+
+class NavigationDestinationButton : public QPushButton {
+  Q_OBJECT
+
+public:
+  explicit NavigationDestinationButton(const QString &label, const QString &destination_id, double latitude, double longitude, const QString &place_name, QWidget *parent = 0);
+
+signals:
+  void destinationSelected();
+
+private:
+  void paintEvent(QPaintEvent *event) override;
+  void selectDestination();
+
+  Params params;
+
+  QString destination_id;
+  QString label;
+  QString place_name;
+
+  double latitude;
+  double longitude;
 };

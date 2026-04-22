@@ -1,31 +1,12 @@
 #include "frogpilot/ui/qt/onroad/frogpilot_buttons.h"
 
-#include <algorithm>
-#include <array>
-
-#include <QDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
-#include <QPushButton>
 
 #include "selfdrive/ui/qt/util.h"
 
 namespace {
-
-struct NavigationTestDestination {
-  const char *id;
-  const char *button_text;
-  const char *place_name;
-  double latitude;
-  double longitude;
-};
-
-constexpr std::array<NavigationTestDestination, 3> navigation_test_destinations = {{
-  {"home", "Home", "Navigation test - Home", 24.675764, 46.581478},
-  {"work", "Work", "Navigation test - Work", 24.714778, 46.683775},
-  {"school", "School", "Navigation test - School", 24.781423, 46.622246},
-}};
 
 QString navigationTestDestinationLabel(const std::string &destination) {
   if (destination == "home") return "HOM";
@@ -34,92 +15,14 @@ QString navigationTestDestinationLabel(const std::string &destination) {
   return "NAV";
 }
 
-QByteArray navigationTestDestinationJson(const NavigationTestDestination &destination) {
+QByteArray navigationTestDestinationJson(double latitude, double longitude, const QString &place_name) {
   QJsonObject destination_json{
-    {"latitude", destination.latitude},
-    {"longitude", destination.longitude},
-    {"place_name", destination.place_name},
+    {"latitude", latitude},
+    {"longitude", longitude},
+    {"place_name", place_name},
   };
   return QJsonDocument(destination_json).toJson(QJsonDocument::Compact);
 }
-
-class RotatedDestinationButton : public QPushButton {
-public:
-  explicit RotatedDestinationButton(const QString &text, QWidget *parent) : QPushButton(parent), button_text(text) {
-    setFlat(true);
-    setFocusPolicy(Qt::NoFocus);
-  }
-
-private:
-  void paintEvent(QPaintEvent *event) override {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-
-    p.translate(rect().center());
-    p.rotate(90);
-
-    const QRect rotated_rect(-height() / 2, -width() / 2, height(), width());
-    p.setPen(QPen(QColor(255, 255, 255, 95), 4));
-    p.setBrush(isDown() ? QColor(45, 45, 45, 240) : QColor(25, 25, 25, 230));
-    p.drawRoundedRect(rotated_rect, 24, 24);
-
-    p.setPen(Qt::white);
-    p.setFont(InterFont(44, QFont::DemiBold));
-    p.drawText(rotated_rect, Qt::AlignCenter, button_text);
-  }
-
-  QString button_text;
-};
-
-class NavigationDestinationDialog : public QDialog {
-public:
-  explicit NavigationDestinationDialog(QWidget *parent) : QDialog(parent ? parent->window() : nullptr) {
-    setModal(true);
-    setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-    setAttribute(Qt::WA_TranslucentBackground);
-
-    if (QWidget *window = parentWidget()) {
-      setGeometry(window->rect());
-    } else {
-      resize(1920, 1080);
-    }
-
-    for (int i = 0; i < static_cast<int>(navigation_test_destinations.size()); ++i) {
-      const NavigationTestDestination &destination = navigation_test_destinations[navigation_test_destinations.size() - 1 - i];
-      RotatedDestinationButton *button = new RotatedDestinationButton(destination.button_text, this);
-      button->setGeometry(destinationButtonRect(i));
-      const NavigationTestDestination *selected = &destination;
-      QObject::connect(button, &QPushButton::clicked, [this, selected] {
-        selected_destination = selected;
-        accept();
-      });
-    }
-  }
-
-  const NavigationTestDestination *selectedDestination() const {
-    return selected_destination;
-  }
-
-private:
-  void paintEvent(QPaintEvent *event) override {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.fillRect(rect(), QColor(0, 0, 0, 185));
-  }
-
-  QRect destinationButtonRect(int index) const {
-    const int button_width = 170;
-    const int button_height = std::min(560, height() - 220);
-    const int spacing = 42;
-    const int destination_count = static_cast<int>(navigation_test_destinations.size());
-    const int total_width = (button_width * destination_count) + (spacing * (destination_count - 1));
-    const int x = (width() - total_width) / 2 + index * (button_width + spacing);
-    const int y = std::min(height() - button_height - 40, (height() - button_height) / 2 + 180);
-    return QRect(x, y, button_width, button_height);
-  }
-
-  const NavigationTestDestination *selected_destination = nullptr;
-};
 
 }  // namespace
 
@@ -194,8 +97,8 @@ NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent
       params.remove("NavDestination");
       params.remove("NavDestinationWaypoints");
       params.remove("NavigationTestTurnCommand");
-    } else if (selectDestination()) {
-      params.putBool("NavigationTestControl", true);
+    } else {
+      emit destinationPickerRequested();
     }
 
     updateState();
@@ -218,18 +121,8 @@ void NavigationTestButton::updateState() {
   update();
 }
 
-bool NavigationTestButton::selectDestination() {
-  NavigationDestinationDialog dialog(this);
-  if (dialog.exec() != QDialog::Accepted || dialog.selectedDestination() == nullptr) {
-    return false;
-  }
-
-  const NavigationTestDestination *destination = dialog.selectedDestination();
-  params.put("NavigationTestSelectedDestination", destination->id);
-  params.put("NavDestination", navigationTestDestinationJson(*destination).toStdString());
-  params.remove("NavDestinationWaypoints");
-  params.remove("NavigationTestTurnCommand");
-  return true;
+bool NavigationTestButton::navigationTestEnabled() {
+  return params.getBool("NavigationTestControl");
 }
 
 void NavigationTestButton::paintEvent(QPaintEvent *event) {
@@ -246,4 +139,30 @@ void NavigationTestButton::paintEvent(QPaintEvent *event) {
   p.setFont(InterFont(27, QFont::DemiBold));
   p.setPen(QColor(255, 255, 255, navigation_test_enabled ? 240 : 175));
   p.drawText(rect().adjusted(0, 104, 0, 0), Qt::AlignHCenter | Qt::AlignTop, navigation_test_enabled ? tr("ON") : tr("OFF"));
+}
+
+NavigationDestinationButton::NavigationDestinationButton(const QString &label, const QString &destination_id, double latitude, double longitude, const QString &place_name, QWidget *parent) : QPushButton(parent), destination_id(destination_id), label(label), place_name(place_name), latitude(latitude), longitude(longitude) {
+  setFixedSize(btn_size, btn_size);
+
+  QObject::connect(this, &QPushButton::clicked, this, &NavigationDestinationButton::selectDestination);
+}
+
+void NavigationDestinationButton::selectDestination() {
+  params.put("NavigationTestSelectedDestination", destination_id.toStdString());
+  params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
+  params.remove("NavDestinationWaypoints");
+  params.remove("NavigationTestTurnCommand");
+  params.putBool("NavigationTestControl", true);
+  emit destinationSelected();
+}
+
+void NavigationDestinationButton::paintEvent(QPaintEvent *event) {
+  QPainter p(this);
+  p.setRenderHint(QPainter::Antialiasing);
+
+  drawIcon(p, QPoint(btn_size / 2, btn_size / 2), QPixmap(), isDown() ? QColor(45, 45, 45, 220) : QColor(0, 0, 0, 190), isDown() ? 0.6 : 1.0);
+
+  p.setPen(Qt::white);
+  p.setFont(InterFont(48, QFont::Bold));
+  p.drawText(rect(), Qt::AlignCenter, label);
 }
