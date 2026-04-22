@@ -34,7 +34,8 @@ NAVIGATION_TEST_DESTINATIONS = {
 }
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
-NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
+NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
+NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN = 250
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
@@ -231,6 +232,10 @@ class RouteEngine:
   def navigation_test_command_distance(self):
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
+
+  def navigation_test_exit_prep_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_EXIT_PREP_SECONDS)
 
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
@@ -557,7 +562,7 @@ class RouteEngine:
         navigation_test_direction = "none"
         navigation_test_display_direction = "none"
       elif navigation_test_direction != "none" or navigation_test_display_direction == "uturn":
-        if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_EXIT_PREP_DISTANCE:
+        if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= self.navigation_test_exit_prep_distance():
           navigation_test_action = "laneChange"
         elif distance_to_maneuver_along_geometry <= command_distance:
           navigation_test_action = "turn"
