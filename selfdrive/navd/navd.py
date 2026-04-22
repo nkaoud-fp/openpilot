@@ -323,7 +323,7 @@ class RouteEngine:
     url = self.mapbox_host + '/directions/v5/mapbox/driving-traffic/' + coords_str
     try:
       if self.params.get_bool("NavigationTestControl"):
-        chosen_route, r = request_osrm_route(self.last_position, destination)
+        chosen_route, r = request_osrm_route(self.last_position, destination, self.last_bearing)
         if chosen_route is None:
           cloudlog.warning("Got empty OSRM route response")
           self.update_navigation_test_command("noRoute")

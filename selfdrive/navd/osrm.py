@@ -6,6 +6,7 @@ from openpilot.selfdrive.navd.helpers import Coordinate
 OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving/{coords}"
 OSRM_MAX_DURATION_SLOWDOWN = 1.15
 OSRM_NON_ACTIONABLE_MANEUVERS = {"arrive", "depart", "new name"}
+OSRM_ORIGIN_BEARING_RANGE_DEGREES = 90
 
 
 def _banner_from_osrm_step(step, distance_along_geometry):
@@ -64,7 +65,7 @@ def _choose_route(routes):
   return min(candidates, key=lambda route: (_route_maneuver_count(route), route.get("duration", float("inf")), route.get("distance", float("inf"))))
 
 
-def request_osrm_route(origin: Coordinate, destination: Coordinate):
+def request_osrm_route(origin: Coordinate, destination: Coordinate, origin_bearing: float | None = None):
   coords = f"{origin.longitude},{origin.latitude};{destination.longitude},{destination.latitude}"
   params = {
     "alternatives": "true",
@@ -72,6 +73,8 @@ def request_osrm_route(origin: Coordinate, destination: Coordinate):
     "overview": "full",
     "steps": "true",
   }
+  if origin_bearing is not None:
+    params["bearings"] = f"{(origin_bearing + 360) % 360:.0f},{OSRM_ORIGIN_BEARING_RANGE_DEGREES};"
 
   resp = requests.get(OSRM_ROUTE_URL.format(coords=coords), params=params, timeout=10)
   resp.raise_for_status()
