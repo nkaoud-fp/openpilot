@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import csv
 import hashlib
 import json
 import math
 import os
+import time
 import threading
 
 import requests
@@ -33,6 +35,31 @@ NAVIGATION_TEST_DESTINATIONS = {
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
+NAVIGATION_TEST_DEBUG_LOG_PATH = "/data/media/0/navigation_test_debug.csv"
+NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
+NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
+  "time",
+  "gps_ok",
+  "localizer_valid",
+  "lat",
+  "lon",
+  "bearing",
+  "v_ego",
+  "destination",
+  "step_idx",
+  "step_count",
+  "maneuver_type",
+  "maneuver_modifier",
+  "maneuver_text",
+  "maneuver_lat",
+  "maneuver_lon",
+  "distance_to_maneuver_along_route",
+  "distance_to_maneuver_straight",
+  "command_threshold",
+  "action",
+  "direction",
+  "cross_track_error",
+]
 
 
 class RouteEngine:
@@ -61,6 +88,8 @@ class RouteEngine:
 
     self.reroute_counter = 0
     self.navigation_test_command = None
+    self.navigation_test_debug_last_log_time = 0.0
+    self.navigation_test_debug_log_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", NAVIGATION_TEST_DEBUG_LOG_PATH)
 
 
     self.api = None
@@ -172,6 +201,65 @@ class RouteEngine:
     maneuver_type = instruction.get("maneuverType", "").lower()
     primary_text = instruction.get("maneuverPrimaryText", "").lower()
     return "ramp" in maneuver_type or "exit" in primary_text
+
+  def navigation_test_cross_track_error(self):
+    if self.route_geometry is None or self.last_position is None:
+      return None
+
+    closest_distance = None
+    for geometry in self.route_geometry:
+      for i in range(len(geometry) - 1):
+        distance = minimum_distance(geometry[i], geometry[i + 1], self.last_position)
+        closest_distance = distance if closest_distance is None else min(closest_distance, distance)
+    return closest_distance
+
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction):
+    if not self.params.get_bool("NavigationTestControl"):
+      return
+
+    now = time.monotonic()
+    if now - self.navigation_test_debug_last_log_time < NAVIGATION_TEST_DEBUG_LOG_INTERVAL:
+      return
+    self.navigation_test_debug_last_log_time = now
+
+    maneuver_coordinate = geometry[-1] if geometry else None
+    distance_to_maneuver_straight = self.last_position.distance_to(maneuver_coordinate) if self.last_position is not None and maneuver_coordinate is not None else None
+    cross_track_error = self.navigation_test_cross_track_error()
+
+    destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
+    row = {
+      "time": f"{time.time():.3f}",
+      "gps_ok": self.gps_ok,
+      "localizer_valid": self.localizer_valid,
+      "lat": f"{self.last_position.latitude:.7f}" if self.last_position is not None else "",
+      "lon": f"{self.last_position.longitude:.7f}" if self.last_position is not None else "",
+      "bearing": f"{self.last_bearing:.2f}" if self.last_bearing is not None else "",
+      "v_ego": f"{self.sm['carState'].vEgo:.2f}",
+      "destination": destination_id,
+      "step_idx": self.step_idx if self.step_idx is not None else "",
+      "step_count": len(self.route) if self.route is not None else "",
+      "maneuver_type": instruction.get("maneuverType", "") if instruction is not None else "",
+      "maneuver_modifier": instruction.get("maneuverModifier", "") if instruction is not None else "",
+      "maneuver_text": instruction.get("maneuverPrimaryText", "") if instruction is not None else "",
+      "maneuver_lat": f"{maneuver_coordinate.latitude:.7f}" if maneuver_coordinate is not None else "",
+      "maneuver_lon": f"{maneuver_coordinate.longitude:.7f}" if maneuver_coordinate is not None else "",
+      "distance_to_maneuver_along_route": f"{distance_to_maneuver_along_geometry:.2f}",
+      "distance_to_maneuver_straight": f"{distance_to_maneuver_straight:.2f}" if distance_to_maneuver_straight is not None else "",
+      "command_threshold": f"{command_distance:.2f}",
+      "action": action,
+      "direction": direction,
+      "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
+    }
+
+    try:
+      write_header = not os.path.exists(self.navigation_test_debug_log_path) or os.path.getsize(self.navigation_test_debug_log_path) == 0
+      with open(self.navigation_test_debug_log_path, "a", newline="") as debug_file:
+        writer = csv.DictWriter(debug_file, fieldnames=NAVIGATION_TEST_DEBUG_LOG_FIELDS)
+        if write_header:
+          writer.writeheader()
+        writer.writerow(row)
+    except OSError:
+      cloudlog.exception("navigation_test_debug.failed_to_write")
 
   def recompute_route(self):
     if self.last_position is None:
@@ -395,6 +483,7 @@ class RouteEngine:
 
     navigation_test_action = "none"
     navigation_test_direction = "none"
+    command_distance = 0.0
     if self.params.get_bool("NavigationTestControl"):
       v_ego = self.sm['carState'].vEgo
       command_distance = max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
@@ -407,6 +496,8 @@ class RouteEngine:
           navigation_test_action = "turn"
         else:
           navigation_test_action = "upcoming"
+
+      self.log_navigation_test_debug(instruction, geometry, distance_to_maneuver_along_geometry, command_distance, navigation_test_action, navigation_test_direction)
 
     # All instructions
     maneuvers = []
