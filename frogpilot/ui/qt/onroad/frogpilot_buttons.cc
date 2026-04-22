@@ -44,13 +44,13 @@ QByteArray navigationTestDestinationJson(const NavigationTestDestination &destin
 
 class NavigationDestinationDialog : public QDialog {
 public:
-  explicit NavigationDestinationDialog(QWidget *parent) : QDialog(parent) {
+  explicit NavigationDestinationDialog(QWidget *parent) : QDialog(parent ? parent->window() : nullptr) {
     setModal(true);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_TranslucentBackground);
 
-    if (QWidget *window = parent ? parent->window() : nullptr) {
-      setGeometry(window->geometry());
+    if (QWidget *window = parentWidget()) {
+      setGeometry(window->rect());
     } else {
       resize(1920, 1080);
     }
