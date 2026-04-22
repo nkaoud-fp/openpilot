@@ -717,6 +717,10 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   QJsonObject command = QJsonDocument::fromJson(QString::fromStdString(params.get("NavigationTestTurnCommand")).toUtf8()).object();
   QString action = command.value("action").toString("none");
   QString direction = command.value("direction").toString("none");
+  QString displayDirection = command.value("displayDirection").toString(direction).replace("_", " ");
+  if (displayDirection == "uturn") {
+    displayDirection = tr("U-turn");
+  }
   double distance = command.value("distance").toDouble(0.0);
   double etaSeconds = command.value("etaSeconds").toDouble(0.0);
 
@@ -738,13 +742,16 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
     actionText = tr("matching route");
     borderColor = QColor(bg_colors[STATUS_CONDITIONAL_OVERRIDDEN]);
   } else if (action == "upcoming") {
-    actionText = tr("upcoming %1").arg(direction);
+    actionText = tr("upcoming %1").arg(displayDirection);
     borderColor = blackColor();
   } else if (action == "laneChange") {
-    actionText = tr("prepare lane change %1").arg(direction);
+    actionText = tr("prepare lane change %1").arg(displayDirection);
     borderColor = blueColor();
+  } else if (action == "turn" && displayDirection == tr("U-turn")) {
+    actionText = tr("make %1").arg(displayDirection);
+    borderColor = greenColor();
   } else if (action == "turn") {
-    actionText = tr("turn %1").arg(direction);
+    actionText = tr("turn %1").arg(displayDirection);
     borderColor = greenColor();
   }
 

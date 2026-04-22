@@ -174,10 +174,11 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None):
     command = json.dumps({
       "action": action,
       "direction": direction,
+      "displayDirection": display_direction or direction,
       "distance": max(distance, 0.0),
       "etaSeconds": max(eta_seconds, 0.0),
     })
@@ -197,6 +198,20 @@ class RouteEngine:
     if "right" in direction_text:
       return "right"
     return "none"
+
+  def navigation_test_maneuver_display_direction(self, instruction):
+    if instruction is None:
+      return "none"
+
+    modifier = instruction.get("maneuverModifier", "").lower().replace(" ", "_")
+    maneuver_type = instruction.get("maneuverType", "").lower().replace(" ", "_")
+    if "uturn" in (modifier, maneuver_type):
+      return "uturn"
+    if modifier in ("slight_left", "sharp_left", "left", "slight_right", "sharp_right", "right"):
+      return modifier
+
+    direction = self.navigation_test_maneuver_direction(instruction)
+    return direction
 
   def navigation_test_is_exit_maneuver(self, instruction):
     if instruction is None:
@@ -525,11 +540,13 @@ class RouteEngine:
       command_distance = self.navigation_test_command_distance()
       cross_track_error = self.navigation_test_cross_track_error()
       navigation_test_direction = self.navigation_test_maneuver_direction(instruction)
+      navigation_test_display_direction = self.navigation_test_maneuver_display_direction(instruction)
 
       if cross_track_error is not None and cross_track_error > NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
         navigation_test_action = "routeMismatch"
         navigation_test_direction = "none"
-      elif navigation_test_direction != "none":
+        navigation_test_display_direction = "none"
+      elif navigation_test_direction != "none" or navigation_test_display_direction == "uturn":
         if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_EXIT_PREP_DISTANCE:
           navigation_test_action = "laneChange"
         elif distance_to_maneuver_along_geometry <= command_distance:
@@ -590,6 +607,7 @@ class RouteEngine:
         navigation_test_direction if navigation_test_action != "none" else "none",
         distance_to_maneuver_along_geometry,
         total_time,
+        navigation_test_display_direction if navigation_test_action != "none" else "none",
       )
 
     # Speed limit
