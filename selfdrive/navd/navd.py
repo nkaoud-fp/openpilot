@@ -25,7 +25,11 @@ from openpilot.frogpilot.common.frogpilot_variables import get_frogpilot_toggles
 REROUTE_DISTANCE = 25
 MANEUVER_TRANSITION_THRESHOLD = 10
 REROUTE_COUNTER_MIN = 3
-NAVIGATION_TEST_DESTINATION = Coordinate(24.675764, 46.581478)
+NAVIGATION_TEST_DESTINATIONS = {
+  "home": ("Navigation test - Home", Coordinate(24.675764, 46.581478)),
+  "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
+  "school": ("Navigation test - School", Coordinate(24.781423, 46.622246)),
+}
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
@@ -123,15 +127,18 @@ class RouteEngine:
       self.update_navigation_test_command("waitingGps")
       return
 
+    destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
+    destination_name, target_destination = NAVIGATION_TEST_DESTINATIONS.get(destination_id, NAVIGATION_TEST_DESTINATIONS["home"])
+
     destination = coordinate_from_param("NavDestination", self.params)
-    if destination == NAVIGATION_TEST_DESTINATION:
+    if destination == target_destination:
       return
 
     self.update_navigation_test_command("routing")
     self.params.put("NavDestination", json.dumps({
-      "latitude": NAVIGATION_TEST_DESTINATION.latitude,
-      "longitude": NAVIGATION_TEST_DESTINATION.longitude,
-      "place_name": "Navigation test destination",
+      "latitude": target_destination.latitude,
+      "longitude": target_destination.longitude,
+      "place_name": destination_name,
     }))
 
   def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0):

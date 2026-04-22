@@ -1,6 +1,47 @@
 #include "frogpilot/ui/qt/onroad/frogpilot_buttons.h"
 
+#include <QDialog>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLabel>
+#include <QPushButton>
+#include <QVBoxLayout>
+
 #include "selfdrive/ui/qt/util.h"
+
+namespace {
+
+struct NavigationTestDestination {
+  const char *id;
+  const char *button_text;
+  const char *place_name;
+  double latitude;
+  double longitude;
+};
+
+const NavigationTestDestination navigation_test_destinations[] = {
+  {"home", "Home", "Navigation test - Home", 24.675764, 46.581478},
+  {"work", "Work", "Navigation test - Work", 24.714778, 46.683775},
+  {"school", "School", "Navigation test - School", 24.781423, 46.622246},
+};
+
+QString navigationTestDestinationLabel(const std::string &destination) {
+  if (destination == "home") return "HOM";
+  if (destination == "work") return "WRK";
+  if (destination == "school") return "SCH";
+  return "NAV";
+}
+
+QByteArray navigationTestDestinationJson(const NavigationTestDestination &destination) {
+  QJsonObject destination_json{
+    {"latitude", destination.latitude},
+    {"longitude", destination.longitude},
+    {"place_name", destination.place_name},
+  };
+  return QJsonDocument(destination_json).toJson(QJsonDocument::Compact);
+}
+
+}  // namespace
 
 DistanceButton::DistanceButton(QWidget *parent) : QPushButton(parent) {
   setFixedSize(btn_size + UI_BORDER_SIZE, btn_size);
@@ -68,13 +109,13 @@ NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent
   setFixedSize(btn_size, btn_size);
 
   QObject::connect(this, &QPushButton::clicked, [this] {
-    const bool enabled = !params.getBool("NavigationTestControl");
-    params.putBool("NavigationTestControl", enabled);
-
-    if (!enabled) {
+    if (params.getBool("NavigationTestControl")) {
+      params.putBool("NavigationTestControl", false);
       params.remove("NavDestination");
       params.remove("NavDestinationWaypoints");
       params.remove("NavigationTestTurnCommand");
+    } else if (selectDestination()) {
+      params.putBool("NavigationTestControl", true);
     }
 
     updateState();
@@ -83,12 +124,53 @@ NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent
 
 void NavigationTestButton::updateState() {
   const bool enabled = params.getBool("NavigationTestControl");
-  if (navigation_test_enabled == enabled) {
+  std::string selected_destination = params.get("NavigationTestSelectedDestination");
+  if (selected_destination.empty()) {
+    selected_destination = "home";
+  }
+  const QString destination = enabled ? navigationTestDestinationLabel(selected_destination) : "NAV";
+  if (navigation_test_enabled == enabled && navigation_test_destination == destination) {
     return;
   }
 
   navigation_test_enabled = enabled;
+  navigation_test_destination = destination;
   update();
+}
+
+bool NavigationTestButton::selectDestination() {
+  QDialog dialog(this);
+  dialog.setWindowTitle(tr("Destination"));
+  dialog.setModal(true);
+
+  QVBoxLayout *layout = new QVBoxLayout(&dialog);
+  layout->setContentsMargins(40, 40, 40, 40);
+  layout->setSpacing(24);
+
+  QLabel *title = new QLabel(tr("Choose destination"), &dialog);
+  title->setAlignment(Qt::AlignCenter);
+  title->setFont(InterFont(42, QFont::DemiBold));
+  layout->addWidget(title);
+
+  bool selected = false;
+  for (const NavigationTestDestination &destination : navigation_test_destinations) {
+    QPushButton *button = new QPushButton(tr(destination.button_text), &dialog);
+    button->setMinimumHeight(120);
+    button->setFont(InterFont(40, QFont::DemiBold));
+    layout->addWidget(button);
+
+    QObject::connect(button, &QPushButton::clicked, [&, destination] {
+      params.put("NavigationTestSelectedDestination", destination.id);
+      params.put("NavDestination", navigationTestDestinationJson(destination).toStdString());
+      params.remove("NavDestinationWaypoints");
+      params.remove("NavigationTestTurnCommand");
+      selected = true;
+      dialog.accept();
+    });
+  }
+
+  dialog.exec();
+  return selected;
 }
 
 void NavigationTestButton::paintEvent(QPaintEvent *event) {
@@ -100,7 +182,7 @@ void NavigationTestButton::paintEvent(QPaintEvent *event) {
 
   p.setPen(Qt::white);
   p.setFont(InterFont(54, QFont::Bold));
-  p.drawText(rect().adjusted(0, 18, 0, 0), Qt::AlignCenter, tr("NAV"));
+  p.drawText(rect().adjusted(0, 18, 0, 0), Qt::AlignCenter, navigation_test_destination);
 
   p.setFont(InterFont(27, QFont::DemiBold));
   p.setPen(QColor(255, 255, 255, navigation_test_enabled ? 240 : 175));

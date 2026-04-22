@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMovie>
+#include <QString>
 
 #include "selfdrive/ui/qt/onroad/buttons.h"
 
@@ -35,9 +36,11 @@ public:
   void updateState();
 
 private:
+  bool selectDestination();
   void paintEvent(QPaintEvent *event) override;
 
   Params params;
 
   bool navigation_test_enabled = false;
+  QString navigation_test_destination;
 };
