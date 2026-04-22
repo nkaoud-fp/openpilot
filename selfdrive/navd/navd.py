@@ -38,6 +38,10 @@ NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
+NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE = 50
+NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE = 80
+NAVIGATION_TEST_DESTINATION_MISSED_DRIFT = 30
+NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN = 2
 NAVIGATION_TEST_DEBUG_LOG_PATH = "/data/media/0/navigation_test_debug.csv"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
@@ -91,6 +95,8 @@ class RouteEngine:
 
     self.reroute_counter = 0
     self.navigation_test_reroute_counter = 0
+    self.navigation_test_destination_missed_counter = 0
+    self.navigation_test_closest_destination_distance = None
     self.navigation_test_command = None
     self.navigation_test_debug_last_log_time = 0.0
     self.navigation_test_debug_log_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", NAVIGATION_TEST_DEBUG_LOG_PATH)
@@ -342,6 +348,7 @@ class RouteEngine:
   def calculate_route(self, destination):
     cloudlog.warning(f"Calculating route {self.last_position} -> {destination}")
     self.nav_destination = destination
+    self.reset_navigation_test_destination_tracking(destination)
     if self.params.get_bool("NavigationTestControl"):
       self.update_navigation_test_command("routing")
 
@@ -697,16 +704,49 @@ class RouteEngine:
     self.step_idx = None
     self.nav_destination = None
     self.navigation_test_reroute_counter = 0
+    self.navigation_test_destination_missed_counter = 0
+    self.navigation_test_closest_destination_distance = None
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
     self.recompute_countdown = 0
+
+  def reset_navigation_test_destination_tracking(self, destination=None):
+    self.navigation_test_destination_missed_counter = 0
+    self.navigation_test_closest_destination_distance = self.last_position.distance_to(destination) if self.last_position is not None and destination is not None else None
 
   def recompute_route_countdown(self):
     countdown = 2**self.recompute_backoff
     if self.params.get_bool("NavigationTestControl"):
       return max(NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN, countdown)
     return countdown
+
+  def navigation_test_missed_destination(self):
+    if self.nav_destination is None or self.last_position is None:
+      return False
+
+    distance_to_destination = self.last_position.distance_to(self.nav_destination)
+    if self.navigation_test_closest_destination_distance is None or distance_to_destination < self.navigation_test_closest_destination_distance:
+      self.navigation_test_closest_destination_distance = distance_to_destination
+      self.navigation_test_destination_missed_counter = 0
+      return False
+
+    if self.navigation_test_closest_destination_distance > NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE:
+      return False
+
+    missed_destination = (
+      distance_to_destination > NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE and
+      distance_to_destination > self.navigation_test_closest_destination_distance + NAVIGATION_TEST_DESTINATION_MISSED_DRIFT
+    )
+    if missed_destination:
+      self.navigation_test_destination_missed_counter += 1
+    else:
+      self.navigation_test_destination_missed_counter = 0
+
+    if self.navigation_test_destination_missed_counter > NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN:
+      cloudlog.warning(f"Navigation test missed destination: distance={distance_to_destination:.1f}m")
+      return True
+    return False
 
   def should_recompute(self):
     if self.step_idx is None or self.route is None:
@@ -725,8 +765,9 @@ class RouteEngine:
         cloudlog.warning(f"Navigation test route mismatch: cross_track={route_match_error:.1f}m")
         return True
 
-    # Don't recompute in last segment, assume destination is reached
     if self.step_idx == len(self.route) - 1:
+      if self.params.get_bool("NavigationTestControl") and self.navigation_test_missed_destination():
+        return True
       return False
 
     # Compute closest distance to all line segments in the current path
