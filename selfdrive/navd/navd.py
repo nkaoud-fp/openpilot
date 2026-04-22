@@ -180,13 +180,14 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error=""):
     command = json.dumps({
       "action": action,
       "direction": direction,
       "displayDirection": display_direction or direction,
       "distance": max(distance, 0.0),
       "etaSeconds": max(eta_seconds, 0.0),
+      "error": error,
     })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
@@ -238,6 +239,8 @@ class RouteEngine:
     closest_distance = None
     for geometry in self.route_geometry:
       distance = self.path_minimum_distance(geometry)
+      if distance is None:
+        continue
       closest_distance = distance if closest_distance is None else min(closest_distance, distance)
     return closest_distance
 
@@ -500,10 +503,10 @@ class RouteEngine:
       # TODO: only clear once we're past a waypoint
       self.params.remove('NavDestinationWaypoints')
 
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
       cloudlog.exception("failed to get route")
       if self.params.get_bool("NavigationTestControl"):
-        self.update_navigation_test_command("routeError")
+        self.update_navigation_test_command("routeError", error=e.__class__.__name__)
       self.clear_route()
 
     self.send_route()

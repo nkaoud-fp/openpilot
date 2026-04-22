@@ -721,6 +721,7 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   if (displayDirection == "uturn") {
     displayDirection = tr("U-turn");
   }
+  QString error = command.value("error").toString("");
   double distance = command.value("distance").toDouble(0.0);
   double etaSeconds = command.value("etaSeconds").toDouble(0.0);
 
@@ -737,6 +738,9 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
     borderColor = redColor();
   } else if (action == "routeError") {
     actionText = tr("route error");
+    if (!error.isEmpty()) {
+      actionText += tr(" %1").arg(error);
+    }
     borderColor = redColor();
   } else if (action == "routeMismatch") {
     actionText = tr("matching route");
