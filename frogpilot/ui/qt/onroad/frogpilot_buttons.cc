@@ -142,7 +142,7 @@ void NavigationTestButton::paintEvent(QPaintEvent *event) {
 }
 
 NavigationDestinationButton::NavigationDestinationButton(const QString &label, const QString &destination_id, double latitude, double longitude, const QString &place_name, QWidget *parent) : QPushButton(parent), destination_id(destination_id), label(label), place_name(place_name), latitude(latitude), longitude(longitude) {
-  setFixedSize(btn_size, btn_size);
+  setFixedSize(btn_size * 1.45, btn_size / 2);
 
   QObject::connect(this, &QPushButton::clicked, this, &NavigationDestinationButton::selectDestination);
 }
@@ -160,9 +160,14 @@ void NavigationDestinationButton::paintEvent(QPaintEvent *event) {
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
 
-  drawIcon(p, QPoint(btn_size / 2, btn_size / 2), QPixmap(), isDown() ? QColor(45, 45, 45, 220) : QColor(0, 0, 0, 190), isDown() ? 0.6 : 1.0);
+  const qreal opacity = isDown() ? 0.75 : 1.0;
+  p.setOpacity(opacity);
+  p.setBrush(isDown() ? QColor(45, 45, 45, 230) : QColor(0, 0, 0, 205));
+  p.setPen(QPen(QColor(255, 255, 255, 65), 3));
+  p.drawRoundedRect(rect().adjusted(2, 2, -2, -2), height() / 2, height() / 2);
+  p.setOpacity(1.0);
 
   p.setPen(Qt::white);
-  p.setFont(InterFont(48, QFont::Bold));
+  p.setFont(InterFont(42, QFont::Bold));
   p.drawText(rect(), Qt::AlignCenter, label);
 }

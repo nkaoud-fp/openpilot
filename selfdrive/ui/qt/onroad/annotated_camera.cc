@@ -162,14 +162,17 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
 
     const bool show_destination_picker = navigation_destination_picker_visible && !navigation_test_btn->navigationTestEnabled();
     NavigationDestinationButton *destination_buttons[] = {navigation_home_btn, navigation_work_btn, navigation_school_btn};
+    const int destination_spacing = UI_BORDER_SIZE / 2;
+    const int destination_stack_height = (3 * navigation_home_btn->height()) + (2 * destination_spacing);
+    const int destination_stack_y = navigation_test_y - destination_stack_height - destination_spacing;
     for (int i = 0; i < 3; ++i) {
-      const int direction = rightHandDM ? -1 : 1;
-      const int destination_x = navigation_test_x + direction * ((i + 1) * (navigation_test_btn->width() + UI_BORDER_SIZE));
-      const bool fits = destination_x >= UI_BORDER_SIZE && destination_x + destination_buttons[i]->width() <= width() - UI_BORDER_SIZE;
+      const int destination_x = std::clamp(navigation_test_x + (navigation_test_btn->width() - destination_buttons[i]->width()) / 2, UI_BORDER_SIZE, width() - UI_BORDER_SIZE - destination_buttons[i]->width());
+      const int destination_y = destination_stack_y + (i * (destination_buttons[i]->height() + destination_spacing));
+      const bool fits = destination_stack_y >= UI_BORDER_SIZE;
       destination_buttons[i]->setEnabled(show_destination_picker && fits);
       destination_buttons[i]->setVisible(destination_buttons[i]->isEnabled());
       if (destination_buttons[i]->isEnabled()) {
-        destination_buttons[i]->move(destination_x, navigation_test_y);
+        destination_buttons[i]->move(destination_x, destination_y);
         destination_buttons[i]->raise();
       }
     }
