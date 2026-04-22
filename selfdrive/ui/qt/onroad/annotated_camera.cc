@@ -133,6 +133,7 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
     if (frogpilot_nvg->dmIconPosition != QPoint(0, 0)) {
       navigation_test_y = frogpilot_nvg->dmIconPosition.y() - navigation_test_btn->height() / 2;
     }
+    navigation_test_y = std::max(UI_BORDER_SIZE, navigation_test_y - navigation_test_btn->height() - UI_BORDER_SIZE);
 
     navigation_test_btn->move(navigation_test_x, navigation_test_y);
     navigation_test_btn->updateState();
