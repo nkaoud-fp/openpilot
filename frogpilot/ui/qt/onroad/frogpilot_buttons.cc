@@ -168,6 +168,6 @@ void NavigationDestinationButton::paintEvent(QPaintEvent *event) {
   p.setOpacity(1.0);
 
   p.setPen(Qt::white);
-  p.setFont(InterFont(42, QFont::Bold));
+  p.setFont(InterFont(36, QFont::Bold));
   p.drawText(rect(), Qt::AlignCenter, label);
 }

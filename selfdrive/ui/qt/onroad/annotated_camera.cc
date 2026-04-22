@@ -31,9 +31,9 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
 
   distance_btn = new DistanceButton(this);
   navigation_test_btn = new NavigationTestButton(this);
-  navigation_home_btn = new NavigationDestinationButton("HOM", "home", 24.675764, 46.581478, "Navigation test - Home", this);
-  navigation_work_btn = new NavigationDestinationButton("WRK", "work", 24.714778, 46.683775, "Navigation test - Work", this);
-  navigation_school_btn = new NavigationDestinationButton("SCH", "school", 24.781423, 46.622246, "Navigation test - School", this);
+  navigation_home_btn = new NavigationDestinationButton("Home", "home", 24.675764, 46.581478, "Navigation test - Home", this);
+  navigation_work_btn = new NavigationDestinationButton("Work", "work", 24.714778, 46.683775, "Navigation test - Work", this);
+  navigation_school_btn = new NavigationDestinationButton("School", "school", 24.781423, 46.622246, "Navigation test - School", this);
   screen_recorder = new ScreenRecorder(this);
 
   distance_btn->setVisible(false);
