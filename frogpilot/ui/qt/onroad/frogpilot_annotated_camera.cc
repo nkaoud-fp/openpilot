@@ -734,6 +734,9 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   } else if (action == "routeError") {
     actionText = tr("route error");
     borderColor = redColor();
+  } else if (action == "routeMismatch") {
+    actionText = tr("matching route");
+    borderColor = QColor(bg_colors[STATUS_CONDITIONAL_OVERRIDDEN]);
   } else if (action == "upcoming") {
     actionText = tr("upcoming %1").arg(direction);
     borderColor = blackColor();

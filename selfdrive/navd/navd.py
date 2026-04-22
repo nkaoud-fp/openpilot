@@ -35,6 +35,8 @@ NAVIGATION_TEST_DESTINATIONS = {
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
+NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
+NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_DEBUG_LOG_PATH = "/data/media/0/navigation_test_debug.csv"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
@@ -87,6 +89,7 @@ class RouteEngine:
     self.ui_pid = None
 
     self.reroute_counter = 0
+    self.navigation_test_reroute_counter = 0
     self.navigation_test_command = None
     self.navigation_test_debug_last_log_time = 0.0
     self.navigation_test_debug_log_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", NAVIGATION_TEST_DEBUG_LOG_PATH)
@@ -202,6 +205,10 @@ class RouteEngine:
     primary_text = instruction.get("maneuverPrimaryText", "").lower()
     return "ramp" in maneuver_type or "exit" in primary_text
 
+  def navigation_test_command_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    return max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
+
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
       return None
@@ -213,7 +220,7 @@ class RouteEngine:
         closest_distance = distance if closest_distance is None else min(closest_distance, distance)
     return closest_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None):
     if not self.params.get_bool("NavigationTestControl"):
       return
 
@@ -224,7 +231,8 @@ class RouteEngine:
 
     maneuver_coordinate = geometry[-1] if geometry else None
     distance_to_maneuver_straight = self.last_position.distance_to(maneuver_coordinate) if self.last_position is not None and maneuver_coordinate is not None else None
-    cross_track_error = self.navigation_test_cross_track_error()
+    if cross_track_error is None:
+      cross_track_error = self.navigation_test_cross_track_error()
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     row = {
@@ -280,11 +288,16 @@ class RouteEngine:
     if not self.gps_ok and self.step_idx is not None:
       return
 
+    if self.params.get_bool("NavigationTestControl") and should_recompute:
+      self.recompute_countdown = 0
+      self.recompute_backoff = 0
+
     if self.recompute_countdown == 0 and should_recompute:
       self.recompute_countdown = 2**self.recompute_backoff
       self.recompute_backoff = min(6, self.recompute_backoff + 1)
       self.calculate_route(new_destination)
       self.reroute_counter = 0
+      self.navigation_test_reroute_counter = 0
     else:
       self.recompute_countdown = max(0, self.recompute_countdown - 1)
 
@@ -484,12 +497,16 @@ class RouteEngine:
     navigation_test_action = "none"
     navigation_test_direction = "none"
     command_distance = 0.0
+    cross_track_error = None
     if self.params.get_bool("NavigationTestControl"):
-      v_ego = self.sm['carState'].vEgo
-      command_distance = max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
+      command_distance = self.navigation_test_command_distance()
+      cross_track_error = self.navigation_test_cross_track_error()
       navigation_test_direction = self.navigation_test_maneuver_direction(instruction)
 
-      if navigation_test_direction != "none":
+      if cross_track_error is not None and cross_track_error > NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
+        navigation_test_action = "routeMismatch"
+        navigation_test_direction = "none"
+      elif navigation_test_direction != "none":
         if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_EXIT_PREP_DISTANCE:
           navigation_test_action = "laneChange"
         elif distance_to_maneuver_along_geometry <= command_distance:
@@ -497,7 +514,7 @@ class RouteEngine:
         else:
           navigation_test_action = "upcoming"
 
-      self.log_navigation_test_debug(instruction, geometry, distance_to_maneuver_along_geometry, command_distance, navigation_test_action, navigation_test_direction)
+      self.log_navigation_test_debug(instruction, geometry, distance_to_maneuver_along_geometry, command_distance, navigation_test_action, navigation_test_direction, cross_track_error)
 
     # All instructions
     maneuvers = []
@@ -638,6 +655,7 @@ class RouteEngine:
     self.route_geometry = None
     self.step_idx = None
     self.nav_destination = None
+    self.navigation_test_reroute_counter = 0
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
@@ -646,6 +664,17 @@ class RouteEngine:
   def should_recompute(self):
     if self.step_idx is None or self.route is None:
       return True
+
+    if self.params.get_bool("NavigationTestControl"):
+      route_match_error = self.navigation_test_cross_track_error()
+      if route_match_error is not None and route_match_error > self.navigation_test_command_distance():
+        self.navigation_test_reroute_counter += 1
+      else:
+        self.navigation_test_reroute_counter = 0
+
+      if self.navigation_test_reroute_counter > NAVIGATION_TEST_REROUTE_COUNTER_MIN:
+        cloudlog.warning(f"Navigation test route mismatch: cross_track={route_match_error:.1f}m")
+        return True
 
     # Don't recompute in last segment, assume destination is reached
     if self.step_idx == len(self.route) - 1:
