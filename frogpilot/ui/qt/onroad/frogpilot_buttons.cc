@@ -6,9 +6,8 @@
 #include <QDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMouseEvent>
 #include <QPainter>
-#include <QTouchEvent>
+#include <QPushButton>
 
 #include "selfdrive/ui/qt/util.h"
 
@@ -44,18 +43,56 @@ QByteArray navigationTestDestinationJson(const NavigationTestDestination &destin
   return QJsonDocument(destination_json).toJson(QJsonDocument::Compact);
 }
 
+class RotatedDestinationButton : public QPushButton {
+public:
+  explicit RotatedDestinationButton(const QString &text, QWidget *parent) : QPushButton(parent), button_text(text) {
+    setFlat(true);
+    setFocusPolicy(Qt::NoFocus);
+  }
+
+private:
+  void paintEvent(QPaintEvent *event) override {
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    p.translate(rect().center());
+    p.rotate(90);
+
+    const QRect rotated_rect(-height() / 2, -width() / 2, height(), width());
+    p.setPen(QPen(QColor(255, 255, 255, 95), 4));
+    p.setBrush(isDown() ? QColor(45, 45, 45, 240) : QColor(25, 25, 25, 230));
+    p.drawRoundedRect(rotated_rect, 24, 24);
+
+    p.setPen(Qt::white);
+    p.setFont(InterFont(44, QFont::DemiBold));
+    p.drawText(rotated_rect, Qt::AlignCenter, button_text);
+  }
+
+  QString button_text;
+};
+
 class NavigationDestinationDialog : public QDialog {
 public:
   explicit NavigationDestinationDialog(QWidget *parent) : QDialog(parent ? parent->window() : nullptr) {
     setModal(true);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_TranslucentBackground);
-    setAttribute(Qt::WA_AcceptTouchEvents);
 
     if (QWidget *window = parentWidget()) {
       setGeometry(window->rect());
     } else {
       resize(1920, 1080);
+    }
+
+    for (int i = 0; i < static_cast<int>(navigation_test_destinations.size()); ++i) {
+      const NavigationTestDestination &destination = navigation_test_destinations[navigation_test_destinations.size() - 1 - i];
+      RotatedDestinationButton *button = new RotatedDestinationButton(destination.button_text, this);
+      button->setGeometry(destinationButtonRect(i));
+      const NavigationTestDestination *selected = &destination;
+      QObject::connect(button, &QPushButton::clicked, [this, selected] {
+        selected_destination = selected;
+        accept();
+      });
     }
   }
 
@@ -68,48 +105,6 @@ private:
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     p.fillRect(rect(), QColor(0, 0, 0, 185));
-
-    p.setFont(InterFont(44, QFont::DemiBold));
-    for (int i = 0; i < static_cast<int>(navigation_test_destinations.size()); ++i) {
-      const QRect button_rect = destinationButtonRect(i);
-      p.save();
-      p.translate(button_rect.center());
-      p.rotate(90);
-      const QRect rotated_rect(-button_rect.height() / 2, -button_rect.width() / 2, button_rect.height(), button_rect.width());
-      p.setPen(QPen(QColor(255, 255, 255, 95), 4));
-      p.setBrush(QColor(25, 25, 25, 230));
-      p.drawRoundedRect(rotated_rect, 24, 24);
-
-      p.setPen(Qt::white);
-      p.drawText(rotated_rect, Qt::AlignCenter, tr(navigation_test_destinations[i].button_text));
-      p.restore();
-    }
-  }
-
-  void mousePressEvent(QMouseEvent *event) override {
-    handlePress(event->pos());
-  }
-
-  bool event(QEvent *event) override {
-    if (event->type() == QEvent::TouchBegin) {
-      QTouchEvent *touch_event = static_cast<QTouchEvent *>(event);
-      if (!touch_event->touchPoints().isEmpty()) {
-        handlePress(touch_event->touchPoints().first().pos().toPoint());
-      }
-      return true;
-    }
-    return QDialog::event(event);
-  }
-
-  void handlePress(const QPoint &point) {
-    for (int i = 0; i < static_cast<int>(navigation_test_destinations.size()); ++i) {
-      if (destinationButtonRect(i).contains(point)) {
-        selected_destination = &navigation_test_destinations[i];
-        accept();
-        return;
-      }
-    }
-    reject();
   }
 
   QRect destinationButtonRect(int index) const {
@@ -119,7 +114,7 @@ private:
     const int destination_count = static_cast<int>(navigation_test_destinations.size());
     const int total_width = (button_width * destination_count) + (spacing * (destination_count - 1));
     const int x = (width() - total_width) / 2 + index * (button_width + spacing);
-    const int y = (height() - button_height) / 2;
+    const int y = std::min(height() - button_height - 40, (height() - button_height) / 2 + 180);
     return QRect(x, y, button_width, button_height);
   }
 
