@@ -37,6 +37,7 @@ NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_DISTANCE = 800
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
+NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
 NAVIGATION_TEST_DEBUG_LOG_PATH = "/data/media/0/navigation_test_debug.csv"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
@@ -288,12 +289,8 @@ class RouteEngine:
     if not self.gps_ok and self.step_idx is not None:
       return
 
-    if self.params.get_bool("NavigationTestControl") and should_recompute:
-      self.recompute_countdown = 0
-      self.recompute_backoff = 0
-
     if self.recompute_countdown == 0 and should_recompute:
-      self.recompute_countdown = 2**self.recompute_backoff
+      self.recompute_countdown = self.recompute_route_countdown()
       self.recompute_backoff = min(6, self.recompute_backoff + 1)
       self.calculate_route(new_destination)
       self.reroute_counter = 0
@@ -661,6 +658,12 @@ class RouteEngine:
     self.recompute_backoff = 0
     self.recompute_countdown = 0
 
+  def recompute_route_countdown(self):
+    countdown = 2**self.recompute_backoff
+    if self.params.get_bool("NavigationTestControl"):
+      return max(NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN, countdown)
+    return countdown
+
   def should_recompute(self):
     if self.step_idx is None or self.route is None:
       return True
@@ -671,6 +674,8 @@ class RouteEngine:
         self.navigation_test_reroute_counter += 1
       else:
         self.navigation_test_reroute_counter = 0
+        if route_match_error is not None and route_match_error <= NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
+          self.recompute_backoff = 0
 
       if self.navigation_test_reroute_counter > NAVIGATION_TEST_REROUTE_COUNTER_MIN:
         cloudlog.warning(f"Navigation test route mismatch: cross_track={route_match_error:.1f}m")
