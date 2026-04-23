@@ -36,6 +36,10 @@ NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
 NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN = 250
+NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED = 22.0
+NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS = 180
+NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN = 1500
+NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX = 5000
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
@@ -64,6 +68,8 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "distance_to_maneuver_along_route",
   "distance_to_maneuver_straight",
   "command_threshold",
+  "strategy_phase",
+  "strategy_threshold",
   "action",
   "direction",
   "cross_track_error",
@@ -181,7 +187,7 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error=""):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none"):
     command = json.dumps({
       "action": action,
       "direction": direction,
@@ -189,6 +195,7 @@ class RouteEngine:
       "distance": max(distance, 0.0),
       "etaSeconds": max(eta_seconds, 0.0),
       "error": error,
+      "strategyPhase": strategy_phase,
     })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
@@ -237,6 +244,39 @@ class RouteEngine:
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_EXIT_PREP_SECONDS)
 
+  def navigation_test_highway_exit_prep_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
+      return self.navigation_test_exit_prep_distance()
+    return min(
+      NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX,
+      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
+    )
+
+  def navigation_test_strategy(self, instruction, distance_to_maneuver_along_geometry, command_distance):
+    direction = self.navigation_test_maneuver_direction(instruction)
+    display_direction = self.navigation_test_maneuver_display_direction(instruction)
+    strategy_phase = "none"
+    strategy_threshold = 0.0
+    action = "none"
+
+    if direction == "none" and display_direction != "uturn":
+      return action, direction, display_direction, strategy_phase, strategy_threshold
+
+    if distance_to_maneuver_along_geometry <= command_distance:
+      return "turn", direction, display_direction, "turn", command_distance
+
+    if self.navigation_test_is_exit_maneuver(instruction):
+      standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
+      highway_exit_prep_distance = self.navigation_test_highway_exit_prep_distance()
+
+      if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
+        return "laneChange", direction, display_direction, "exitPrep", standard_exit_prep_distance
+      if distance_to_maneuver_along_geometry <= highway_exit_prep_distance:
+        return "laneChange", direction, display_direction, "highwayExitPrep", highway_exit_prep_distance
+
+    return "upcoming", direction, display_direction, "upcoming", command_distance
+
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
       return None
@@ -276,7 +316,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0):
     if not self.params.get_bool("NavigationTestControl"):
       return
 
@@ -310,6 +350,8 @@ class RouteEngine:
       "distance_to_maneuver_along_route": f"{distance_to_maneuver_along_geometry:.2f}",
       "distance_to_maneuver_straight": f"{distance_to_maneuver_straight:.2f}" if distance_to_maneuver_straight is not None else "",
       "command_threshold": f"{command_distance:.2f}",
+      "strategy_phase": strategy_phase,
+      "strategy_threshold": f"{strategy_threshold:.2f}",
       "action": action,
       "direction": direction,
       "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
@@ -549,27 +591,38 @@ class RouteEngine:
 
     navigation_test_action = "none"
     navigation_test_direction = "none"
+    navigation_test_display_direction = "none"
+    navigation_test_strategy_phase = "none"
+    navigation_test_strategy_threshold = 0.0
     command_distance = 0.0
     cross_track_error = None
     if self.params.get_bool("NavigationTestControl"):
       command_distance = self.navigation_test_command_distance()
       cross_track_error = self.navigation_test_cross_track_error()
-      navigation_test_direction = self.navigation_test_maneuver_direction(instruction)
-      navigation_test_display_direction = self.navigation_test_maneuver_display_direction(instruction)
 
       if cross_track_error is not None and cross_track_error > NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
         navigation_test_action = "routeMismatch"
         navigation_test_direction = "none"
         navigation_test_display_direction = "none"
-      elif navigation_test_direction != "none" or navigation_test_display_direction == "uturn":
-        if self.navigation_test_is_exit_maneuver(instruction) and command_distance < distance_to_maneuver_along_geometry <= self.navigation_test_exit_prep_distance():
-          navigation_test_action = "laneChange"
-        elif distance_to_maneuver_along_geometry <= command_distance:
-          navigation_test_action = "turn"
-        else:
-          navigation_test_action = "upcoming"
+        navigation_test_strategy_phase = "routeMismatch"
+      else:
+        navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold = self.navigation_test_strategy(
+          instruction,
+          distance_to_maneuver_along_geometry,
+          command_distance,
+        )
 
-      self.log_navigation_test_debug(instruction, geometry, distance_to_maneuver_along_geometry, command_distance, navigation_test_action, navigation_test_direction, cross_track_error)
+      self.log_navigation_test_debug(
+        instruction,
+        geometry,
+        distance_to_maneuver_along_geometry,
+        command_distance,
+        navigation_test_action,
+        navigation_test_direction,
+        cross_track_error,
+        navigation_test_strategy_phase,
+        navigation_test_strategy_threshold,
+      )
 
     # All instructions
     maneuvers = []
@@ -623,6 +676,7 @@ class RouteEngine:
         distance_to_maneuver_along_geometry,
         total_time,
         navigation_test_display_direction if navigation_test_action != "none" else "none",
+        strategy_phase=navigation_test_strategy_phase,
       )
 
     # Speed limit
