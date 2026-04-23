@@ -40,6 +40,7 @@ NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED = 22.0
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS = 180
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN = 1500
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX = 5000
+NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE = 400
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
@@ -70,6 +71,9 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "command_threshold",
   "strategy_phase",
   "strategy_threshold",
+  "strategy_constraint",
+  "next_maneuver_direction",
+  "next_maneuver_distance_after_current",
   "migration_active",
   "migration_age_seconds",
   "migration_start_distance",
@@ -194,7 +198,7 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none"):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none"):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     command = json.dumps({
       "action": action,
@@ -204,6 +208,7 @@ class RouteEngine:
       "etaSeconds": max(eta_seconds, 0.0),
       "error": error,
       "strategyPhase": strategy_phase,
+      "strategyConstraint": strategy_constraint,
       "migrationActive": self.navigation_test_exit_migration_key is not None,
       "migrationAgeSeconds": max(migration_age, 0.0),
       "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
@@ -297,34 +302,64 @@ class RouteEngine:
       max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
     )
 
-  def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance):
+  def navigation_test_next_maneuver(self, distance_to_maneuver_along_geometry):
+    if self.route is None or self.step_idx is None:
+      return "none", None, None
+
+    cumulative_distance = distance_to_maneuver_along_geometry
+    for i in range(self.step_idx + 1, len(self.route)):
+      cumulative_distance += self.route[i]['distance']
+      instruction = parse_banner_instructions(self.route[i]['bannerInstructions'], cumulative_distance)
+      if instruction is None:
+        continue
+
+      direction = self.navigation_test_maneuver_direction(instruction)
+      display_direction = self.navigation_test_maneuver_display_direction(instruction)
+      if direction != "none" or display_direction == "uturn":
+        return direction, cumulative_distance, instruction
+
+    return "none", None, None
+
+  def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
     direction = self.navigation_test_maneuver_direction(instruction)
     display_direction = self.navigation_test_maneuver_display_direction(instruction)
     strategy_phase = "none"
     strategy_threshold = 0.0
+    strategy_constraint = "none"
     action = "none"
 
     if direction == "none" and display_direction != "uturn":
       self.reset_navigation_test_exit_migration()
-      return action, direction, display_direction, strategy_phase, strategy_threshold
+      return action, direction, display_direction, strategy_phase, strategy_threshold, strategy_constraint
 
     if distance_to_maneuver_along_geometry <= command_distance:
       self.reset_navigation_test_exit_migration()
-      return "turn", direction, display_direction, "turn", command_distance
+      return "turn", direction, display_direction, "turn", command_distance, strategy_constraint
 
     if self.navigation_test_is_exit_maneuver(instruction):
       standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
       highway_exit_prep_distance = self.navigation_test_highway_exit_prep_distance()
+      conflict_soon = (
+        next_maneuver_direction in ("left", "right") and
+        next_maneuver_direction != direction and
+        next_maneuver_distance_after_current is not None and
+        0.0 < next_maneuver_distance_after_current <= NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE
+      )
 
       if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
         self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
-        return "laneChange", direction, display_direction, "exitMigration", standard_exit_prep_distance
+        if conflict_soon:
+          strategy_constraint = "conflictingNextManeuver"
+        return "laneChange", direction, display_direction, "exitMigration", standard_exit_prep_distance, strategy_constraint
       if distance_to_maneuver_along_geometry <= highway_exit_prep_distance:
+        if conflict_soon:
+          self.reset_navigation_test_exit_migration()
+          return "upcoming", direction, display_direction, "consecutiveConflictHold", highway_exit_prep_distance, "conflictingNextManeuver"
         self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
-        return "laneChange", direction, display_direction, "highwayExitMigration", highway_exit_prep_distance
+        return "laneChange", direction, display_direction, "highwayExitMigration", highway_exit_prep_distance, strategy_constraint
 
     self.reset_navigation_test_exit_migration()
-    return "upcoming", direction, display_direction, "upcoming", command_distance
+    return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
 
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
@@ -365,7 +400,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None):
     if not self.params.get_bool("NavigationTestControl"):
       return
 
@@ -402,6 +437,9 @@ class RouteEngine:
       "command_threshold": f"{command_distance:.2f}",
       "strategy_phase": strategy_phase,
       "strategy_threshold": f"{strategy_threshold:.2f}",
+      "strategy_constraint": strategy_constraint,
+      "next_maneuver_direction": next_maneuver_direction,
+      "next_maneuver_distance_after_current": f"{next_maneuver_distance_after_current:.2f}" if next_maneuver_distance_after_current is not None else "",
       "migration_active": self.navigation_test_exit_migration_key is not None,
       "migration_age_seconds": f"{migration_age:.2f}",
       "migration_start_distance": f"{self.navigation_test_exit_migration_start_distance:.2f}" if self.navigation_test_exit_migration_key is not None else "",
@@ -647,24 +685,33 @@ class RouteEngine:
     navigation_test_display_direction = "none"
     navigation_test_strategy_phase = "none"
     navigation_test_strategy_threshold = 0.0
+    navigation_test_strategy_constraint = "none"
+    next_maneuver_direction = "none"
+    next_maneuver_distance_after_current = None
     command_distance = 0.0
     cross_track_error = None
     if self.params.get_bool("NavigationTestControl"):
       command_distance = self.navigation_test_command_distance()
       cross_track_error = self.navigation_test_cross_track_error()
+      next_maneuver_direction, next_maneuver_distance, _ = self.navigation_test_next_maneuver(distance_to_maneuver_along_geometry)
+      if next_maneuver_distance is not None:
+        next_maneuver_distance_after_current = max(next_maneuver_distance - distance_to_maneuver_along_geometry, 0.0)
 
       if cross_track_error is not None and cross_track_error > NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
         navigation_test_action = "routeMismatch"
         navigation_test_direction = "none"
         navigation_test_display_direction = "none"
         navigation_test_strategy_phase = "routeMismatch"
+        navigation_test_strategy_constraint = "routeMismatch"
         self.reset_navigation_test_exit_migration()
       else:
-        navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold = self.navigation_test_strategy(
+        navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold, navigation_test_strategy_constraint = self.navigation_test_strategy(
           instruction,
           geometry,
           distance_to_maneuver_along_geometry,
           command_distance,
+          next_maneuver_direction,
+          next_maneuver_distance_after_current,
         )
 
       self.log_navigation_test_debug(
@@ -677,6 +724,9 @@ class RouteEngine:
         cross_track_error,
         navigation_test_strategy_phase,
         navigation_test_strategy_threshold,
+        navigation_test_strategy_constraint,
+        next_maneuver_direction,
+        next_maneuver_distance_after_current,
       )
 
     # All instructions
@@ -732,6 +782,7 @@ class RouteEngine:
         total_time,
         navigation_test_display_direction if navigation_test_action != "none" else "none",
         strategy_phase=navigation_test_strategy_phase,
+        strategy_constraint=navigation_test_strategy_constraint,
       )
 
     # Speed limit
