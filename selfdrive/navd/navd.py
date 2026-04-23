@@ -70,6 +70,9 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "command_threshold",
   "strategy_phase",
   "strategy_threshold",
+  "migration_active",
+  "migration_age_seconds",
+  "migration_start_distance",
   "action",
   "direction",
   "cross_track_error",
@@ -105,6 +108,10 @@ class RouteEngine:
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
     self.navigation_test_command = None
+    self.navigation_test_exit_migration_key = None
+    self.navigation_test_exit_migration_direction = "none"
+    self.navigation_test_exit_migration_started_at = 0.0
+    self.navigation_test_exit_migration_start_distance = 0.0
     self.navigation_test_debug_last_log_time = 0.0
     self.navigation_test_debug_log_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", NAVIGATION_TEST_DEBUG_LOG_PATH)
 
@@ -188,6 +195,7 @@ class RouteEngine:
     }))
 
   def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none"):
+    migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     command = json.dumps({
       "action": action,
       "direction": direction,
@@ -196,6 +204,9 @@ class RouteEngine:
       "etaSeconds": max(eta_seconds, 0.0),
       "error": error,
       "strategyPhase": strategy_phase,
+      "migrationActive": self.navigation_test_exit_migration_key is not None,
+      "migrationAgeSeconds": max(migration_age, 0.0),
+      "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
     })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
@@ -236,6 +247,39 @@ class RouteEngine:
     primary_text = instruction.get("maneuverPrimaryText", "").lower()
     return "ramp" in maneuver_type or "exit" in primary_text
 
+  def navigation_test_maneuver_key(self, instruction, geometry):
+    if instruction is None:
+      return None
+
+    maneuver_coordinate = geometry[-1] if geometry else None
+    maneuver_latitude = round(maneuver_coordinate.latitude, 5) if maneuver_coordinate is not None else None
+    maneuver_longitude = round(maneuver_coordinate.longitude, 5) if maneuver_coordinate is not None else None
+    return (
+      instruction.get("maneuverType", ""),
+      instruction.get("maneuverModifier", ""),
+      instruction.get("maneuverPrimaryText", ""),
+      maneuver_latitude,
+      maneuver_longitude,
+    )
+
+  def reset_navigation_test_exit_migration(self):
+    self.navigation_test_exit_migration_key = None
+    self.navigation_test_exit_migration_direction = "none"
+    self.navigation_test_exit_migration_started_at = 0.0
+    self.navigation_test_exit_migration_start_distance = 0.0
+
+  def update_navigation_test_exit_migration(self, instruction, geometry, direction, distance_to_maneuver_along_geometry):
+    migration_key = self.navigation_test_maneuver_key(instruction, geometry)
+    if migration_key is None or direction == "none":
+      self.reset_navigation_test_exit_migration()
+      return
+
+    if migration_key != self.navigation_test_exit_migration_key or direction != self.navigation_test_exit_migration_direction:
+      self.navigation_test_exit_migration_key = migration_key
+      self.navigation_test_exit_migration_direction = direction
+      self.navigation_test_exit_migration_started_at = time.monotonic()
+      self.navigation_test_exit_migration_start_distance = distance_to_maneuver_along_geometry
+
   def navigation_test_command_distance(self):
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
@@ -253,7 +297,7 @@ class RouteEngine:
       max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
     )
 
-  def navigation_test_strategy(self, instruction, distance_to_maneuver_along_geometry, command_distance):
+  def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance):
     direction = self.navigation_test_maneuver_direction(instruction)
     display_direction = self.navigation_test_maneuver_display_direction(instruction)
     strategy_phase = "none"
@@ -261,9 +305,11 @@ class RouteEngine:
     action = "none"
 
     if direction == "none" and display_direction != "uturn":
+      self.reset_navigation_test_exit_migration()
       return action, direction, display_direction, strategy_phase, strategy_threshold
 
     if distance_to_maneuver_along_geometry <= command_distance:
+      self.reset_navigation_test_exit_migration()
       return "turn", direction, display_direction, "turn", command_distance
 
     if self.navigation_test_is_exit_maneuver(instruction):
@@ -271,10 +317,13 @@ class RouteEngine:
       highway_exit_prep_distance = self.navigation_test_highway_exit_prep_distance()
 
       if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
-        return "laneChange", direction, display_direction, "exitPrep", standard_exit_prep_distance
+        self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
+        return "laneChange", direction, display_direction, "exitMigration", standard_exit_prep_distance
       if distance_to_maneuver_along_geometry <= highway_exit_prep_distance:
-        return "laneChange", direction, display_direction, "highwayExitPrep", highway_exit_prep_distance
+        self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
+        return "laneChange", direction, display_direction, "highwayExitMigration", highway_exit_prep_distance
 
+    self.reset_navigation_test_exit_migration()
     return "upcoming", direction, display_direction, "upcoming", command_distance
 
   def navigation_test_cross_track_error(self):
@@ -331,6 +380,7 @@ class RouteEngine:
       cross_track_error = self.navigation_test_cross_track_error()
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
+    migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     row = {
       "time": f"{time.time():.3f}",
       "gps_ok": self.gps_ok,
@@ -352,6 +402,9 @@ class RouteEngine:
       "command_threshold": f"{command_distance:.2f}",
       "strategy_phase": strategy_phase,
       "strategy_threshold": f"{strategy_threshold:.2f}",
+      "migration_active": self.navigation_test_exit_migration_key is not None,
+      "migration_age_seconds": f"{migration_age:.2f}",
+      "migration_start_distance": f"{self.navigation_test_exit_migration_start_distance:.2f}" if self.navigation_test_exit_migration_key is not None else "",
       "action": action,
       "direction": direction,
       "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
@@ -605,9 +658,11 @@ class RouteEngine:
         navigation_test_direction = "none"
         navigation_test_display_direction = "none"
         navigation_test_strategy_phase = "routeMismatch"
+        self.reset_navigation_test_exit_migration()
       else:
         navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold = self.navigation_test_strategy(
           instruction,
+          geometry,
           distance_to_maneuver_along_geometry,
           command_distance,
         )
@@ -768,6 +823,7 @@ class RouteEngine:
     self.navigation_test_reroute_counter = 0
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
+    self.reset_navigation_test_exit_migration()
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
