@@ -127,13 +127,16 @@ class RouteEngine:
     self.r3 = {}
 
     self.api = Api(self.params.get("DongleId", encoding='utf8'))
-    self.mapbox_token = None
-    if "MAPBOX_TOKEN" in os.environ:
-      self.mapbox_token = os.environ["MAPBOX_TOKEN"]
-      self.mapbox_host = "https://api.mapbox.com"
-    else:
-      self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
-      self.mapbox_host = "https://api.mapbox.com"
+    self.mapbox_token = "pk.eyJ1Ijoibmthb3VkIiwiYSI6ImNsc2N5bWNxdDBucmQyamw1ZDJwcGNrZDQifQ.DGj1Zp8GIeV24w7NJ3plAA"
+    self.mapbox_host = "https://api.mapbox.com"
+    #self.mapbox_token = None
+    
+    #if "MAPBOX_TOKEN" in os.environ:
+      #self.mapbox_token = os.environ["MAPBOX_TOKEN"]
+      #self.mapbox_host = "https://api.mapbox.com"
+    #else:
+      #self.mapbox_token = self.params.get("MapboxSecretKey", encoding='utf8')
+      #self.mapbox_host = "https://api.mapbox.com"
 
     # FrogPilot variables
     self.approaching_intersection = False
