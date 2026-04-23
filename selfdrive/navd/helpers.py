@@ -83,9 +83,26 @@ def minimum_distance(a: Coordinate, b: Coordinate, p: Coordinate):
   return projection.distance_to(p)
 
 
+def distance_to_projection_along_segment(a: Coordinate, b: Coordinate, p: Coordinate) -> tuple[float, float]:
+  segment_distance = a.distance_to(b)
+  if segment_distance < 0.01:
+    return 0.0, a.distance_to(p)
+
+  ap = p - a
+  ab = b - a
+  t = clip(ap.dot(ab) / ab.dot(ab), 0.0, 1.0)
+  projection = a + ab * t
+  return segment_distance * t, projection.distance_to(p)
+
+
 def distance_along_geometry(geometry: list[Coordinate], pos: Coordinate) -> float:
-  if len(geometry) <= 2:
+  if len(geometry) == 0:
+    return 0.0
+  if len(geometry) == 1:
     return geometry[0].distance_to(pos)
+  if len(geometry) == 2:
+    along_segment, _ = distance_to_projection_along_segment(geometry[0], geometry[1], pos)
+    return along_segment
 
   # 1. Find segment that is closest to current position
   # 2. Total distance is sum of distance to start of closest segment
@@ -95,11 +112,11 @@ def distance_along_geometry(geometry: list[Coordinate], pos: Coordinate) -> floa
   closest_distance = 1e9
 
   for i in range(len(geometry) - 1):
-    d = minimum_distance(geometry[i], geometry[i + 1], pos)
+    along_segment, d = distance_to_projection_along_segment(geometry[i], geometry[i + 1], pos)
 
     if d < closest_distance:
       closest_distance = d
-      total_distance_closest = total_distance + geometry[i].distance_to(pos)
+      total_distance_closest = total_distance + along_segment
 
     total_distance += geometry[i].distance_to(geometry[i + 1])
 
