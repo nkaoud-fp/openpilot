@@ -166,7 +166,7 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
     const int destination_stack_height = (3 * navigation_home_btn->height()) + (2 * destination_spacing);
     const int destination_stack_y = navigation_test_y - destination_stack_height - destination_spacing;
     for (int i = 0; i < 3; ++i) {
-      const int destination_x = std::clamp(navigation_test_x + (navigation_test_btn->width() - destination_buttons[i]->width()) / 2, UI_BORDER_SIZE, width() - UI_BORDER_SIZE - destination_buttons[i]->width());
+      const int destination_x = std::clamp(navigation_test_x + (navigation_test_btn->width() / 2), UI_BORDER_SIZE, width() - UI_BORDER_SIZE - destination_buttons[i]->width());
       const int destination_y = destination_stack_y + (i * (destination_buttons[i]->height() + destination_spacing));
       const bool fits = destination_stack_y >= UI_BORDER_SIZE;
       destination_buttons[i]->setEnabled(show_destination_picker && fits);

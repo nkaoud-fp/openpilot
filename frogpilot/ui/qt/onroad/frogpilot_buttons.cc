@@ -134,11 +134,7 @@ void NavigationTestButton::paintEvent(QPaintEvent *event) {
 
   p.setPen(Qt::white);
   p.setFont(InterFont(54, QFont::Bold));
-  p.drawText(rect().adjusted(0, 18, 0, 0), Qt::AlignCenter, navigation_test_destination);
-
-  p.setFont(InterFont(27, QFont::DemiBold));
-  p.setPen(QColor(255, 255, 255, navigation_test_enabled ? 240 : 175));
-  p.drawText(rect().adjusted(0, 104, 0, 0), Qt::AlignHCenter | Qt::AlignTop, navigation_test_enabled ? tr("ON") : tr("OFF"));
+  p.drawText(rect(), Qt::AlignCenter, navigation_test_destination);
 }
 
 NavigationDestinationButton::NavigationDestinationButton(const QString &label, const QString &destination_id, double latitude, double longitude, const QString &place_name, QWidget *parent) : QPushButton(parent), destination_id(destination_id), label(label), place_name(place_name), latitude(latitude), longitude(longitude) {
