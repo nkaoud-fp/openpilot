@@ -127,9 +127,19 @@ class RouteEngine:
     self.r3 = {}
 
     self.api = Api(self.params.get("DongleId", encoding='utf8'))
-    self.mapbox_token = "pk.eyJ1Ijoibmthb3VkIiwiYSI6ImNsc2N5bWNxdDBucmQyamw1ZDJwcGNrZDQifQ.DGj1Zp8GIeV24w7NJ3plAA"
     self.mapbox_host = "https://api.mapbox.com"
     #self.mapbox_token = None
+    
+    # Get the directory where navd.py is located and point to the token file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    token_file_path = os.path.join(current_dir, "mapbox_token")
+    
+    try:
+      with open(token_file_path, "r") as f:
+        self.mapbox_token = f.read().strip()
+    except FileNotFoundError:
+      self.mapbox_token = None
+      cloudlog.warning(f"Mapbox token file not found at {token_file_path}!")
     
     #if "MAPBOX_TOKEN" in os.environ:
       #self.mapbox_token = os.environ["MAPBOX_TOKEN"]
