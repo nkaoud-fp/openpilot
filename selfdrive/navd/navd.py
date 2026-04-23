@@ -793,20 +793,20 @@ class RouteEngine:
           next_maneuver_distance_after_current,
         )
 
-      self.log_navigation_test_debug(
-        instruction,
-        geometry,
-        distance_to_maneuver_along_geometry,
-        command_distance,
-        navigation_test_action,
-        navigation_test_direction,
-        cross_track_error,
-        navigation_test_strategy_phase,
-        navigation_test_strategy_threshold,
-        navigation_test_strategy_constraint,
-        next_maneuver_direction,
-        next_maneuver_distance_after_current,
-      )
+      #self.log_navigation_test_debug(
+        #instruction,
+        #geometry,
+        #distance_to_maneuver_along_geometry,
+        #command_distance,
+        #navigation_test_action,
+        #navigation_test_direction,
+        #cross_track_error,
+        #navigation_test_strategy_phase,
+        #navigation_test_strategy_threshold,
+        #navigation_test_strategy_constraint,
+        #next_maneuver_direction,
+        #next_maneuver_distance_after_current,
+      #)
 
     maneuvers = []
     for i, step_i in enumerate(self.route):
