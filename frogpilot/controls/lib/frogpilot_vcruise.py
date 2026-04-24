@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
+import json
+
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE
 
-from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME
+from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, params
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
+
+NAVIGATION_EXIT_TARGET_SPEED = 17.9  # 40 mph / 64 kph
+NAVIGATION_TURN_TARGET_SPEED = 9.0   # 20 mph / 32 kph
+NAVIGATION_PREP_DECEL = 1.2
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
@@ -17,7 +23,14 @@ class FrogPilotVCruise:
     self.forcing_stop = False
     self.override_force_stop = False
 
+    self.force_stop_timer = 0
     self.override_force_stop_timer = 0
+    self.tracked_model_length = 0
+
+    self.braking_target = 0
+    self.csc_controlling_speed = False
+    self.csc_target = 0
+    self.navigation_prep_target = 0
 
   def update(self, gps_position, now, time_validated, v_cruise, v_ego, sm, frogpilot_toggles):
     force_stop = self.frogpilot_planner.cem.stop_light_detected and sm["controlsState"].enabled and frogpilot_toggles.force_stops
@@ -86,6 +99,8 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
+    self.navigation_prep_target = self.update_navigation_prep_target(v_cruise)
+
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
 
@@ -98,9 +113,43 @@ class FrogPilotVCruise:
       self.tracked_model_length = self.frogpilot_planner.model_length
 
       targets = [self.braking_target, self.csc_target, v_cruise]
+      if self.navigation_prep_target > CRUISING_SPEED:
+        targets.append(self.navigation_prep_target)
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
 
       v_cruise = min([target if target > CRUISING_SPEED else v_cruise for target in targets])
 
     return v_cruise
+
+  def update_navigation_prep_target(self, v_cruise):
+    if not params.get_bool("NavigationTestControl"):
+      return 0
+
+    command = params.get("NavigationTestTurnCommand", encoding="utf-8")
+    if command is None:
+      return 0
+
+    try:
+      command_json = json.loads(command)
+    except json.JSONDecodeError:
+      return 0
+
+    action = command_json.get("action", "none")
+    if action not in ("laneChange", "turn"):
+      return 0
+
+    distance = float(command_json.get("distance", 0.0))
+    if distance <= 0:
+      return 0
+
+    strategy_phase = command_json.get("strategyPhase", "none")
+    target_speed = (
+      NAVIGATION_EXIT_TARGET_SPEED
+      if action == "laneChange" or "Exit" in strategy_phase
+      else NAVIGATION_TURN_TARGET_SPEED
+    )
+    decel = min(NAVIGATION_PREP_DECEL, COMFORT_BRAKE)
+    speed_target_now = (target_speed ** 2 + 2.0 * decel * distance) ** 0.5
+
+    return float(min(v_cruise, max(speed_target_now, target_speed, CRUISING_SPEED)))
