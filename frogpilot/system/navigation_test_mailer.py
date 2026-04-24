@@ -53,6 +53,20 @@ def _read_navigation_test_email_config():
   return config
 
 
+def _get_brevo_smtp_key(config, params):
+  segmented_key = "".join([
+    config.get("BREVO_SMTP_KEY_A", ""),
+    config.get("BREVO_SMTP_KEY_B", ""),
+    config.get("BREVO_SMTP_KEY_C", ""),
+    config.get("BREVO_SMTP_KEY_D", ""),
+  ])
+
+  if segmented_key:
+    return segmented_key
+
+  return config.get("BREVO_SMTP_KEY") or params.get("NavigationTestEmailSMTPPassword", encoding="utf8")
+
+
 def queue_navigation_test_log(log_path):
   params = Params()
 
@@ -87,7 +101,7 @@ def send_pending_navigation_test_log():
 
   smtp_host = config.get("BREVO_SMTP_HOST") or params.get("NavigationTestEmailSMTPHost", encoding="utf8") or "smtp-relay.brevo.com"
   smtp_user = config.get("BREVO_SMTP_LOGIN") or params.get("NavigationTestEmailSMTPUser", encoding="utf8")
-  smtp_password = config.get("BREVO_SMTP_KEY") or params.get("NavigationTestEmailSMTPPassword", encoding="utf8")
+  smtp_password = _get_brevo_smtp_key(config, params)
   email_from = config.get("SENDER_EMAIL") or params.get("NavigationTestEmailFrom", encoding="utf8")
   email_to = config.get("EMAIL_RECEIVER") or params.get("NavigationTestEmailTo", encoding="utf8")
 
