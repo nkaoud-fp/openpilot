@@ -234,7 +234,7 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none"):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_speed=0.0, target_speed_source="none"):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     command = json.dumps({
       "action": action,
@@ -250,6 +250,8 @@ class RouteEngine:
       "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
       "maxLaneChanges": NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES,
       "laneChangeCooldown": NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN,
+      "targetSpeed": max(target_speed, 0.0),
+      "targetSpeedSource": target_speed_source,
     })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
@@ -404,6 +406,31 @@ class RouteEngine:
 
     self.reset_navigation_test_exit_migration()
     return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
+
+  def navigation_test_maneuver_target_speed(self, instruction, current_geometry):
+    if instruction is None:
+      return 0.0, "none"
+
+    # Pull nearby route-annotation speeds around the maneuver: last points of current step plus first points of next step.
+    speed_candidates = []
+    if current_geometry is not None:
+      for coordinate in current_geometry[-12:]:
+        speed = coordinate.annotations.get('maxspeed', 0.0)
+        if speed and speed > 0.0:
+          speed_candidates.append(float(speed))
+
+    next_idx = (self.step_idx + 1) if self.step_idx is not None else None
+    if next_idx is not None and self.route_geometry is not None and next_idx < len(self.route_geometry):
+      for coordinate in self.route_geometry[next_idx][:12]:
+        speed = coordinate.annotations.get('maxspeed', 0.0)
+        if speed and speed > 0.0:
+          speed_candidates.append(float(speed))
+
+    if not speed_candidates:
+      return 0.0, "none"
+
+    # Bias conservative around maneuver transitions by taking the minimum nearby annotated speed.
+    return min(speed_candidates), "annotationNearbyMin"
 
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
@@ -775,6 +802,8 @@ class RouteEngine:
     navigation_test_strategy_phase = "none"
     navigation_test_strategy_threshold = 0.0
     navigation_test_strategy_constraint = "none"
+    navigation_test_target_speed = 0.0
+    navigation_test_target_speed_source = "none"
     next_maneuver_direction = "none"
     next_maneuver_distance_after_current = None
     command_distance = 0.0
@@ -803,6 +832,7 @@ class RouteEngine:
           next_maneuver_direction,
           next_maneuver_distance_after_current,
         )
+        navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry)
 
       #self.log_navigation_test_debug(
         #instruction,
@@ -863,6 +893,8 @@ class RouteEngine:
         navigation_test_display_direction if navigation_test_action != "none" else "none",
         strategy_phase=navigation_test_strategy_phase,
         strategy_constraint=navigation_test_strategy_constraint,
+        target_speed=navigation_test_target_speed if navigation_test_action in ("laneChange", "turn") else 0.0,
+        target_speed_source=navigation_test_target_speed_source if navigation_test_action in ("laneChange", "turn") else "none",
       )
 
     closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))

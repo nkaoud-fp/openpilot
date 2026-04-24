@@ -306,14 +306,7 @@ class DesireHelper:
 
     if navigation_test_lane_change_active:
       self.turn_direction = TurnDirection.none
-      self.lane_change_state = LaneChangeState.laneChangeStarting
-      self.lane_change_direction = LaneChangeDirection.left if navigation_test_direction == "left" else LaneChangeDirection.right
       self.desire = navigation_test_lane_change_desire
-    elif navigation_test_action == "laneChange":
-      self.turn_direction = TurnDirection.none
-      self.lane_change_state = LaneChangeState.off
-      self.lane_change_direction = LaneChangeDirection.none
-      self.desire = log.Desire.none
     elif navigation_test_turn_active:
       self.turn_direction = navigation_test_turn_direction
       self.desire = TURN_DESIRES[self.turn_direction]

@@ -10,7 +10,7 @@ from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedCo
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
 NAVIGATION_EXIT_TARGET_SPEED = 17.9  # 40 mph / 64 kph
-NAVIGATION_TURN_TARGET_SPEED = 9.0   # 20 mph / 32 kph
+NAVIGATION_TURN_TARGET_SPEED_SHARP = 9.0   # 20 mph / 32 kph
 NAVIGATION_PREP_DECEL = 1.2
 
 class FrogPilotVCruise:
@@ -143,12 +143,21 @@ class FrogPilotVCruise:
     if distance <= 0:
       return 0
 
+    target_speed_from_nav = float(command_json.get("targetSpeed", 0.0))
+    if target_speed_from_nav <= 0.0:
+      target_speed_from_nav = 0.0
+
+    display_direction = str(command_json.get("displayDirection", "none")).lower()
+    is_sharp_turn = display_direction in ("sharp_left", "sharp_right", "uturn")
+
     strategy_phase = command_json.get("strategyPhase", "none")
-    target_speed = (
-      NAVIGATION_EXIT_TARGET_SPEED
-      if action == "laneChange" or "Exit" in strategy_phase
-      else NAVIGATION_TURN_TARGET_SPEED
-    )
+    if action == "laneChange" or "Exit" in strategy_phase:
+      target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_EXIT_TARGET_SPEED
+    elif action == "turn" and is_sharp_turn:
+      target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_TURN_TARGET_SPEED_SHARP
+    else:
+      return 0
+
     decel = min(NAVIGATION_PREP_DECEL, COMFORT_BRAKE)
     speed_target_now = (target_speed ** 2 + 2.0 * decel * distance) ** 0.5
 
