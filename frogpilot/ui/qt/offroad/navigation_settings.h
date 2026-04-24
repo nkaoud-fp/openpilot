@@ -18,8 +18,10 @@ protected:
 
 private:
   void createKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix, const int &minLength, FrogPilotListWidget *list);
+  void createTextControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &subtitle, FrogPilotListWidget *list, bool secret = false, int minLength = 0, bool numeric = false);
   void mousePressEvent(QMouseEvent *event);
   void updateButtons();
+  void updateEmailControls();
   void updateState(const UIState &s, const FrogPilotUIState &fs);
   void updateStep();
 
@@ -34,7 +36,15 @@ private:
   ButtonControl *publicMapboxKeyControl;
   ButtonControl *secretMapboxKeyControl;
   ButtonControl *setupButton;
+  ButtonControl *smtpHostControl;
+  ButtonControl *smtpPortControl;
+  ButtonControl *smtpUserControl;
+  ButtonControl *smtpPasswordControl;
+  ButtonControl *emailFromControl;
+  ButtonControl *emailToControl;
 
+  ParamControl *autoEmailToggle;
+  ParamControl *driveLoggingToggle;
   FrogPilotButtonControl *updateSpeedLimitsToggle;
 
   FrogPilotButtonsControl *searchInput;
@@ -42,6 +52,8 @@ private:
   FrogPilotSettingsWindow *parent;
 
   LabelControl *ipLabel;
+  LabelControl *emailStatusLabel;
+  LabelControl *lastLogLabel;
 
   Params params;
   Params params_cache{"/cache/params"};

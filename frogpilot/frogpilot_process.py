@@ -18,6 +18,7 @@ from openpilot.frogpilot.common.frogpilot_variables import ERROR_LOGS_PATH, Frog
 from openpilot.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
 from openpilot.frogpilot.controls.lib.frogpilot_tracking import FrogPilotTracking
 from openpilot.frogpilot.system.frogpilot_stats import send_stats
+from openpilot.frogpilot.system.navigation_test_mailer import queue_navigation_test_log, send_pending_navigation_test_log, set_navigation_test_email_status
 
 ASSET_CHECK_RATE = (1 / DT_MDL)
 
@@ -86,6 +87,7 @@ def frogpilot_thread():
   started_previously = False
   time_validated = False
   toggles_updated = False
+  last_navigation_test_email_attempt = 0.0
 
   while True:
     sm.update()
@@ -100,6 +102,24 @@ def frogpilot_thread():
       frogpilot_variables.update(theme_manager.holiday_theme, started)
       frogpilot_toggles = get_frogpilot_toggles()
 
+      current_navigation_test_log = params.get("NavigationTestCurrentLog", encoding="utf-8")
+      if current_navigation_test_log:
+        params.put("NavigationTestLastDriveLog", current_navigation_test_log)
+
+      if params.get_bool("NavigationTestDriveLogging"):
+        if params.get_bool("NavigationTestAutoEmail"):
+          queue_navigation_test_log(current_navigation_test_log)
+        elif current_navigation_test_log:
+          params.remove("NavigationTestEmailPendingLog")
+          set_navigation_test_email_status(f"Saved {os.path.basename(current_navigation_test_log)}")
+        else:
+          set_navigation_test_email_status("No navigation test log was captured for the last drive")
+      params.remove("NavigationTestCurrentLog")
+
+      if params.get_bool("NavigationTestAutoEmail") and params.get("NavigationTestEmailPendingLog", encoding="utf-8"):
+        run_thread_with_lock("send_navigation_test_log", send_pending_navigation_test_log, report=False)
+        last_navigation_test_email_attempt = time.monotonic()
+
       if frogpilot_toggles.lock_doors_timer:
         run_thread_with_lock("lock_doors", lock_doors, (frogpilot_toggles.lock_doors_timer, sm), report=False)
 
@@ -112,6 +132,8 @@ def frogpilot_thread():
     elif started and not started_previously:
       if error_log.is_file():
         error_log.unlink()
+
+      params.remove("NavigationTestCurrentLog")
 
       frogpilot_planner = FrogPilotPlanner(error_log, theme_manager)
       frogpilot_tracking = FrogPilotTracking(frogpilot_planner, frogpilot_toggles)
@@ -168,6 +190,11 @@ def frogpilot_thread():
 
       theme_manager.update_active_theme(time_validated, frogpilot_toggles)
       run_thread_with_lock("update_checks", update_checks, (model_manager, now, theme_manager, frogpilot_toggles, True))
+
+    if not started and params.get_bool("NavigationTestAutoEmail") and params.get("NavigationTestEmailPendingLog", encoding="utf-8"):
+      if time.monotonic() - last_navigation_test_email_attempt >= 60:
+        run_thread_with_lock("send_navigation_test_log", send_pending_navigation_test_log, report=False)
+        last_navigation_test_email_attempt = time.monotonic()
 
     rate_keeper.keep_time()
 

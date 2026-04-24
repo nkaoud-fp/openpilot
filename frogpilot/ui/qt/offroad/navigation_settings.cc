@@ -1,5 +1,7 @@
 #include "frogpilot/ui/qt/offroad/navigation_settings.h"
 
+#include <QFileInfo>
+
 FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   QJsonObject shownDescriptions = QJsonDocument::fromJson(QString::fromStdString(params.get("ShownToggleDescriptions")).toUtf8()).object();
   QString className = this->metaObject()->className();
@@ -38,6 +40,35 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
 
   createKeyControl(publicMapboxKeyControl, tr("Public Mapbox Key"), "MapboxPublicKey", "pk.", 80, settingsList);
   createKeyControl(secretMapboxKeyControl, tr("Secret Mapbox Key"), "MapboxSecretKey", "sk.", 80, settingsList);
+
+  driveLoggingToggle = new ParamControl("NavigationTestDriveLogging", tr("Navigation Test Drive Logging"),
+                                        tr("<b>Save a per-drive CSV log</b> with navigation test maneuver decisions, prep phases, distances, and constraints for tuning."),
+                                        "");
+  settingsList->addItem(driveLoggingToggle);
+
+  lastLogLabel = new LabelControl(tr("Latest Navigation Test Log"), tr("Waiting for first drive..."));
+  settingsList->addItem(lastLogLabel);
+
+  autoEmailToggle = new ParamControl("NavigationTestAutoEmail", tr("Email Latest Navigation Test Log"),
+                                     tr("<b>Queue the most recent navigation test drive log for email</b> when the drive ends and retry while the device stays offroad."),
+                                     "");
+  settingsList->addItem(autoEmailToggle);
+
+  createTextControl(smtpHostControl, tr("SMTP Host"), "NavigationTestEmailSMTPHost",
+                    tr("<b>Set the SMTP server hostname</b> used for navigation test log emails."), settingsList, false, 1);
+  createTextControl(smtpPortControl, tr("SMTP Port"), "NavigationTestEmailSMTPPort",
+                    tr("<b>Set the SMTP server port</b> used for navigation test log emails."), settingsList, false, 1, true);
+  createTextControl(smtpUserControl, tr("SMTP Username"), "NavigationTestEmailSMTPUser",
+                    tr("<b>Set the SMTP username</b> used for navigation test log emails."), settingsList, false, 1);
+  createTextControl(smtpPasswordControl, tr("SMTP Password"), "NavigationTestEmailSMTPPassword",
+                    tr("<b>Set the SMTP password</b> used for navigation test log emails."), settingsList, true);
+  createTextControl(emailFromControl, tr("Email From"), "NavigationTestEmailFrom",
+                    tr("<b>Set the sender email address</b> used for navigation test log emails."), settingsList, false, 3);
+  createTextControl(emailToControl, tr("Email To"), "NavigationTestEmailTo",
+                    tr("<b>Set the recipient email address</b> used for navigation test log emails."), settingsList, false, 3);
+
+  emailStatusLabel = new LabelControl(tr("Navigation Test Email Status"), tr("Idle"));
+  settingsList->addItem(emailStatusLabel);
 
   setupButton = new ButtonControl(tr("Mapbox Setup Instructions"), tr("VIEW"), tr("<b>Instructions on how to set up Mapbox</b> for \"Primeless Navigation\"."), this);
   QObject::connect(setupButton, &ButtonControl::clicked, [this]() {
@@ -139,12 +170,26 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
     if (forceOpenDescriptions) {
       amapKeyControl1->showDescription();
       amapKeyControl2->showDescription();
+      autoEmailToggle->showDescription();
+      driveLoggingToggle->showDescription();
+      emailFromControl->showDescription();
+      emailToControl->showDescription();
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
       setupButton->showDescription();
+      smtpHostControl->showDescription();
+      smtpPasswordControl->showDescription();
+      smtpPortControl->showDescription();
+      smtpUserControl->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
+  });
+  QObject::connect(static_cast<ToggleControl*>(driveLoggingToggle), &ToggleControl::toggleFlipped, [this](bool) {
+    updateEmailControls();
+  });
+  QObject::connect(static_cast<ToggleControl*>(autoEmailToggle), &ToggleControl::toggleFlipped, [this](bool) {
+    updateEmailControls();
   });
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotNavigationPanel::updateState);
 }
@@ -153,10 +198,18 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
   if (forceOpenDescriptions) {
     amapKeyControl1->showDescription();
     amapKeyControl2->showDescription();
+    autoEmailToggle->showDescription();
+    driveLoggingToggle->showDescription();
+    emailFromControl->showDescription();
+    emailToControl->showDescription();
     publicMapboxKeyControl->showDescription();
     searchInput->showDescription();
     secretMapboxKeyControl->showDescription();
     setupButton->showDescription();
+    smtpHostControl->showDescription();
+    smtpPasswordControl->showDescription();
+    smtpPortControl->showDescription();
+    smtpUserControl->showDescription();
     updateSpeedLimitsToggle->showDescription();
   }
 
@@ -179,6 +232,8 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
 
   amapKeyControl1->setVisible(selectedSearchInput == 1);
   amapKeyControl2->setVisible(selectedSearchInput == 1);
+
+  updateEmailControls();
 
   updateSpeedLimitsToggle->setVisibleButton(0, updatingLimits);
   updateSpeedLimitsToggle->setVisibleButton(1, !updatingLimits);
@@ -205,10 +260,18 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
     if (forceOpenDescriptions) {
       amapKeyControl1->showDescription();
       amapKeyControl2->showDescription();
+      autoEmailToggle->showDescription();
+      driveLoggingToggle->showDescription();
+      emailFromControl->showDescription();
+      emailToControl->showDescription();
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
       setupButton->showDescription();
+      smtpHostControl->showDescription();
+      smtpPasswordControl->showDescription();
+      smtpPortControl->showDescription();
+      smtpUserControl->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
   }
@@ -244,6 +307,45 @@ void FrogPilotNavigationPanel::createKeyControl(ButtonControl *&control, const Q
   list->addItem(control);
 }
 
+void FrogPilotNavigationPanel::createTextControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &subtitle, FrogPilotListWidget *list, bool secret, int minLength, bool numeric) {
+  control = new ButtonControl(label, "", subtitle);
+  QObject::connect(control, &ButtonControl::clicked, [=] {
+    const QString currentValue = QString::fromStdString(params.get(paramKey));
+
+    if (control->text() == tr("REMOVE")) {
+      if (FrogPilotConfirmationDialog::yesorno(tr("Remove your %1?").arg(label), this)) {
+        params.remove(paramKey);
+        params_cache.remove(paramKey);
+      }
+    } else {
+      QString value = InputDialog::getText(tr("Enter your %1").arg(label), this, "", secret, minLength, currentValue).trimmed();
+      if (value.isEmpty()) {
+        return;
+      }
+
+      if (numeric) {
+        bool ok = false;
+        int number = value.toInt(&ok);
+        if (!ok || number < 1 || number > 65535) {
+          ConfirmationDialog::alert(tr("Please enter a valid number between 1 and 65535."), this);
+          return;
+        }
+        value = QString::number(number);
+      } else if (value.length() < minLength) {
+        ConfirmationDialog::alert(tr("Input is invalid or too short!"), this);
+        return;
+      }
+
+      params.put(paramKey, value.toStdString());
+    }
+
+    control->setText(params.get(paramKey).empty() ? tr("ADD") : tr("REMOVE"));
+    updateEmailControls();
+  });
+  control->setText(params.get(paramKey).empty() ? tr("ADD") : tr("REMOVE"));
+  list->addItem(control);
+}
+
 void FrogPilotNavigationPanel::updateButtons() {
   amapKeyControl1->setText(params.get("AMapKey1").empty() ? tr("ADD") : tr("REMOVE"));
   amapKeyControl2->setText(params.get("AMapKey2").empty() ? tr("ADD") : tr("REMOVE"));
@@ -255,12 +357,38 @@ void FrogPilotNavigationPanel::updateButtons() {
   secretMapboxKeyControl->setText(mapboxSecretKeySet ? tr("REMOVE") : tr("ADD"));
 }
 
+void FrogPilotNavigationPanel::updateEmailControls() {
+  bool driveLoggingEnabled = params.getBool("NavigationTestDriveLogging");
+  bool autoEmailEnabled = params.getBool("NavigationTestAutoEmail");
+
+  QString lastLogPath = QString::fromStdString(params.get("NavigationTestLastDriveLog"));
+  QString emailStatus = QString::fromStdString(params.get("NavigationTestEmailLastStatus"));
+
+  lastLogLabel->setVisible(driveLoggingEnabled || !lastLogPath.isEmpty());
+  if (lastLogPath.isEmpty()) {
+    lastLogLabel->setText(tr("Waiting for first drive..."));
+  } else {
+    QFileInfo logInfo(lastLogPath);
+    lastLogLabel->setText(logInfo.fileName());
+  }
+
+  smtpHostControl->setVisible(autoEmailEnabled);
+  smtpPortControl->setVisible(autoEmailEnabled);
+  smtpUserControl->setVisible(autoEmailEnabled);
+  smtpPasswordControl->setVisible(autoEmailEnabled);
+  emailFromControl->setVisible(autoEmailEnabled);
+  emailToControl->setVisible(autoEmailEnabled);
+  emailStatusLabel->setVisible(driveLoggingEnabled || autoEmailEnabled || !emailStatus.isEmpty());
+  emailStatusLabel->setText(emailStatus.isEmpty() ? tr("Idle") : emailStatus);
+}
+
 void FrogPilotNavigationPanel::updateState(const UIState &s, const FrogPilotUIState &fs) {
   if (!isVisible() || s.sm->frame % (UI_FREQ / 2) != 0) {
     return;
   }
 
   updateButtons();
+  updateEmailControls();
   updateStep();
 
   bool parked = !s.scene.started || fs.frogpilot_scene.parked || fs.frogpilot_toggles.value("frogs_go_moo").toBool();

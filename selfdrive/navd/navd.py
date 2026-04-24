@@ -51,7 +51,7 @@ NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE = 50
 NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE = 80
 NAVIGATION_TEST_DESTINATION_MISSED_DRIFT = 30
 NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN = 2
-NAVIGATION_TEST_DEBUG_LOG_PATH = "/data/media/0/navigation_test_debug.csv"
+NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "time",
@@ -120,7 +120,8 @@ class RouteEngine:
     self.navigation_test_exit_migration_started_at = 0.0
     self.navigation_test_exit_migration_start_distance = 0.0
     self.navigation_test_debug_last_log_time = 0.0
-    self.navigation_test_debug_log_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", NAVIGATION_TEST_DEBUG_LOG_PATH)
+    self.navigation_test_debug_log_override_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", "")
+    self.navigation_test_debug_log_dir = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_DIR", NAVIGATION_TEST_DEBUG_LOG_DIR)
 
     # Threading variables
     self.route_thread = None
@@ -518,7 +519,7 @@ class RouteEngine:
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
   def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None):
-    if not self.params.get_bool("NavigationTestControl"):
+    if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
       return
 
     now = time.monotonic()
@@ -566,14 +567,43 @@ class RouteEngine:
     }
 
     try:
-      write_header = not os.path.exists(self.navigation_test_debug_log_path) or os.path.getsize(self.navigation_test_debug_log_path) == 0
-      with open(self.navigation_test_debug_log_path, "a", newline="") as debug_file:
+      debug_log_path = self.navigation_test_debug_log_path()
+      if not debug_log_path:
+        return
+
+      write_header = not os.path.exists(debug_log_path) or os.path.getsize(debug_log_path) == 0
+      with open(debug_log_path, "a", newline="") as debug_file:
         writer = csv.DictWriter(debug_file, fieldnames=NAVIGATION_TEST_DEBUG_LOG_FIELDS)
         if write_header:
           writer.writeheader()
         writer.writerow(row)
     except OSError:
       cloudlog.exception("navigation_test_debug.failed_to_write")
+
+  def navigation_test_debug_log_path(self):
+    if self.navigation_test_debug_log_override_path:
+      override_dir = os.path.dirname(self.navigation_test_debug_log_override_path)
+      if override_dir:
+        os.makedirs(override_dir, exist_ok=True)
+      return self.navigation_test_debug_log_override_path
+
+    existing_path = self.params.get("NavigationTestCurrentLog", encoding="utf8")
+    if existing_path:
+      existing_dir = os.path.dirname(existing_path)
+      if existing_dir:
+        os.makedirs(existing_dir, exist_ok=True)
+      return existing_path
+
+    os.makedirs(self.navigation_test_debug_log_dir, exist_ok=True)
+
+    destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
+    safe_destination = "".join(char if char.isalnum() or char in ("-", "_") else "_" for char in destination_id)
+    filename = f"navigation_test_{safe_destination}_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}.csv"
+    debug_log_path = os.path.join(self.navigation_test_debug_log_dir, filename)
+
+    self.params.put("NavigationTestCurrentLog", debug_log_path)
+    self.params.put("NavigationTestLastDriveLog", debug_log_path)
+    return debug_log_path
 
   def recompute_route(self):
     if self.last_position is None:
@@ -834,20 +864,20 @@ class RouteEngine:
         )
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry)
 
-      #self.log_navigation_test_debug(
-        #instruction,
-        #geometry,
-        #distance_to_maneuver_along_geometry,
-        #command_distance,
-        #navigation_test_action,
-        #navigation_test_direction,
-        #cross_track_error,
-        #navigation_test_strategy_phase,
-        #navigation_test_strategy_threshold,
-        #navigation_test_strategy_constraint,
-        #next_maneuver_direction,
-        #next_maneuver_distance_after_current,
-      #)
+      self.log_navigation_test_debug(
+        instruction,
+        geometry,
+        distance_to_maneuver_along_geometry,
+        command_distance,
+        navigation_test_action,
+        navigation_test_direction,
+        cross_track_error,
+        navigation_test_strategy_phase,
+        navigation_test_strategy_threshold,
+        navigation_test_strategy_constraint,
+        next_maneuver_direction,
+        next_maneuver_distance_after_current,
+      )
 
     maneuvers = []
     for i, step_i in enumerate(self.route):
