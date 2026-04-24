@@ -1,0 +1,5 @@
+BREVO_SMTP_LOGIN = a5bf6c001@smtp-brevo.com
+BREVO_SMTP_KEY = xsmtpsib-1ec2f2d02dcf48b6788187c95ab8cb4dd879d45380d0949ab7211fd61df6d2ad-Vm61pAIPZg8u33d3
+EMAIL_RECEIVER = nizar.kaoud@gmail.com
+SENDER_EMAIL = nizar.kaoud@gmail.com
+
