@@ -10,10 +10,13 @@ from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 
 NAVIGATION_TEST_EMAIL_STATUS_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-NAVIGATION_TEST_EMAIL_SUBJECT = "FrogPilot navigation test drive log"
+NAVIGATION_TEST_EMAIL_SUBJECT = "Comma Navigation Test"
 NAVIGATION_TEST_EMAIL_BODY = (
   "Attached is the latest FrogPilot navigation test drive log.\n\n"
   "This message was generated automatically when the drive ended."
+)
+NAVIGATION_TEST_EMAIL_CONFIG_PATH = os.path.abspath(
+  os.path.join(os.path.dirname(__file__), "..", "..", "selfdrive", "navd", "config.txt")
 )
 
 
@@ -27,6 +30,27 @@ def _set_status(params, message):
 
 def set_navigation_test_email_status(message):
   _set_status(Params(), message)
+
+
+def _read_navigation_test_email_config():
+  if not os.path.isfile(NAVIGATION_TEST_EMAIL_CONFIG_PATH):
+    return {}
+
+  config = {}
+  try:
+    with open(NAVIGATION_TEST_EMAIL_CONFIG_PATH, "r", encoding="utf-8") as config_file:
+      for raw_line in config_file:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+          continue
+
+        key, value = line.split("=", 1)
+        config[key.strip()] = value.strip().strip('"').strip("'")
+  except OSError:
+    cloudlog.exception("navigation_test_email.config_read_failed")
+    return {}
+
+  return config
 
 
 def queue_navigation_test_log(log_path):
@@ -59,11 +83,13 @@ def send_pending_navigation_test_log():
     _set_status(params, "Pending navigation test log no longer exists")
     return False
 
-  smtp_host = params.get("NavigationTestEmailSMTPHost", encoding="utf8")
-  smtp_user = params.get("NavigationTestEmailSMTPUser", encoding="utf8")
-  smtp_password = params.get("NavigationTestEmailSMTPPassword", encoding="utf8")
-  email_from = params.get("NavigationTestEmailFrom", encoding="utf8")
-  email_to = params.get("NavigationTestEmailTo", encoding="utf8")
+  config = _read_navigation_test_email_config()
+
+  smtp_host = config.get("BREVO_SMTP_HOST") or params.get("NavigationTestEmailSMTPHost", encoding="utf8") or "smtp-relay.brevo.com"
+  smtp_user = config.get("BREVO_SMTP_LOGIN") or params.get("NavigationTestEmailSMTPUser", encoding="utf8")
+  smtp_password = config.get("BREVO_SMTP_KEY") or params.get("NavigationTestEmailSMTPPassword", encoding="utf8")
+  email_from = config.get("SENDER_EMAIL") or params.get("NavigationTestEmailFrom", encoding="utf8")
+  email_to = config.get("EMAIL_RECEIVER") or params.get("NavigationTestEmailTo", encoding="utf8")
 
   missing_config = []
   if not smtp_host:
@@ -79,7 +105,7 @@ def send_pending_navigation_test_log():
     _set_status(params, f"Email config incomplete: {', '.join(missing_config)}")
     return False
 
-  smtp_port_raw = params.get("NavigationTestEmailSMTPPort", encoding="utf8") or "587"
+  smtp_port_raw = config.get("BREVO_SMTP_PORT") or params.get("NavigationTestEmailSMTPPort", encoding="utf8") or "587"
   try:
     smtp_port = int(smtp_port_raw)
   except (TypeError, ValueError):
@@ -87,7 +113,7 @@ def send_pending_navigation_test_log():
     return False
 
   message = EmailMessage()
-  message["Subject"] = f"{NAVIGATION_TEST_EMAIL_SUBJECT} - {os.path.basename(pending_log)}"
+  message["Subject"] = f"{NAVIGATION_TEST_EMAIL_SUBJECT} - {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}"
   message["From"] = email_from
   message["To"] = email_to
   message.set_content(NAVIGATION_TEST_EMAIL_BODY)
@@ -116,6 +142,14 @@ def send_pending_navigation_test_log():
     _set_status(params, f"Send failed for {os.path.basename(pending_log)}")
     return False
 
+  try:
+    os.remove(pending_log)
+  except OSError:
+    cloudlog.exception("navigation_test_email.cleanup_failed")
+    _set_status(params, f"Sent {os.path.basename(pending_log)} but could not delete the log file")
+    params.remove("NavigationTestEmailPendingLog")
+    return False
+
   params.remove("NavigationTestEmailPendingLog")
-  _set_status(params, f"Sent {os.path.basename(pending_log)}")
+  _set_status(params, f"Sent and deleted {os.path.basename(pending_log)}")
   return True
