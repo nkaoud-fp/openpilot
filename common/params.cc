@@ -173,6 +173,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"NavDestinationWaypoints", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavigationTestControl", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavigationTestSelectedDestination", PERSISTENT},
+    {"NavigationTestPrepStatus", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavigationTestTurnCommand", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavPastDestinations", PERSISTENT},
     {"NavSettingLeftSide", PERSISTENT},

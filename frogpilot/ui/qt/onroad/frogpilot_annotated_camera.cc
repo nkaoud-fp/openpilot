@@ -724,6 +724,12 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   QString error = command.value("error").toString("");
   double distance = command.value("distance").toDouble(0.0);
   double etaSeconds = command.value("etaSeconds").toDouble(0.0);
+  QJsonObject prepStatus = QJsonDocument::fromJson(QString::fromStdString(params.get("NavigationTestPrepStatus")).toUtf8()).object();
+  QString prepStage = prepStatus.value("stage").toString("idle");
+  QString prepDirection = prepStatus.value("direction").toString("none").replace("_", " ");
+  int completedLaneChanges = prepStatus.value("completedLaneChanges").toInt(0);
+  int maxLaneChanges = prepStatus.value("maxLaneChanges").toInt(0);
+  double cooldownRemaining = prepStatus.value("cooldownRemaining").toDouble(0.0);
 
   QString actionText = tr("idle");
   QColor borderColor = blackColor();
@@ -773,6 +779,36 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   QFontMetrics metrics(font);
   int textWidth = std::min(metrics.horizontalAdvance(actionText), width() - 240);
   QRect actionRect((width() - textWidth - 90) / 2, rect().bottom() - 135, textWidth + 90, 62);
+
+  QString prepText;
+  if (prepStage == "preparing") {
+    prepText = tr("exit prep: checking %1 lane %2/%3").arg(prepDirection).arg(completedLaneChanges).arg(maxLaneChanges);
+  } else if (prepStage == "changing") {
+    prepText = tr("exit prep: changing %1 %2/%3").arg(prepDirection).arg(completedLaneChanges + 1).arg(maxLaneChanges);
+  } else if (prepStage == "cooldown") {
+    prepText = tr("exit prep: cooldown %1s %2/%3").arg(static_cast<int>(cooldownRemaining + 0.999)).arg(completedLaneChanges).arg(maxLaneChanges);
+  } else if (prepStage == "edgeReached") {
+    prepText = tr("exit prep: edge lane reached %1/%2").arg(completedLaneChanges).arg(maxLaneChanges);
+  } else if (prepStage == "maxLaneChanges") {
+    prepText = tr("exit prep: max lanes %1/%2").arg(completedLaneChanges).arg(maxLaneChanges);
+  } else if (prepStage == "blocked") {
+    prepText = tr("exit prep: blocked %1 %2/%3").arg(prepDirection).arg(completedLaneChanges).arg(maxLaneChanges);
+  }
+
+  if (!prepText.isEmpty()) {
+    QFont prepFont = InterFont(32, QFont::DemiBold);
+    QFontMetrics prepMetrics(prepFont);
+    int prepTextWidth = std::min(prepMetrics.horizontalAdvance(prepText), width() - 280);
+    QRect prepRect((width() - prepTextWidth - 80) / 2, actionRect.top() - 72, prepTextWidth + 80, 54);
+
+    p.setBrush(blackColor(180));
+    p.setPen(QPen(blueColor(), 5));
+    p.drawRoundedRect(prepRect, 22, 22);
+
+    p.setFont(prepFont);
+    p.setPen(QPen(whiteColor(), 6));
+    p.drawText(prepRect.adjusted(30, 0, -30, 0), Qt::AlignCenter, prepMetrics.elidedText(prepText, Qt::ElideRight, prepRect.width() - 60));
+  }
 
   p.setBrush(blackColor(190));
   p.setPen(QPen(borderColor, 6));

@@ -13,6 +13,10 @@ LANE_CHANGE_SPEED_MIN = 20 * CV.MPH_TO_MS
 LANE_CHANGE_TIME_MAX = 10.
 NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE = 30.0
 NAVIGATION_TEST_LANE_CHANGE_CONDITION_TIME = 2.0
+NAVIGATION_TEST_LANE_CHANGE_COMPLETE_PROB = 0.02
+NAVIGATION_TEST_LANE_CHANGE_COMPLETE_TIME = 4.0
+NAVIGATION_TEST_LANE_CHANGE_COOLDOWN = 3.0
+NAVIGATION_TEST_MAX_LANE_CHANGES = 3
 
 DESIRES = {
   LaneChangeDirection.none: {
@@ -69,36 +73,134 @@ class DesireHelper:
     self.lane_change_wait_timer = 0
     self.navigation_test_lane_change_condition_timer = 0.0
     self.navigation_test_lane_change_condition_direction = "none"
+    self.navigation_test_lane_change_active = False
+    self.navigation_test_lane_change_timer = 0.0
+    self.navigation_test_lane_change_cooldown_timer = 0.0
+    self.navigation_test_lane_change_count = 0
+    self.navigation_test_lane_change_key = None
+    self.navigation_test_prep_status = None
 
   def navigation_test_command(self):
     if not self.params.get_bool("NavigationTestControl"):
-      return "none", "none"
+      self.reset_navigation_test_lane_change_plan()
+      self.update_navigation_test_prep_status("idle")
+      return "none", "none", {}
 
     command = self.params.get("NavigationTestTurnCommand", encoding="utf-8")
     if command is None:
-      return "none", "none"
+      self.reset_navigation_test_lane_change_plan()
+      self.update_navigation_test_prep_status("idle")
+      return "none", "none", {}
 
     try:
       command_json = json.loads(command)
     except json.JSONDecodeError:
-      return "none", "none"
+      self.reset_navigation_test_lane_change_plan()
+      self.update_navigation_test_prep_status("idle")
+      return "none", "none", {}
 
     direction = command_json.get("direction", "none")
     action = command_json.get("action", "turn" if direction in NAVIGATION_TEST_DIRECTIONS else "none")
     if direction not in NAVIGATION_TEST_DIRECTIONS:
-      return "none", "none"
-    return action, direction
+      self.reset_navigation_test_lane_change_plan()
+      self.update_navigation_test_prep_status("idle")
+      return "none", "none", command_json
+    return action, direction, command_json
+
+  def reset_navigation_test_lane_change_plan(self):
+    self.navigation_test_lane_change_active = False
+    self.navigation_test_lane_change_timer = 0.0
+    self.navigation_test_lane_change_cooldown_timer = 0.0
+    self.navigation_test_lane_change_count = 0
+    self.navigation_test_lane_change_key = None
+    self.navigation_test_lane_change_condition_timer = 0.0
+    self.navigation_test_lane_change_condition_direction = "none"
+
+  def update_navigation_test_prep_status(self, stage, direction="none", max_lane_changes=NAVIGATION_TEST_MAX_LANE_CHANGES, reason=""):
+    status = json.dumps({
+      "stage": stage,
+      "direction": direction,
+      "completedLaneChanges": self.navigation_test_lane_change_count,
+      "maxLaneChanges": max_lane_changes,
+      "cooldownRemaining": max(self.navigation_test_lane_change_cooldown_timer, 0.0),
+      "reason": reason,
+    })
+    if status != self.navigation_test_prep_status:
+      self.params.put("NavigationTestPrepStatus", status)
+      self.navigation_test_prep_status = status
+
+  def navigation_test_lane_available(self, direction, frogpilotPlan, frogpilot_toggles):
+    desired_lane_width = frogpilotPlan.laneWidthLeft if direction == "left" else frogpilotPlan.laneWidthRight
+    return desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
 
   def navigation_test_lane_change_allowed(self, direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
     if below_lane_change_speed or not frogpilot_toggles.lane_changes:
       return False
 
-    desired_lane_width = frogpilotPlan.laneWidthLeft if direction == "left" else frogpilotPlan.laneWidthRight
-    lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
+    lane_available = self.navigation_test_lane_available(direction, frogpilotPlan, frogpilot_toggles)
     blindspot_detected = (carstate.leftBlindspot and direction == "left") or (carstate.rightBlindspot and direction == "right")
     adjacent_lead = frogpilotRadarState.leadLeft if direction == "left" else frogpilotRadarState.leadRight
     adjacent_lead_too_close = adjacent_lead.status and adjacent_lead.dRel < NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE
     return lane_available and not blindspot_detected and not adjacent_lead_too_close
+
+  def navigation_test_lane_change_desire_active(self, action, direction, command_json, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed, lane_change_prob):
+    if action != "laneChange" or direction not in NAVIGATION_TEST_LANE_CHANGE_DESIRES:
+      self.reset_navigation_test_lane_change_plan()
+      self.update_navigation_test_prep_status("idle")
+      return False
+
+    max_lane_changes = max(1, int(command_json.get("maxLaneChanges", NAVIGATION_TEST_MAX_LANE_CHANGES)))
+    cooldown_seconds = max(0.0, float(command_json.get("laneChangeCooldown", NAVIGATION_TEST_LANE_CHANGE_COOLDOWN)))
+    migration_start_distance = round(float(command_json.get("migrationStartDistance", 0.0)), 1)
+    migration_key = (direction, migration_start_distance)
+    if migration_key != self.navigation_test_lane_change_key:
+      self.reset_navigation_test_lane_change_plan()
+      self.navigation_test_lane_change_key = migration_key
+
+    if self.navigation_test_lane_change_active:
+      self.navigation_test_lane_change_timer += DT_MDL
+      complete_by_model = self.navigation_test_lane_change_timer >= NAVIGATION_TEST_LANE_CHANGE_COMPLETE_TIME and lane_change_prob < NAVIGATION_TEST_LANE_CHANGE_COMPLETE_PROB
+      complete_by_timeout = self.navigation_test_lane_change_timer >= LANE_CHANGE_TIME_MAX
+      if complete_by_model or complete_by_timeout:
+        self.navigation_test_lane_change_active = False
+        self.navigation_test_lane_change_timer = 0.0
+        self.navigation_test_lane_change_count += 1
+        self.navigation_test_lane_change_cooldown_timer = cooldown_seconds
+        self.navigation_test_lane_change_condition_timer = 0.0
+        self.navigation_test_lane_change_condition_direction = "none"
+        self.update_navigation_test_prep_status("cooldown", direction, max_lane_changes)
+        return False
+
+      self.update_navigation_test_prep_status("changing", direction, max_lane_changes)
+      return True
+
+    if self.navigation_test_lane_change_count >= max_lane_changes:
+      self.update_navigation_test_prep_status("maxLaneChanges", direction, max_lane_changes)
+      return False
+
+    if not self.navigation_test_lane_available(direction, frogpilotPlan, frogpilot_toggles):
+      self.update_navigation_test_prep_status("edgeReached", direction, max_lane_changes)
+      return False
+
+    if self.navigation_test_lane_change_cooldown_timer > 0.0:
+      self.navigation_test_lane_change_cooldown_timer = max(self.navigation_test_lane_change_cooldown_timer - DT_MDL, 0.0)
+      self.update_navigation_test_prep_status("cooldown", direction, max_lane_changes)
+      return False
+
+    allowed = self.navigation_test_lane_change_allowed(direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
+    if not allowed:
+      self.update_navigation_test_prep_status("blocked", direction, max_lane_changes)
+      return False
+
+    stable = self.navigation_test_lane_change_conditions_stable(action, direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
+    if not stable:
+      self.update_navigation_test_prep_status("preparing", direction, max_lane_changes)
+      return False
+
+    self.navigation_test_lane_change_active = True
+    self.navigation_test_lane_change_timer = 0.0
+    self.update_navigation_test_prep_status("changing", direction, max_lane_changes)
+    return True
 
   def navigation_test_lane_change_conditions_stable(self, action, direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
     conditions_met = (
@@ -195,16 +297,23 @@ class DesireHelper:
     self.lane_change_completed &= one_blinker
     self.prev_one_blinker = one_blinker
 
-    navigation_test_action, navigation_test_direction = self.navigation_test_command()
+    navigation_test_action, navigation_test_direction, navigation_test_command = self.navigation_test_command()
     navigation_test_turn_direction = NAVIGATION_TEST_DIRECTIONS.get(navigation_test_direction, TurnDirection.none) if navigation_test_action == "turn" else TurnDirection.none
     navigation_test_lane_change_desire = NAVIGATION_TEST_LANE_CHANGE_DESIRES.get(navigation_test_direction, log.Desire.none) if navigation_test_action == "laneChange" else log.Desire.none
     navigation_test_lane_change_active = navigation_test_lane_change_desire != log.Desire.none
-    navigation_test_lane_change_active &= self.navigation_test_lane_change_conditions_stable(navigation_test_action, navigation_test_direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
+    navigation_test_lane_change_active &= self.navigation_test_lane_change_desire_active(navigation_test_action, navigation_test_direction, navigation_test_command, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed, lane_change_prob)
     navigation_test_turn_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
 
     if navigation_test_lane_change_active:
       self.turn_direction = TurnDirection.none
+      self.lane_change_state = LaneChangeState.laneChangeStarting
+      self.lane_change_direction = LaneChangeDirection.left if navigation_test_direction == "left" else LaneChangeDirection.right
       self.desire = navigation_test_lane_change_desire
+    elif navigation_test_action == "laneChange":
+      self.turn_direction = TurnDirection.none
+      self.lane_change_state = LaneChangeState.off
+      self.lane_change_direction = LaneChangeDirection.none
+      self.desire = log.Desire.none
     elif navigation_test_turn_active:
       self.turn_direction = navigation_test_turn_direction
       self.desire = TURN_DESIRES[self.turn_direction]

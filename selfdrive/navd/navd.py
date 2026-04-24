@@ -36,6 +36,9 @@ NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
 NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN = 250
+NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES = 3
+NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS = 10
+NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN = 3
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED = 22.0
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS = 180
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN = 1500
@@ -245,6 +248,8 @@ class RouteEngine:
       "migrationActive": self.navigation_test_exit_migration_key is not None,
       "migrationAgeSeconds": max(migration_age, 0.0),
       "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
+      "maxLaneChanges": NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES,
+      "laneChangeCooldown": NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN,
     })
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
@@ -324,15 +329,21 @@ class RouteEngine:
 
   def navigation_test_exit_prep_distance(self):
     v_ego = self.sm['carState'].vEgo
-    return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_EXIT_PREP_SECONDS)
+    lane_prep_seconds = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES * (
+      NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS + NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN
+    )
+    return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * max(NAVIGATION_TEST_EXIT_PREP_SECONDS, lane_prep_seconds))
 
   def navigation_test_highway_exit_prep_distance(self):
     v_ego = self.sm['carState'].vEgo
     if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
       return self.navigation_test_exit_prep_distance()
+    lane_prep_seconds = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES * (
+      NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS + NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN
+    )
     return min(
       NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX,
-      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
+      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS, lane_prep_seconds)),
     )
 
   def navigation_test_next_maneuver(self, distance_to_maneuver_along_geometry):

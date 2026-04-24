@@ -96,6 +96,7 @@ NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent
       params.putBool("NavigationTestControl", false);
       params.remove("NavDestination");
       params.remove("NavDestinationWaypoints");
+      params.remove("NavigationTestPrepStatus");
       params.remove("NavigationTestTurnCommand");
     } else {
       emit destinationPickerRequested();
@@ -147,6 +148,7 @@ void NavigationDestinationButton::selectDestination() {
   params.put("NavigationTestSelectedDestination", destination_id.toStdString());
   params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
   params.remove("NavDestinationWaypoints");
+  params.remove("NavigationTestPrepStatus");
   params.remove("NavigationTestTurnCommand");
   params.putBool("NavigationTestControl", true);
   emit destinationSelected();
