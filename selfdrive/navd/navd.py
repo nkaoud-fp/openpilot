@@ -82,7 +82,14 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "migration_start_distance",
   "action",
   "direction",
+  "command_actionable",
+  "command_direction",
+  "display_direction",
+  "current_step_error",
+  "global_route_error",
   "cross_track_error",
+  "recompute_reason",
+  "route_generation",
 ]
 
 
@@ -122,6 +129,8 @@ class RouteEngine:
     self.navigation_test_debug_last_log_time = 0.0
     self.navigation_test_debug_log_override_path = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_PATH", "")
     self.navigation_test_debug_log_dir = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_DIR", NAVIGATION_TEST_DEBUG_LOG_DIR)
+    self.navigation_test_recompute_reason = "none"
+    self.navigation_test_route_generation = 0
 
     # Threading variables
     self.route_thread = None
@@ -535,7 +544,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, command_actionable=False, command_direction="none", display_direction="none", current_step_error=None, global_route_error=None):
     if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
       return
 
@@ -546,8 +555,12 @@ class RouteEngine:
 
     maneuver_coordinate = geometry[-1] if geometry else None
     distance_to_maneuver_straight = self.last_position.distance_to(maneuver_coordinate) if self.last_position is not None and maneuver_coordinate is not None else None
+    if current_step_error is None and geometry is not None:
+      current_step_error = self.path_minimum_distance(geometry)
+    if global_route_error is None:
+      global_route_error = self.navigation_test_cross_track_error()
     if cross_track_error is None:
-      cross_track_error = self.navigation_test_cross_track_error()
+      cross_track_error = global_route_error
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
@@ -580,7 +593,14 @@ class RouteEngine:
       "migration_start_distance": f"{self.navigation_test_exit_migration_start_distance:.2f}" if self.navigation_test_exit_migration_key is not None else "",
       "action": action,
       "direction": direction,
+      "command_actionable": command_actionable,
+      "command_direction": command_direction,
+      "display_direction": display_direction,
+      "current_step_error": f"{current_step_error:.2f}" if current_step_error is not None else "",
+      "global_route_error": f"{global_route_error:.2f}" if global_route_error is not None else "",
       "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
+      "recompute_reason": self.navigation_test_recompute_reason,
+      "route_generation": self.navigation_test_route_generation,
     }
 
     try:
@@ -623,11 +643,15 @@ class RouteEngine:
     return debug_log_path
 
   def recompute_route(self):
+    self.navigation_test_recompute_reason = "none"
+
     if self.last_position is None:
+      self.navigation_test_recompute_reason = "waitingGps"
       return
 
     new_destination = coordinate_from_param("NavDestination", self.params)
     if new_destination is None:
+      self.navigation_test_recompute_reason = "noDestination"
       self.clear_route()
       self.reset_recompute_limits()
       return
@@ -635,12 +659,17 @@ class RouteEngine:
     should_recompute = self.should_recompute()
     if new_destination != self.nav_destination:
       cloudlog.warning(f"Got new destination from NavDestination param {new_destination}")
+      self.navigation_test_recompute_reason = "newDestination"
       should_recompute = True
 
     if not self.gps_ok and self.step_idx is not None:
+      if should_recompute and self.navigation_test_recompute_reason != "none":
+        self.navigation_test_recompute_reason = f"{self.navigation_test_recompute_reason}:gpsHold"
       return
 
     if self.recompute_countdown == 0 and should_recompute:
+      if self.navigation_test_recompute_reason == "none":
+        self.navigation_test_recompute_reason = "scheduledRecompute"
       self.recompute_countdown = self.recompute_route_countdown()
       self.recompute_backoff = min(6, self.recompute_backoff + 1)
       self.calculate_route(new_destination)
@@ -807,6 +836,7 @@ class RouteEngine:
         maxspeed_idx -= 1 
 
       self.step_idx = 0
+      self.navigation_test_route_generation += 1
     else:
       cloudlog.warning("Got empty route response in applied data")
       self.clear_route()
@@ -851,6 +881,11 @@ class RouteEngine:
     navigation_test_strategy_constraint = "none"
     navigation_test_target_speed = 0.0
     navigation_test_target_speed_source = "none"
+    navigation_test_actionable = False
+    navigation_test_command_direction = "none"
+    navigation_test_command_display_direction = "none"
+    current_step_error = None
+    global_route_error = None
     next_maneuver_direction = "none"
     next_maneuver_distance_after_current = None
     command_distance = 0.0
@@ -881,6 +916,13 @@ class RouteEngine:
         )
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry)
 
+      navigation_test_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
+      navigation_test_command_direction = navigation_test_direction if navigation_test_actionable else "none"
+      navigation_test_display_active = navigation_test_action not in ("none", "routeMismatch", "routeError", "routing", "waitingGps")
+      navigation_test_command_display_direction = navigation_test_display_direction if navigation_test_display_active else "none"
+      current_step_error = self.path_minimum_distance(geometry)
+      global_route_error = cross_track_error
+
       self.log_navigation_test_debug(
         instruction,
         geometry,
@@ -894,6 +936,11 @@ class RouteEngine:
         navigation_test_strategy_constraint,
         next_maneuver_direction,
         next_maneuver_distance_after_current,
+        navigation_test_actionable,
+        navigation_test_command_direction,
+        navigation_test_command_display_direction,
+        current_step_error,
+        global_route_error,
       )
 
     maneuvers = []
@@ -932,13 +979,12 @@ class RouteEngine:
     msg.navInstruction.timeRemainingTypical = total_time_typical
 
     if self.params.get_bool("NavigationTestControl"):
-      navigation_test_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
       self.update_navigation_test_command(
         navigation_test_action,
-        navigation_test_direction if navigation_test_actionable else "none",
+        navigation_test_command_direction,
         distance_to_maneuver_along_geometry,
         total_time,
-        navigation_test_display_direction if navigation_test_actionable else "none",
+        navigation_test_command_display_direction,
         strategy_phase=navigation_test_strategy_phase,
         strategy_constraint=navigation_test_strategy_constraint,
         target_speed=navigation_test_target_speed if navigation_test_actionable else 0.0,
@@ -1071,6 +1117,7 @@ class RouteEngine:
 
   def should_recompute(self):
     if self.step_idx is None or self.route is None:
+      self.navigation_test_recompute_reason = "routeMissing"
       return True
 
     if self.params.get_bool("NavigationTestControl"):
@@ -1083,11 +1130,13 @@ class RouteEngine:
           self.recompute_backoff = 0
 
       if self.navigation_test_reroute_counter > NAVIGATION_TEST_REROUTE_COUNTER_MIN:
+        self.navigation_test_recompute_reason = "globalRouteMismatch"
         cloudlog.warning(f"Navigation test route mismatch: cross_track={route_match_error:.1f}m")
         return True
 
     if self.step_idx == len(self.route) - 1:
       if self.params.get_bool("NavigationTestControl") and self.navigation_test_missed_destination():
+        self.navigation_test_recompute_reason = "missedDestination"
         return True
       return False
 
@@ -1097,7 +1146,11 @@ class RouteEngine:
       self.reroute_counter += 1
     else:
       self.reroute_counter = 0
-    return self.reroute_counter > REROUTE_COUNTER_MIN
+
+    if self.reroute_counter > REROUTE_COUNTER_MIN:
+      self.navigation_test_recompute_reason = "currentStepMismatch"
+      return True
+    return False
 
 def main():
   pm = messaging.PubMaster(['navInstruction', 'navRoute', 'frogpilotNavigation'])
