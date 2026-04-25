@@ -419,6 +419,12 @@ class RouteEngine:
         0.0 < next_maneuver_distance_after_current <= NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE
       )
 
+      # --- TRAP LANE RECOVERY ---
+      # If exiting right and the next maneuver isn't an immediate right turn,
+      # prompt the downstream logic to merge left away from the exit lane.
+      if direction == "right" and next_maneuver_direction != "right" and (next_maneuver_distance_after_current is None or next_maneuver_distance_after_current > 200.0):
+        strategy_constraint = "postExitMergeLeft"
+
       if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
         self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
         if conflict_soon:
@@ -437,6 +443,11 @@ class RouteEngine:
   def navigation_test_maneuver_target_speed(self, instruction, current_geometry):
     if instruction is None:
       return 0.0, "none"
+
+    # --- 80 KM/H EXIT FALLBACK ---
+    # Intercepts exits before Mapbox maxspeed logic is applied
+    if self.navigation_test_is_exit_maneuver(instruction):
+      return 22.22, "hardcodedExit80kph"
 
     # Pull nearby route-annotation speeds around the maneuver: last points of current step plus first points of next step.
     speed_candidates = []
