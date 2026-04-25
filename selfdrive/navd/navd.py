@@ -422,8 +422,8 @@ class RouteEngine:
       # --- TRAP LANE RECOVERY ---
       # If exiting right and the next maneuver isn't an immediate right turn,
       # prompt the downstream logic to merge left away from the exit lane.
-      if direction == "right" and next_maneuver_direction != "right" and (next_maneuver_distance_after_current is None or next_maneuver_distance_after_current > 200.0):
-        strategy_constraint = "postExitMergeLeft"
+      #if direction == "right" and next_maneuver_direction != "right" and (next_maneuver_distance_after_current is None or next_maneuver_distance_after_current > 200.0):
+        #strategy_constraint = "postExitMergeLeft"
 
       if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
         self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
