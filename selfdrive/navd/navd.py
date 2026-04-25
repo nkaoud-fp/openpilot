@@ -285,6 +285,21 @@ class RouteEngine:
     direction = self.navigation_test_maneuver_direction(instruction)
     return direction
 
+  def navigation_test_is_control_turn(self, instruction):
+    if instruction is None:
+      return False
+
+    # Only these should create an actual near-maneuver control turn.
+    # Highway guidance such as fork/continue/merge/new name can contain
+    # a left/right modifier, but it is lane guidance, not a real turn.
+    maneuver_type = instruction.get("maneuverType", "").lower()
+    modifier = instruction.get("maneuverModifier", "").lower()
+
+    if modifier not in ("left", "right", "slight left", "slight right", "sharp left", "sharp right"):
+      return False
+
+    return maneuver_type in ("turn", "end of road")
+
   def navigation_test_is_exit_maneuver(self, instruction):
     if instruction is None:
       return False
@@ -381,7 +396,9 @@ class RouteEngine:
 
     if distance_to_maneuver_along_geometry <= command_distance:
       self.reset_navigation_test_exit_migration()
-      return "turn", direction, display_direction, "turn", command_distance, strategy_constraint
+      if self.navigation_test_is_control_turn(instruction):
+        return "turn", direction, display_direction, "turn", command_distance, strategy_constraint
+      return "upcoming", "none", display_direction, "upcoming", command_distance, "displayOnly"
 
     if self.navigation_test_is_exit_maneuver(instruction):
       standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
@@ -915,16 +932,17 @@ class RouteEngine:
     msg.navInstruction.timeRemainingTypical = total_time_typical
 
     if self.params.get_bool("NavigationTestControl"):
+      navigation_test_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
       self.update_navigation_test_command(
         navigation_test_action,
-        navigation_test_direction if navigation_test_action != "none" else "none",
+        navigation_test_direction if navigation_test_actionable else "none",
         distance_to_maneuver_along_geometry,
         total_time,
-        navigation_test_display_direction if navigation_test_action != "none" else "none",
+        navigation_test_display_direction if navigation_test_actionable else "none",
         strategy_phase=navigation_test_strategy_phase,
         strategy_constraint=navigation_test_strategy_constraint,
-        target_speed=navigation_test_target_speed if navigation_test_action in ("laneChange", "turn") else 0.0,
-        target_speed_source=navigation_test_target_speed_source if navigation_test_action in ("laneChange", "turn") else "none",
+        target_speed=navigation_test_target_speed if navigation_test_actionable else 0.0,
+        target_speed_source=navigation_test_target_speed_source if navigation_test_actionable else "none",
       )
 
     closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
