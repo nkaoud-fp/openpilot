@@ -51,6 +51,11 @@ NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE = 50
 NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE = 80
 NAVIGATION_TEST_DESTINATION_MISSED_DRIFT = 30
 NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN = 2
+NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_SPEED = 13.0
+NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_DISTANCE = 100.0
+NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE = 600.0
+NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE = 500.0
+NAVIGATION_TEST_POST_EXIT_RECOVERY_COMMAND_SECONDS = 10.0
 NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
@@ -85,6 +90,12 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "command_actionable",
   "command_direction",
   "display_direction",
+  "command_max_lane_changes",
+  "post_exit_recovery_active",
+  "post_exit_recovery_exit_direction",
+  "post_exit_recovery_direction",
+  "post_exit_recovery_distance",
+  "post_exit_recovery_done",
   "current_step_error",
   "global_route_error",
   "cross_track_error",
@@ -131,6 +142,13 @@ class RouteEngine:
     self.navigation_test_debug_log_dir = os.environ.get("NAVIGATION_TEST_DEBUG_LOG_DIR", NAVIGATION_TEST_DEBUG_LOG_DIR)
     self.navigation_test_recompute_reason = "none"
     self.navigation_test_route_generation = 0
+    self.navigation_test_post_exit_recovery_key = None
+    self.navigation_test_post_exit_recovery_exit_direction = "none"
+    self.navigation_test_post_exit_recovery_direction = "none"
+    self.navigation_test_post_exit_recovery_exit_coordinate = None
+    self.navigation_test_post_exit_recovery_started_at = 0.0
+    self.navigation_test_post_exit_recovery_command_started_at = 0.0
+    self.navigation_test_post_exit_recovery_done = True
 
     # Threading variables
     self.route_thread = None
@@ -244,8 +262,10 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_speed=0.0, target_speed_source="none"):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_speed=0.0, target_speed_source="none", max_lane_changes=None, lane_change_cooldown=None):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
+    max_lane_changes = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES if max_lane_changes is None else max_lane_changes
+    lane_change_cooldown = NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN if lane_change_cooldown is None else lane_change_cooldown
     command = json.dumps({
       "action": action,
       "direction": direction,
@@ -258,8 +278,8 @@ class RouteEngine:
       "migrationActive": self.navigation_test_exit_migration_key is not None,
       "migrationAgeSeconds": max(migration_age, 0.0),
       "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
-      "maxLaneChanges": NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES,
-      "laneChangeCooldown": NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN,
+      "maxLaneChanges": max_lane_changes,
+      "laneChangeCooldown": lane_change_cooldown,
       "targetSpeed": max(target_speed, 0.0),
       "targetSpeedSource": target_speed_source,
     })
@@ -349,6 +369,107 @@ class RouteEngine:
       self.navigation_test_exit_migration_direction = direction
       self.navigation_test_exit_migration_started_at = time.monotonic()
       self.navigation_test_exit_migration_start_distance = distance_to_maneuver_along_geometry
+
+  def reset_navigation_test_post_exit_recovery(self):
+    self.navigation_test_post_exit_recovery_key = None
+    self.navigation_test_post_exit_recovery_exit_direction = "none"
+    self.navigation_test_post_exit_recovery_direction = "none"
+    self.navigation_test_post_exit_recovery_exit_coordinate = None
+    self.navigation_test_post_exit_recovery_started_at = 0.0
+    self.navigation_test_post_exit_recovery_command_started_at = 0.0
+    self.navigation_test_post_exit_recovery_done = True
+
+  def start_navigation_test_post_exit_recovery(self, instruction, geometry, exit_direction):
+    if exit_direction not in ("left", "right"):
+      self.reset_navigation_test_post_exit_recovery()
+      return
+
+    # After a right-side exit, move one lane left away from the exit/on-ramp lane.
+    # Mirror the behavior for left-side exits.
+    recovery_direction = "left" if exit_direction == "right" else "right"
+    exit_coordinate = geometry[-1] if geometry else self.last_position
+    self.navigation_test_post_exit_recovery_key = self.navigation_test_maneuver_key(instruction, geometry)
+    self.navigation_test_post_exit_recovery_exit_direction = exit_direction
+    self.navigation_test_post_exit_recovery_direction = recovery_direction
+    self.navigation_test_post_exit_recovery_exit_coordinate = exit_coordinate
+    self.navigation_test_post_exit_recovery_started_at = time.monotonic()
+    self.navigation_test_post_exit_recovery_command_started_at = 0.0
+    self.navigation_test_post_exit_recovery_done = False
+
+  def navigation_test_post_exit_recovery_distance(self):
+    if self.navigation_test_post_exit_recovery_exit_coordinate is None or self.last_position is None:
+      return None
+    return self.last_position.distance_to(self.navigation_test_post_exit_recovery_exit_coordinate)
+
+  def navigation_test_same_direction_maneuver_soon(self, direction, instruction, distance_to_maneuver_along_geometry, next_maneuver_direction, next_maneuver_distance_after_current):
+    if direction not in ("left", "right"):
+      return False
+
+    current_direction = self.navigation_test_maneuver_direction(instruction)
+    current_soon = (
+      current_direction == direction and
+      0.0 < distance_to_maneuver_along_geometry <= NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE
+    )
+    next_soon = (
+      next_maneuver_direction == direction and
+      next_maneuver_distance_after_current is not None and
+      0.0 <= next_maneuver_distance_after_current <= NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE
+    )
+    return current_soon or next_soon
+
+  def navigation_test_post_exit_recovery_strategy(self, instruction, distance_to_maneuver_along_geometry, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
+    if self.navigation_test_post_exit_recovery_done or self.navigation_test_post_exit_recovery_key is None:
+      return None
+
+    exit_direction = self.navigation_test_post_exit_recovery_exit_direction
+    recovery_direction = self.navigation_test_post_exit_recovery_direction
+    if exit_direction not in ("left", "right") or recovery_direction not in ("left", "right"):
+      self.reset_navigation_test_post_exit_recovery()
+      return None
+
+    distance_since_exit = self.navigation_test_post_exit_recovery_distance()
+    if distance_since_exit is None:
+      return None
+
+    if distance_since_exit > NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE:
+      self.navigation_test_post_exit_recovery_done = True
+      return None
+
+    # If the next maneuver needs the same side as the exit very soon, stay in the exit-side lane.
+    if self.navigation_test_same_direction_maneuver_soon(
+      exit_direction,
+      instruction,
+      distance_to_maneuver_along_geometry,
+      next_maneuver_direction,
+      next_maneuver_distance_after_current,
+    ):
+      self.navigation_test_post_exit_recovery_done = True
+      return None
+
+    v_ego = self.sm['carState'].vEgo
+    if v_ego < NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_SPEED:
+      return None
+
+    if distance_since_exit < NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_DISTANCE:
+      return None
+
+    now = time.monotonic()
+    if self.navigation_test_post_exit_recovery_command_started_at == 0.0:
+      self.navigation_test_post_exit_recovery_command_started_at = now
+
+    if now - self.navigation_test_post_exit_recovery_command_started_at > NAVIGATION_TEST_POST_EXIT_RECOVERY_COMMAND_SECONDS:
+      self.navigation_test_post_exit_recovery_done = True
+      return None
+
+    constraint = "recoverFromRightExitLane" if exit_direction == "right" else "recoverFromLeftExitLane"
+    return (
+      "laneChange",
+      recovery_direction,
+      recovery_direction,
+      "postExitLaneRecovery",
+      NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE,
+      constraint,
+    )
 
   def navigation_test_command_distance(self):
     v_ego = self.sm['carState'].vEgo
@@ -558,7 +679,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, command_actionable=False, command_direction="none", display_direction="none", current_step_error=None, global_route_error=None):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, command_actionable=False, command_direction="none", display_direction="none", current_step_error=None, global_route_error=None, command_max_lane_changes=NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES):
     if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
       return
 
@@ -610,6 +731,12 @@ class RouteEngine:
       "command_actionable": command_actionable,
       "command_direction": command_direction,
       "display_direction": display_direction,
+      "command_max_lane_changes": command_max_lane_changes,
+      "post_exit_recovery_active": self.navigation_test_post_exit_recovery_key is not None and not self.navigation_test_post_exit_recovery_done,
+      "post_exit_recovery_exit_direction": self.navigation_test_post_exit_recovery_exit_direction,
+      "post_exit_recovery_direction": self.navigation_test_post_exit_recovery_direction,
+      "post_exit_recovery_distance": f"{self.navigation_test_post_exit_recovery_distance():.2f}" if self.navigation_test_post_exit_recovery_distance() is not None else "",
+      "post_exit_recovery_done": self.navigation_test_post_exit_recovery_done,
       "current_step_error": f"{current_step_error:.2f}" if current_step_error is not None else "",
       "global_route_error": f"{global_route_error:.2f}" if global_route_error is not None else "",
       "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
@@ -851,6 +978,7 @@ class RouteEngine:
 
       self.step_idx = 0
       self.navigation_test_route_generation += 1
+      self.reset_navigation_test_post_exit_recovery()
     else:
       cloudlog.warning("Got empty route response in applied data")
       self.clear_route()
@@ -895,6 +1023,7 @@ class RouteEngine:
     navigation_test_strategy_constraint = "none"
     navigation_test_target_speed = 0.0
     navigation_test_target_speed_source = "none"
+    navigation_test_command_max_lane_changes = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES
     navigation_test_actionable = False
     navigation_test_command_direction = "none"
     navigation_test_command_display_direction = "none"
@@ -928,7 +1057,23 @@ class RouteEngine:
           next_maneuver_direction,
           next_maneuver_distance_after_current,
         )
+
+        current_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
+        if not current_actionable:
+          post_exit_recovery = self.navigation_test_post_exit_recovery_strategy(
+            instruction,
+            distance_to_maneuver_along_geometry,
+            next_maneuver_direction,
+            next_maneuver_distance_after_current,
+          )
+          if post_exit_recovery is not None:
+            navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold, navigation_test_strategy_constraint = post_exit_recovery
+            navigation_test_command_max_lane_changes = 1
+
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry)
+        if navigation_test_strategy_phase == "postExitLaneRecovery":
+          navigation_test_target_speed = 0.0
+          navigation_test_target_speed_source = "none"
 
       navigation_test_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
       navigation_test_command_direction = navigation_test_direction if navigation_test_actionable else "none"
@@ -955,6 +1100,7 @@ class RouteEngine:
         navigation_test_command_display_direction,
         current_step_error,
         global_route_error,
+        navigation_test_command_max_lane_changes,
       )
 
     maneuvers = []
@@ -1003,6 +1149,7 @@ class RouteEngine:
         strategy_constraint=navigation_test_strategy_constraint,
         target_speed=navigation_test_target_speed if navigation_test_actionable else 0.0,
         target_speed_source=navigation_test_target_speed_source if navigation_test_actionable else "none",
+        max_lane_changes=navigation_test_command_max_lane_changes,
       )
 
     closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
@@ -1025,7 +1172,12 @@ class RouteEngine:
     self.pm.send('navInstruction', msg)
 
     if self.should_transition_to_next_step(distance_to_maneuver_along_geometry):
+      completed_instruction = instruction
+      completed_direction = self.navigation_test_maneuver_direction(completed_instruction)
+
       if self.step_idx + 1 < len(self.route):
+        if self.navigation_test_is_exit_maneuver(completed_instruction) and completed_direction in ("left", "right"):
+          self.start_navigation_test_post_exit_recovery(completed_instruction, geometry, completed_direction)
         self.step_idx += 1
         self.reset_recompute_limits()
 
@@ -1087,6 +1239,7 @@ class RouteEngine:
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
     self.reset_navigation_test_exit_migration()
+    self.reset_navigation_test_post_exit_recovery()
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
