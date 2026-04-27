@@ -32,6 +32,7 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   distance_btn = new DistanceButton(this);
   navigation_test_btn = new NavigationTestButton(this);
   navigation_home_btn = new NavigationDestinationButton("Home", "home", 24.675764, 46.581478, "Navigation test - Home", this);
+  navigation_share_btn = new NavigationDestinationButton("Share", "share", 0.0, 0.0, "Navigation test - Share", this);
   navigation_work_btn = new NavigationDestinationButton("Work", "work", 24.714778, 46.683775, "Navigation test - Work", this);
   navigation_school_btn = new NavigationDestinationButton("School", "school", 24.781423, 46.622246, "Navigation test - School", this);
   screen_recorder = new ScreenRecorder(this);
@@ -39,6 +40,7 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   distance_btn->setVisible(false);
   navigation_test_btn->setVisible(false);
   navigation_home_btn->setVisible(false);
+  navigation_share_btn->setVisible(false);
   navigation_work_btn->setVisible(false);
   navigation_school_btn->setVisible(false);
 
@@ -46,6 +48,10 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
     navigation_destination_picker_visible = !navigation_destination_picker_visible;
   });
   QObject::connect(navigation_home_btn, &NavigationDestinationButton::destinationSelected, [this] {
+    navigation_destination_picker_visible = false;
+    navigation_test_btn->updateState();
+  });
+  QObject::connect(navigation_share_btn, &NavigationDestinationButton::destinationSelected, [this] {
     navigation_destination_picker_visible = false;
     navigation_test_btn->updateState();
   });
@@ -161,11 +167,12 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
     navigation_test_btn->updateState();
 
     const bool show_destination_picker = navigation_destination_picker_visible && !navigation_test_btn->navigationTestEnabled();
-    NavigationDestinationButton *destination_buttons[] = {navigation_home_btn, navigation_work_btn, navigation_school_btn};
+    NavigationDestinationButton *destination_buttons[] = {navigation_home_btn, navigation_share_btn, navigation_work_btn, navigation_school_btn};
     const int destination_spacing = UI_BORDER_SIZE / 2;
-    const int destination_stack_height = (3 * navigation_home_btn->height()) + (2 * destination_spacing);
+    const int destination_button_count = sizeof(destination_buttons) / sizeof(destination_buttons[0]);
+    const int destination_stack_height = (destination_button_count * navigation_home_btn->height()) + ((destination_button_count - 1) * destination_spacing);
     const int destination_stack_y = navigation_test_y - destination_stack_height - destination_spacing;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < destination_button_count; ++i) {
       const int destination_x = std::clamp(navigation_test_x + (navigation_test_btn->width() / 2), UI_BORDER_SIZE, width() - UI_BORDER_SIZE - destination_buttons[i]->width());
       const int destination_y = destination_stack_y + (i * (destination_buttons[i]->height() + destination_spacing));
       const bool fits = destination_stack_y >= UI_BORDER_SIZE;
@@ -180,6 +187,7 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
   } else {
     navigation_destination_picker_visible = false;
     navigation_home_btn->setVisible(false);
+    navigation_share_btn->setVisible(false);
     navigation_work_btn->setVisible(false);
     navigation_school_btn->setVisible(false);
   }

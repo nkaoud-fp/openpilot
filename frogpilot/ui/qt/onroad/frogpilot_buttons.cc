@@ -10,6 +10,7 @@ namespace {
 
 QString navigationTestDestinationLabel(const std::string &destination) {
   if (destination == "home") return "HOM";
+  if (destination == "share") return "SHR";
   if (destination == "work") return "WRK";
   if (destination == "school") return "SCH";
   return "NAV";
@@ -145,7 +146,11 @@ NavigationDestinationButton::NavigationDestinationButton(const QString &label, c
 
 void NavigationDestinationButton::selectDestination() {
   params.put("NavigationTestSelectedDestination", destination_id.toStdString());
-  params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
+  if (destination_id == "share") {
+    params.remove("NavDestination");
+  } else {
+    params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
+  }
   params.remove("NavDestinationWaypoints");
   params.remove("NavigationTestTurnCommand");
   params.putBool("NavigationTestControl", true);

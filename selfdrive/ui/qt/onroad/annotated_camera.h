@@ -59,6 +59,7 @@ private:
   DistanceButton *distance_btn;
   NavigationTestButton *navigation_test_btn;
   NavigationDestinationButton *navigation_home_btn;
+  NavigationDestinationButton *navigation_share_btn;
   NavigationDestinationButton *navigation_work_btn;
   NavigationDestinationButton *navigation_school_btn;
 
