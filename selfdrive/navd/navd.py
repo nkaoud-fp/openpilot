@@ -195,9 +195,9 @@ class RouteEngine:
       self._check_and_apply_route_thread()
       
       self.send_instruction()
-    except Exception:
+    except Exception as err:
       if self.params.get_bool("NavigationTestControl"):
-        self.update_navigation_test_command("routeError")
+        self.update_navigation_test_command("routeError", error=err.__class__.__name__)
       cloudlog.exception("navd.failed_to_compute")
 
     # Update FrogPilot variables
@@ -741,6 +741,9 @@ class RouteEngine:
 
     except requests.exceptions.RequestException as e:
       cloudlog.exception("failed to get route in thread")
+      self._pending_route_error = e.__class__.__name__
+    except Exception as e:
+      cloudlog.exception("unexpected route worker failure")
       self._pending_route_error = e.__class__.__name__
 
   def _check_and_apply_route_thread(self):
