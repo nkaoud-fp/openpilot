@@ -1,5 +1,6 @@
 #include "frogpilot/ui/qt/onroad/frogpilot_buttons.h"
 
+#include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
@@ -147,6 +148,8 @@ NavigationDestinationButton::NavigationDestinationButton(const QString &label, c
 void NavigationDestinationButton::selectDestination() {
   params.put("NavigationTestSelectedDestination", destination_id.toStdString());
   if (destination_id == "share") {
+    const std::string selection_token = std::to_string(QDateTime::currentMSecsSinceEpoch());
+    params.put("NavigationTestShareSelectionToken", selection_token);
     params.remove("NavDestination");
   } else {
     params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());

@@ -32,7 +32,9 @@ NAVIGATION_TEST_DESTINATIONS = {
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
   "school": ("Navigation test - School", Coordinate(24.781423, 46.622246)),
 }
-NAVIGATION_TEST_SHARED_DESTINATION_URL = "https://crudcrud.com/api/59cbc96bb1ce468c8bdd2addd2a2a140/shared"
+NAVIGATION_TEST_SHARED_DESTINATION_URL = "https://frihtcjnhcayqvcphczr.supabase.co/rest/v1/shared_destination?id=eq.1&select=lat,lng"
+NAVIGATION_TEST_SHARED_DESTINATION_API_KEY = "sb_publishable_1Lh9fwsQOJppOm82Rk7uyA_nm2qWGdh"
+NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS = 15.0
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
@@ -113,6 +115,9 @@ class RouteEngine:
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
     self.navigation_test_command = None
+    self.navigation_test_shared_destination = None
+    self.navigation_test_shared_destination_retry_at = 0.0
+    self.navigation_test_last_handled_share_selection_token = ""
     self.navigation_test_exit_migration_key = None
     self.navigation_test_exit_migration_direction = "none"
     self.navigation_test_exit_migration_started_at = 0.0
@@ -220,14 +225,17 @@ class RouteEngine:
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     if destination_id == "share":
-      shared_destination = self.get_navigation_test_shared_destination()
+      share_selection_token = self.params.get("NavigationTestShareSelectionToken", encoding="utf8")
+      force_refresh = share_selection_token != self.navigation_test_last_handled_share_selection_token
+      destination = coordinate_from_param("NavDestination", self.params)
+      shared_destination = self.get_navigation_test_shared_destination(force_refresh or destination is None)
       if shared_destination is None:
         return
+      self.navigation_test_last_handled_share_selection_token = share_selection_token
       destination_name, target_destination = shared_destination
     else:
       destination_name, target_destination = NAVIGATION_TEST_DESTINATIONS.get(destination_id, NAVIGATION_TEST_DESTINATIONS["home"])
-
-    destination = coordinate_from_param("NavDestination", self.params)
+      destination = coordinate_from_param("NavDestination", self.params)
     if destination == target_destination:
       return
 
@@ -238,23 +246,39 @@ class RouteEngine:
       "place_name": destination_name,
     }))
 
-  def get_navigation_test_shared_destination(self):
+  def get_navigation_test_shared_destination(self, force_refresh=False):
+    now = time.monotonic()
+    if not force_refresh and self.navigation_test_shared_destination is not None:
+      return self.navigation_test_shared_destination
+    if not force_refresh and now < self.navigation_test_shared_destination_retry_at:
+      return self.navigation_test_shared_destination
+
     try:
-      response = requests.get(NAVIGATION_TEST_SHARED_DESTINATION_URL, timeout=5)
+      response = requests.get(
+        NAVIGATION_TEST_SHARED_DESTINATION_URL,
+        timeout=5,
+        headers={
+          "apikey": NAVIGATION_TEST_SHARED_DESTINATION_API_KEY,
+          "Authorization": f"Bearer {NAVIGATION_TEST_SHARED_DESTINATION_API_KEY}",
+        },
+      )
       response.raise_for_status()
       payload = response.json()
     except requests.RequestException as err:
       cloudlog.warning(f"Navigation test shared destination fetch failed: {err}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedFetchFailed")
       return None
     except ValueError as err:
       cloudlog.warning(f"Navigation test shared destination JSON parse failed: {err}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedInvalidJson")
       return None
 
     record = payload[0] if isinstance(payload, list) and payload else payload
     if not isinstance(record, dict):
       cloudlog.warning(f"Navigation test shared destination has invalid payload: {payload}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedInvalidPayload")
       return None
 
@@ -263,15 +287,19 @@ class RouteEngine:
       longitude = float(record["lng"])
     except (KeyError, TypeError, ValueError) as err:
       cloudlog.warning(f"Navigation test shared destination missing coordinates: {err}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedInvalidCoordinates")
       return None
 
     if not (-90.0 <= latitude <= 90.0 and -180.0 <= longitude <= 180.0):
       cloudlog.warning(f"Navigation test shared destination out of bounds: {(latitude, longitude)}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedOutOfBounds")
       return None
 
-    return "Navigation test - Share", Coordinate(latitude, longitude)
+    self.navigation_test_shared_destination = ("Navigation test - Share", Coordinate(latitude, longitude))
+    self.navigation_test_shared_destination_retry_at = 0.0
+    return self.navigation_test_shared_destination
 
   def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none"):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
