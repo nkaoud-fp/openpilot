@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import time
+import threading
 
 import openpilot.system.sentry as sentry
 
@@ -18,7 +19,7 @@ from openpilot.frogpilot.common.frogpilot_variables import ERROR_LOGS_PATH, Frog
 from openpilot.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
 from openpilot.frogpilot.controls.lib.frogpilot_tracking import FrogPilotTracking
 from openpilot.frogpilot.system.frogpilot_stats import send_stats
-from openpilot.frogpilot.system.navigation_test_mailer import queue_navigation_test_log, send_pending_navigation_test_log
+from openpilot.frogpilot.system.navigation_test_mailer import queue_navigation_test_log, send_pending_navigation_test_log, set_navigation_test_email_status
 
 ASSET_CHECK_RATE = (1 / DT_MDL)
 
@@ -58,6 +59,13 @@ def update_checks(model_manager, now, theme_manager, frogpilot_toggles, boot_run
     run_thread_with_lock("update_openpilot", update_openpilot)
 
   time.sleep(1)
+
+def send_navigation_test_log_async():
+  threading.Thread(
+    target=send_pending_navigation_test_log,
+    name="navigation_test_email_sender",
+    daemon=True,
+  ).start()
 
 def frogpilot_thread():
   rate_keeper = Ratekeeper(1 / DT_MDL, None)
@@ -103,11 +111,14 @@ def frogpilot_thread():
       frogpilot_toggles = get_frogpilot_toggles()
 
       current_navigation_test_log = params.get("NavigationTestCurrentLog", encoding="utf-8")
+      if current_navigation_test_log:
+        params.put("NavigationTestLastDriveLog", current_navigation_test_log)
+
       queue_navigation_test_log(current_navigation_test_log)
       params.remove("NavigationTestCurrentLog")
 
       if params.get("NavigationTestEmailPendingLog", encoding="utf-8"):
-        run_thread_with_lock("send_navigation_test_log", send_pending_navigation_test_log, report=False)
+        send_navigation_test_log_async()
         last_navigation_test_email_attempt = time.monotonic()
 
       if frogpilot_toggles.lock_doors_timer:
@@ -183,7 +194,7 @@ def frogpilot_thread():
 
     if not started and params.get("NavigationTestEmailPendingLog", encoding="utf-8"):
       if time.monotonic() - last_navigation_test_email_attempt >= 60:
-        run_thread_with_lock("send_navigation_test_log", send_pending_navigation_test_log, report=False)
+        send_navigation_test_log_async()
         last_navigation_test_email_attempt = time.monotonic()
 
     rate_keeper.keep_time()
