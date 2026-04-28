@@ -284,7 +284,7 @@ QStringList FrogPilotNavigationPanel::navdCandidates() const {
   return candidates;
 }
 
-QString FrogPilotNavigationPanel::currentNavdSelection() const {
+QString FrogPilotNavigationPanel::currentNavdSelection() {
   const QString navdDirPath = "../../selfdrive/navd";
   const QString activeNavdPath = QDir(navdDirPath).filePath("navd.py");
   const QString selectedNavd = QString::fromStdString(params.get("SelectedNavdFile"));

@@ -17,7 +17,7 @@ protected:
   void showEvent(QShowEvent *event) override;
 
 private:
-  QString currentNavdSelection() const;
+  QString currentNavdSelection();
   void createKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix, const int &minLength, FrogPilotListWidget *list);
   void mousePressEvent(QMouseEvent *event);
   QStringList navdCandidates() const;
