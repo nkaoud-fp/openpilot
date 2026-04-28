@@ -17,9 +17,12 @@ protected:
   void showEvent(QShowEvent *event) override;
 
 private:
+  QString currentNavdSelection() const;
   void createKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix, const int &minLength, FrogPilotListWidget *list);
   void mousePressEvent(QMouseEvent *event);
+  QStringList navdCandidates() const;
   void updateButtons();
+  void updateNavdButton();
   void updateState(const UIState &s, const FrogPilotUIState &fs);
   void updateStep();
 
@@ -33,6 +36,7 @@ private:
   ButtonControl *amapKeyControl2;
   ButtonControl *publicMapboxKeyControl;
   ButtonControl *secretMapboxKeyControl;
+  ButtonControl *selectNavdButton;
   ButtonControl *setupButton;
 
   FrogPilotButtonControl *updateSpeedLimitsToggle;
