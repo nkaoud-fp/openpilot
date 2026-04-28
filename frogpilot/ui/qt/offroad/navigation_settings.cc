@@ -1,5 +1,9 @@
 #include "frogpilot/ui/qt/offroad/navigation_settings.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+
 FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   QJsonObject shownDescriptions = QJsonDocument::fromJson(QString::fromStdString(params.get("ShownToggleDescriptions")).toUtf8()).object();
   QString className = this->metaObject()->className();
@@ -38,6 +42,58 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
 
   createKeyControl(publicMapboxKeyControl, tr("Public Mapbox Key"), "MapboxPublicKey", "pk.", 80, settingsList);
   createKeyControl(secretMapboxKeyControl, tr("Secret Mapbox Key"), "MapboxSecretKey", "sk.", 80, settingsList);
+
+  selectNavdButton = new ButtonControl(tr("Navigation Daemon"), tr("SELECT"),
+                                       tr("<b>Choose which navd implementation FrogPilot should use.</b> "
+                                          "Any runtime file matching \"navd*.py\" in <b>selfdrive/navd</b> will appear here. "
+                                          "Selecting one copies it over <b>navd.py</b>."));
+  QObject::connect(selectNavdButton, &ButtonControl::clicked, [this]() {
+    QStringList candidates = navdCandidates();
+    if (candidates.isEmpty()) {
+      ConfirmationDialog::alert(tr("No alternate navd files were found in selfdrive/navd."), this);
+      return;
+    }
+
+    QString currentSelection = currentNavdSelection();
+    QString navdToSelect = MultiOptionDialog::getSelection(tr("Select a navigation daemon"), candidates, currentSelection, this);
+    if (navdToSelect.isEmpty() || navdToSelect == currentSelection) {
+      return;
+    }
+
+    if (!ConfirmationDialog::confirm(tr("Copy \"%1\" over navd.py?").arg(navdToSelect), tr("Switch"), this)) {
+      return;
+    }
+
+    const QString navdDirPath = "../../selfdrive/navd";
+    const QString sourcePath = QDir(navdDirPath).filePath(navdToSelect);
+    const QString destinationPath = QDir(navdDirPath).filePath("navd.py");
+    const QString temporaryPath = QDir(navdDirPath).filePath("navd.py.tmp");
+
+    QFile::remove(temporaryPath);
+    if (!QFile::copy(sourcePath, temporaryPath)) {
+      ConfirmationDialog::alert(tr("Failed to prepare \"%1\" for activation.").arg(navdToSelect), this);
+      return;
+    }
+
+    QFile::remove(destinationPath);
+    if (!QFile::rename(temporaryPath, destinationPath)) {
+      QFile::remove(temporaryPath);
+      ConfirmationDialog::alert(tr("Failed to switch navd.py to \"%1\".").arg(navdToSelect), this);
+      return;
+    }
+
+    params.put("SelectedNavdFile", navdToSelect.toStdString());
+    updateNavdButton();
+
+    UIState &s = *uiState();
+    if (s.scene.started) {
+      std::system("pkill -SIGINT -f selfdrive.navd.navd");
+      ConfirmationDialog::alert(tr("Switched to \"%1\". navd is restarting now.").arg(navdToSelect), this);
+    } else {
+      ConfirmationDialog::alert(tr("Switched to \"%1\". The new navd will be used the next time you drive.").arg(navdToSelect), this);
+    }
+  });
+  settingsList->addItem(selectNavdButton);
 
   setupButton = new ButtonControl(tr("Mapbox Setup Instructions"), tr("VIEW"), tr("<b>Instructions on how to set up Mapbox</b> for \"Primeless Navigation\"."), this);
   QObject::connect(setupButton, &ButtonControl::clicked, [this]() {
@@ -142,6 +198,7 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
+      selectNavdButton->showDescription();
       setupButton->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
@@ -156,6 +213,7 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
     publicMapboxKeyControl->showDescription();
     searchInput->showDescription();
     secretMapboxKeyControl->showDescription();
+    selectNavdButton->showDescription();
     setupButton->showDescription();
     updateSpeedLimitsToggle->showDescription();
   }
@@ -169,6 +227,7 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
   ipLabel->setText(ipAddress.isEmpty() ? tr("Offline...") : QString("%1:8082").arg(ipAddress));
 
   updateButtons();
+  updateNavdButton();
 
   setupCompleted = mapboxPublicKeySet && mapboxSecretKeySet;
   updatingLimits = !params_memory.get("UpdateSpeedLimitsStatus").empty() && QString::fromStdString(params_memory.get("UpdateSpeedLimitsStatus")) != "Completed!";
@@ -179,6 +238,9 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
 
   amapKeyControl1->setVisible(selectedSearchInput == 1);
   amapKeyControl2->setVisible(selectedSearchInput == 1);
+
+  selectNavdButton->setEnabled(parked && !navdCandidates().isEmpty());
+  selectNavdButton->setValue(parked ? currentNavdSelection() : tr("Not parked"));
 
   updateSpeedLimitsToggle->setVisibleButton(0, updatingLimits);
   updateSpeedLimitsToggle->setVisibleButton(1, !updatingLimits);
@@ -208,10 +270,45 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
+      selectNavdButton->showDescription();
       setupButton->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
   }
+}
+
+QStringList FrogPilotNavigationPanel::navdCandidates() const {
+  QDir navdDir("../../selfdrive/navd");
+  QStringList candidates = navdDir.entryList({"navd*.py"}, QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
+  candidates.removeAll("navd.py");
+  return candidates;
+}
+
+QString FrogPilotNavigationPanel::currentNavdSelection() const {
+  const QString navdDirPath = "../../selfdrive/navd";
+  const QString activeNavdPath = QDir(navdDirPath).filePath("navd.py");
+  const QString selectedNavd = QString::fromStdString(params.get("SelectedNavdFile"));
+
+  if (!selectedNavd.isEmpty()) {
+    const QString selectedPath = QDir(navdDirPath).filePath(selectedNavd);
+    if (QFileInfo::exists(selectedPath)) {
+      QFile activeNavd(activeNavdPath);
+      QFile selectedFile(selectedPath);
+      if (activeNavd.open(QIODevice::ReadOnly) && selectedFile.open(QIODevice::ReadOnly) && activeNavd.readAll() == selectedFile.readAll()) {
+        return selectedNavd;
+      }
+    }
+  }
+
+  for (const QString &candidate : navdCandidates()) {
+    QFile activeNavd(activeNavdPath);
+    QFile candidateFile(QDir(navdDirPath).filePath(candidate));
+    if (activeNavd.open(QIODevice::ReadOnly) && candidateFile.open(QIODevice::ReadOnly) && activeNavd.readAll() == candidateFile.readAll()) {
+      return candidate;
+    }
+  }
+
+  return QFileInfo(activeNavdPath).exists() ? tr("Custom navd.py") : tr("Missing navd.py");
 }
 
 void FrogPilotNavigationPanel::createKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix, const int &minLength, FrogPilotListWidget *list) {
@@ -255,12 +352,19 @@ void FrogPilotNavigationPanel::updateButtons() {
   secretMapboxKeyControl->setText(mapboxSecretKeySet ? tr("REMOVE") : tr("ADD"));
 }
 
+void FrogPilotNavigationPanel::updateNavdButton() {
+  QStringList candidates = navdCandidates();
+  selectNavdButton->setEnabled(!candidates.isEmpty());
+  selectNavdButton->setValue(currentNavdSelection());
+}
+
 void FrogPilotNavigationPanel::updateState(const UIState &s, const FrogPilotUIState &fs) {
   if (!isVisible() || s.sm->frame % (UI_FREQ / 2) != 0) {
     return;
   }
 
   updateButtons();
+  updateNavdButton();
   updateStep();
 
   bool parked = !s.scene.started || fs.frogpilot_scene.parked || fs.frogpilot_toggles.value("frogs_go_moo").toBool();
@@ -283,6 +387,9 @@ void FrogPilotNavigationPanel::updateState(const UIState &s, const FrogPilotUISt
       updateSpeedLimitsToggle->setValue(QString::fromStdString(params_memory.get("UpdateSpeedLimitsStatus")));
     }
   } else {
+    selectNavdButton->setEnabled(parked && !navdCandidates().isEmpty());
+    selectNavdButton->setValue(parked ? currentNavdSelection() : tr("Not parked"));
+
     updateSpeedLimitsToggle->setEnabledButton(1, fs.frogpilot_scene.online && util::system_time_valid() && parked);
     updateSpeedLimitsToggle->setValue(fs.frogpilot_scene.online ? (parked ? "" : "Not parked") : tr("Offline..."));
   }
