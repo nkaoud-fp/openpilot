@@ -33,7 +33,7 @@ REROUTE_COUNTER_MIN = 3
 # cruise set-speed before the turn instead of arriving at full speed.
 TURN_SLOWDOWN_DISTANCE_M = 150.0
 TURN_SLOWDOWN_MAX_SPEED_MS = 100.0 / 3.6  # ~27.78 m/s (100 km/h) at 150m out
-TURN_SLOWDOWN_MIN_SPEED_MS = 25.0 / 3.6   # ~6.94 m/s (25 km/h) at the turn
+TURN_SLOWDOWN_MIN_SPEED_MS = 15.0 / 3.6 # 25.0 / 3.6   # ~6.94 m/s (25 km/h) at the turn
 TURN_SLOWDOWN_MANEUVER_CLASSES = ("normal_turn", "uturn", "roundabout")
 NAVIGATION_TEST_DESTINATIONS = {
   "home": ("Navigation test - Home", Coordinate(24.675764, 46.581478)),
