@@ -27,6 +27,14 @@ from openpilot.frogpilot.common.frogpilot_variables import get_frogpilot_toggles
 REROUTE_DISTANCE = 25
 MANEUVER_TRANSITION_THRESHOLD = 10
 REROUTE_COUNTER_MIN = 3
+
+# Gradual pre-turn slowdown: when approaching a turn-type maneuver, override
+# the navigation speed limit so FrogPilot's speed-limit pipeline trims the
+# cruise set-speed before the turn instead of arriving at full speed.
+TURN_SLOWDOWN_DISTANCE_M = 150.0
+TURN_SLOWDOWN_MAX_SPEED_MS = 100.0 / 3.6  # ~27.78 m/s (100 km/h) at 150m out
+TURN_SLOWDOWN_MIN_SPEED_MS = 25.0 / 3.6   # ~6.94 m/s (25 km/h) at the turn
+TURN_SLOWDOWN_MANEUVER_CLASSES = ("normal_turn", "uturn", "roundabout")
 NAVIGATION_TEST_DESTINATIONS = {
   "home": ("Navigation test - Home", Coordinate(24.675764, 46.581478)),
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
@@ -420,6 +428,15 @@ class RouteEngine:
 
   def navigation_test_is_lane_positioning_maneuver(self, maneuver_class):
     return maneuver_class in ("highway_exit", "highway_fork")
+
+  def turn_slowdown_speed(self, maneuver_class, distance_to_maneuver):
+    if maneuver_class not in TURN_SLOWDOWN_MANEUVER_CLASSES:
+      return 0.0
+    if distance_to_maneuver is None or distance_to_maneuver > TURN_SLOWDOWN_DISTANCE_M:
+      return 0.0
+    d = max(distance_to_maneuver, 0.0)
+    return float(interp(d, [0.0, TURN_SLOWDOWN_DISTANCE_M],
+                        [TURN_SLOWDOWN_MIN_SPEED_MS, TURN_SLOWDOWN_MAX_SPEED_MS]))
 
   def navigation_test_road_context(self, maneuver_class):
     v_ego = self.sm['carState'].vEgo
@@ -1390,7 +1407,12 @@ class RouteEngine:
 
     fp_msg.frogpilotNavigation.approachingIntersection = self.approaching_intersection
     fp_msg.frogpilotNavigation.approachingTurn = self.approaching_turn
-    fp_msg.frogpilotNavigation.navigationSpeedLimit = self.nav_speed_limit
+
+    nav_speed_limit_out = self.nav_speed_limit
+    turn_slowdown = self.turn_slowdown_speed(navigation_test_maneuver_class, distance_to_maneuver_along_geometry)
+    if turn_slowdown > 0.0:
+      nav_speed_limit_out = min(nav_speed_limit_out, turn_slowdown) if nav_speed_limit_out > 0 else turn_slowdown
+    fp_msg.frogpilotNavigation.navigationSpeedLimit = nav_speed_limit_out
 
     self.pm.send('frogpilotNavigation', fp_msg)
 
