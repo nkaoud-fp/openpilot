@@ -1867,8 +1867,8 @@ def main():
   pm = messaging.PubMaster(['navInstruction', 'navRoute', 'frogpilotNavigation'])
   sm = messaging.SubMaster(['carState', 'liveLocationKalman', 'managerState', 'frogpilotPlan', 'modelV2', 'radarState'])
 
-  rk = Ratekeeper(1.0)
-  #rk = Ratekeeper(2.0)  # runs twice per second
+  #rk = Ratekeeper(1.0)
+  rk = Ratekeeper(2.0)  # runs twice per second
   route_engine = RouteEngine(sm, pm)
   while True:
     route_engine.update()
