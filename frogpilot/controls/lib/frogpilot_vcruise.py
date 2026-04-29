@@ -101,6 +101,12 @@ class FrogPilotVCruise:
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
 
+      # Pre-turn slowdown from navd (active only when a route is loaded and a
+      # turn-type maneuver is within range). Independent of SLC settings.
+      turn_slowdown_speed = sm["frogpilotNavigation"].turnSlowdownSpeed
+      if turn_slowdown_speed > 0:
+        targets.append(turn_slowdown_speed)
+
       v_cruise = min([target if target > CRUISING_SPEED else v_cruise for target in targets])
 
     return v_cruise

@@ -183,6 +183,7 @@ struct FrogPilotNavigation @0xf416ec09499d9d19 {
   approachingIntersection @0 :Bool;
   approachingTurn @1 :Bool;
   navigationSpeedLimit @2 :Float32;
+  turnSlowdownSpeed @3 :Float32;
 }
 
 struct FrogPilotPlan @0xa1680744031fdb2d {

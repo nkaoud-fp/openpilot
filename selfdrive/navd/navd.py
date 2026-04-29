@@ -1182,6 +1182,7 @@ class RouteEngine:
       self.pm.send('navInstruction', msg)
 
       fp_msg.frogpilotNavigation.navigationSpeedLimit = 0
+      fp_msg.frogpilotNavigation.turnSlowdownSpeed = 0
       self.pm.send('frogpilotNavigation', fp_msg)
       if not self.params.get_bool("NavigationTestControl"):
         self.update_navigation_test_command("none")
@@ -1407,12 +1408,8 @@ class RouteEngine:
 
     fp_msg.frogpilotNavigation.approachingIntersection = self.approaching_intersection
     fp_msg.frogpilotNavigation.approachingTurn = self.approaching_turn
-
-    nav_speed_limit_out = self.nav_speed_limit
-    turn_slowdown = self.turn_slowdown_speed(navigation_test_maneuver_class, distance_to_maneuver_along_geometry)
-    if turn_slowdown > 0.0:
-      nav_speed_limit_out = min(nav_speed_limit_out, turn_slowdown) if nav_speed_limit_out > 0 else turn_slowdown
-    fp_msg.frogpilotNavigation.navigationSpeedLimit = nav_speed_limit_out
+    fp_msg.frogpilotNavigation.navigationSpeedLimit = self.nav_speed_limit
+    fp_msg.frogpilotNavigation.turnSlowdownSpeed = self.turn_slowdown_speed(navigation_test_maneuver_class, distance_to_maneuver_along_geometry)
 
     self.pm.send('frogpilotNavigation', fp_msg)
 
