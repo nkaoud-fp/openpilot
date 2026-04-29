@@ -233,7 +233,7 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
     paintRoadName(p);
   }
 
-  paintNavigationTestAction(p);
+  paintNavigationTestAction(p, frogpilotNavigation);
 
   if (!bigMapOpen && (mutcdSpeedLimit || viennaSpeedLimit) && frogpilot_toggles.value("speed_limit_sources").toBool()) {
     paintSpeedLimitSources(p, frogpilotCarState, frogpilotNavigation, frogpilotPlan);
@@ -709,7 +709,7 @@ void FrogPilotAnnotatedCameraWidget::paintPendingSpeedLimit(QPainter &p, const c
   p.restore();
 }
 
-void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
+void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p, const cereal::FrogPilotNavigation::Reader &frogpilotNavigation) {
   if (!params.getBool("NavigationTestControl")) {
     return;
   }
@@ -765,6 +765,14 @@ void FrogPilotAnnotatedCameraWidget::paintNavigationTestAction(QPainter &p) {
   }
   if (etaSeconds > 0.0) {
     actionText += "  " + tr("ETA %1").arg(QTime::currentTime().addSecs(qRound(etaSeconds)).toString("h:mm AP"));
+  }
+
+  float turnSlowdownSpeed = frogpilotNavigation.getTurnSlowdownSpeed();
+  if (turnSlowdownSpeed > 0.0f) {
+    actionText += "  " + tr("slowing to %1%2").arg(QString::number(qRound(turnSlowdownSpeed * speedConversion))).arg(speedUnit);
+    if (borderColor == blackColor()) {
+      borderColor = QColor(bg_colors[STATUS_CONDITIONAL_OVERRIDDEN]);
+    }
   }
 
   p.save();
