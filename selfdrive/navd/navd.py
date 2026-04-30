@@ -64,7 +64,7 @@ NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.24 # 0.5
 # Navigation test control is intentionally conservative: navd is a lane-preparation
 # planner, not a steering/turn controller. It should only ask FrogPilot for lane
 # changes when a route maneuver needs side-lane positioning.
-NAVIGATION_TEST_DEBUG_LOG_VERSION = 6
+NAVIGATION_TEST_DEBUG_LOG_VERSION = 7
 NAVIGATION_TEST_MAX_BEARING_ERROR = 55.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 80.0
@@ -80,6 +80,13 @@ NAVIGATION_TEST_ROUTE_GRACE_CROSS_TRACK_M = 70.0
 NAVIGATION_TEST_BEARING_CHECK_MIN_SPEED = 8.0
 NAVIGATION_TEST_BEARING_CROSS_TRACK_TRUST_M = 8.0
 NAVIGATION_TEST_ROUTE_GRACE_LATE_TURN_HOLD_DISTANCE_M = 80.0
+# For surface-street turns, do not fire the lane-change intent far ahead of the
+# maneuver. Fire a short turn-assist pulse when the actual turn/intersection is
+# close enough to be visually/contextually relevant to FrogPilot.
+NAVIGATION_TEST_SURFACE_TURN_ASSIST_SECONDS = 2.5
+NAVIGATION_TEST_SURFACE_TURN_ASSIST_DISTANCE_MIN = 10.0
+NAVIGATION_TEST_SURFACE_TURN_ASSIST_DISTANCE_MAX = 35.0
+NAVIGATION_TEST_SURFACE_TURN_ASSIST_PAST_DISTANCE_M = -5.0
 # Lane-change command prerequisites. navd can only request a lane-change intent;
 # the actual FrogPilot lane-change stack must still make the final safety decision.
 NAVIGATION_TEST_LANE_CHANGE_MIN_LEAD_GAP_M = 14.0
@@ -916,6 +923,13 @@ class RouteEngine:
       max(NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS),
     )
 
+  def navigation_test_surface_turn_assist_distance(self):
+    v_ego = max(float(self.sm['carState'].vEgo), 0.0)
+    return min(
+      NAVIGATION_TEST_SURFACE_TURN_ASSIST_DISTANCE_MAX,
+      max(NAVIGATION_TEST_SURFACE_TURN_ASSIST_DISTANCE_MIN, v_ego * NAVIGATION_TEST_SURFACE_TURN_ASSIST_SECONDS),
+    )
+
   def navigation_test_prep_distance_for_maneuver(self, maneuver_class, road_context):
     if maneuver_class in ("normal_turn", "uturn"):
       return self.navigation_test_surface_turn_prep_distance()
@@ -1094,8 +1108,38 @@ class RouteEngine:
       self.reset_navigation_test_exit_migration()
       return "upcoming", direction, display_direction, "consecutiveConflictHold", active_prep_distance, "conflictingNextManeuver", target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "conflictingNextManeuver", urgency
 
+    if maneuver_class in ("normal_turn", "uturn"):
+      turn_assist_distance = self.navigation_test_surface_turn_assist_distance()
+
+      if self.navigation_test_surface_turn_already_commanded(instruction, geometry, direction):
+        return "upcoming", direction, display_direction, "turnAssistCommandedHold", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "surfaceTurnAlreadyCommanded", urgency
+
+      # For surface turns, the lane-change command is being used as a turn-intent
+      # pulse, not as early lane positioning. Wait until the actual turn is close
+      # enough to be visible/contextual, then fire one short command.
+      if distance_to_maneuver_along_geometry > turn_assist_distance:
+        return "upcoming", direction, display_direction, "turnAssistWaiting", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "waitingForTurnAssistWindow", urgency
+
+      if distance_to_maneuver_along_geometry < NAVIGATION_TEST_SURFACE_TURN_ASSIST_PAST_DISTANCE_M:
+        return "guidanceOnly", direction, display_direction, "turnAssistExpired", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "turnAssistWindowExpired", 1.0
+
+      lane_safe, safety_reason, _, _, _ = self.navigation_test_lane_change_prerequisites(direction, left_available, right_available)
+      if not lane_safe:
+        return "upcoming", direction, display_direction, "turnAssistBlocked", turn_assist_distance, safety_reason, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, safety_reason, urgency
+
+      allowed, block_reason = self.navigation_test_lane_command_allowed(direction)
+      if not allowed:
+        strategy_phase = "turnAssistCooldown"
+        if conflict_soon:
+          strategy_constraint = "conflictingNextManeuver"
+        return "upcoming", direction, display_direction, strategy_phase, turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, block_reason, urgency
+
+      self.record_navigation_test_surface_turn_command(instruction, geometry, direction)
+      self.record_navigation_test_lane_command(direction, distance_to_maneuver_along_geometry)
+      return "laneChange", direction, display_direction, "turnAssist", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, 1.0
+
     if (
-      maneuver_class in ("normal_turn", "uturn") and
+      maneuver_class not in ("normal_turn", "uturn") and
       self.navigation_test_route_grace_active() and
       distance_to_maneuver_along_geometry <= NAVIGATION_TEST_ROUTE_GRACE_LATE_TURN_HOLD_DISTANCE_M
     ):
@@ -1106,12 +1150,6 @@ class RouteEngine:
 
     if self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
       return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "targetEdgeReached", urgency
-
-    if (
-      maneuver_class in ("normal_turn", "uturn") and
-      self.navigation_test_surface_turn_already_commanded(instruction, geometry, direction)
-    ):
-      return "upcoming", direction, display_direction, "surfaceTurnCommandedHold", active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "surfaceTurnAlreadyCommanded", urgency
 
     lane_safe, safety_reason, _, _, _ = self.navigation_test_lane_change_prerequisites(direction, left_available, right_available)
     if not lane_safe:
@@ -1124,9 +1162,7 @@ class RouteEngine:
         strategy_constraint = "conflictingNextManeuver"
       return "upcoming", direction, display_direction, strategy_phase, active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, block_reason, urgency
 
-    if maneuver_class in ("normal_turn", "uturn"):
-      strategy_phase = "turnLanePositioning"
-    elif distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
+    if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
       strategy_phase = "exitMigration"
     else:
       strategy_phase = "highwayExitMigration"
@@ -1134,8 +1170,6 @@ class RouteEngine:
     if conflict_soon:
       strategy_constraint = "conflictingNextManeuver"
 
-    if maneuver_class in ("normal_turn", "uturn"):
-      self.record_navigation_test_surface_turn_command(instruction, geometry, direction)
     self.record_navigation_test_lane_command(direction, distance_to_maneuver_along_geometry)
     return "laneChange", direction, display_direction, strategy_phase, active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, urgency
 
