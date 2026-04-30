@@ -98,6 +98,23 @@ NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
 NAVIGATION_TEST_SURFACE_TURN_LATE_LOCKOUT_DISTANCE_MIN = 35.0
 NAVIGATION_TEST_POST_EXIT_RECENTER_SECONDS = 20.0
 NAVIGATION_TEST_POST_EXIT_RECENTER_CONFLICT_DISTANCE = 500.0
+
+# --- Geometric maneuver classifier thresholds (tunable) ---
+# All angles are degrees; all speeds are m/s. Direction sign convention:
+# positive turn_angle = right, negative = left.
+NAV_HIGHWAY_SPEED_MIN_MS = 18.0          # >= this -> highway road context
+NAV_SURFACE_TURN_SPEED_MAX_MS = 12.0     # <= this preferred for surface-turn classification
+NAV_ANGLE_CONTINUE_MAX_DEG = 5.0         # |angle| below this is straight/continue
+NAV_ANGLE_FORK_MIN_DEG = 5.0             # 5..15 = highway_fork at high speed
+NAV_ANGLE_FORK_MAX_DEG = 15.0
+NAV_ANGLE_HIGHWAY_EXIT_MIN_DEG = 15.0    # 15..45 = highway_exit at high speed
+NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG = 45.0
+NAV_ANGLE_NORMAL_TURN_MIN_DEG = 15.0     # at low speed, anything >=15 is a normal_turn
+NAV_ANGLE_UTURN_MIN_DEG = 135.0
+# Distance (m) walked along the route polyline before/after the maneuver point
+# to anchor the bearing-in / bearing-out vectors used for the angle measurement.
+# Larger values smooth polyline noise but blur tight intersections.
+NAV_ANGLE_ANCHOR_M = 8.0
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "log_version",
   "time",
@@ -421,76 +438,159 @@ class RouteEngine:
       self.params.put("NavigationTestTurnCommand", command)
       self.navigation_test_command = command
 
-  def navigation_test_maneuver_direction(self, instruction):
+  def navigation_test_compute_maneuver_angle(self, geometry, next_geometry=None):
+    """Compute the signed turn angle (degrees) at the maneuver point of the
+    given step's geometry. Positive = right turn, negative = left turn.
+
+    The maneuver point is the last coordinate in `geometry`. bearing_in is
+    taken between an anchor walked back NAV_ANGLE_ANCHOR_M along `geometry`
+    and the maneuver point. bearing_out is taken between the maneuver point
+    and an anchor walked forward NAV_ANGLE_ANCHOR_M along `next_geometry`.
+    If `next_geometry` is None, defaults to the geometry of the step
+    immediately after `self.step_idx` (i.e. the current maneuver). Falls back
+    to a local 2-segment estimate when no usable next geometry is available.
+
+    Returns (angle_deg, valid).
+    """
+    if geometry is None or len(geometry) < 2:
+      return 0.0, False
+
+    maneuver_point = geometry[-1]
+
+    pre_anchor = geometry[0]
+    accumulated = 0.0
+    for i in range(len(geometry) - 1, 0, -1):
+      accumulated += geometry[i].distance_to(geometry[i - 1])
+      pre_anchor = geometry[i - 1]
+      if accumulated >= NAV_ANGLE_ANCHOR_M:
+        break
+    if pre_anchor.distance_to(maneuver_point) < 1e-3:
+      return 0.0, False
+    bearing_in = self.navigation_test_bearing_between(pre_anchor, maneuver_point)
+
+    if next_geometry is None and (self.route_geometry is not None
+        and self.step_idx is not None
+        and self.step_idx + 1 < len(self.route_geometry)):
+      next_geometry = self.route_geometry[self.step_idx + 1]
+
+    post_anchor = None
+    if next_geometry and len(next_geometry) >= 2:
+      accumulated = 0.0
+      for i in range(len(next_geometry) - 1):
+        accumulated += next_geometry[i].distance_to(next_geometry[i + 1])
+        post_anchor = next_geometry[i + 1]
+        if accumulated >= NAV_ANGLE_ANCHOR_M:
+          break
+
+    if post_anchor is None or post_anchor.distance_to(maneuver_point) < 1e-3:
+      if len(geometry) < 3:
+        return 0.0, False
+      bearing_in = self.navigation_test_bearing_between(geometry[-3], geometry[-2])
+      bearing_out = self.navigation_test_bearing_between(geometry[-2], geometry[-1])
+    else:
+      bearing_out = self.navigation_test_bearing_between(maneuver_point, post_anchor)
+
+    return self.navigation_test_angle_diff(bearing_out, bearing_in), True
+
+  def navigation_test_maneuver_direction(self, instruction, geometry=None, next_geometry=None):
+    """Direction is the sign of the turn angle. Geometry is preferred; the
+    instruction is only consulted to detect u-turns when geometry is missing."""
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    if valid:
+      if angle > NAV_ANGLE_CONTINUE_MAX_DEG:
+        return "right"
+      if angle < -NAV_ANGLE_CONTINUE_MAX_DEG:
+        return "left"
+      return "none"
+    # Geometry unavailable: best-effort fallback for u-turn / arrive cases.
     if instruction is None:
       return "none"
-
-    modifier = instruction.get("maneuverModifier", "").lower()
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    direction_text = f"{maneuver_type} {modifier}"
-    if "left" in direction_text:
+    text = (instruction.get("maneuverType", "") + " " +
+            instruction.get("maneuverModifier", "")).lower()
+    if "left" in text:
       return "left"
-    if "right" in direction_text:
+    if "right" in text:
       return "right"
     return "none"
 
-  def navigation_test_maneuver_display_direction(self, instruction):
-    if instruction is None:
+  def navigation_test_maneuver_display_direction(self, instruction, geometry=None, next_geometry=None):
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    # Roundabouts/u-turns from text take priority over local angle estimate;
+    # roundabout geometry is multi-segment and can read like a sharp turn.
+    text_modifier = "" if instruction is None else instruction.get("maneuverModifier", "").lower().replace(" ", "_")
+    text_type = "" if instruction is None else instruction.get("maneuverType", "").lower().replace(" ", "_")
+    if "uturn" in (text_modifier, text_type):
+      return "uturn"
+
+    if not valid:
+      return self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
+
+    abs_angle = abs(angle)
+    if abs_angle >= NAV_ANGLE_UTURN_MIN_DEG:
+      return "uturn"
+    side = "right" if angle > 0 else "left"
+    if abs_angle >= NAV_ANGLE_NORMAL_TURN_MIN_DEG:
+      return side
+    if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+      return f"slight_{side}"
+    return "none"
+
+  def navigation_test_maneuver_class(self, instruction, geometry=None, next_geometry=None):
+    """Geometric maneuver classification. Roundabouts and arrive maneuvers are
+    intentionally text-driven (geometry can't reliably distinguish them).
+    Everything else is classified from the signed turn angle plus the current
+    speed (used as a proxy for road context).
+
+    Returns the same string vocabulary as the legacy text classifier so all
+    downstream consumers (turn_slowdown, dedup cache, etc.) keep working."""
+    if instruction is None and (geometry is None or len(geometry) < 2):
       return "none"
 
-    modifier = instruction.get("maneuverModifier", "").lower().replace(" ", "_")
-    maneuver_type = instruction.get("maneuverType", "").lower().replace(" ", "_")
-    if "uturn" in (modifier, maneuver_type):
-      return "uturn"
-    if modifier in ("slight_left", "sharp_left", "left", "slight_right", "sharp_right", "right"):
-      return modifier
+    text_type = "" if instruction is None else instruction.get("maneuverType", "").lower()
+    text_primary = "" if instruction is None else instruction.get("maneuverPrimaryText", "").lower()
+    text = f"{text_type} {text_primary}"
 
-    direction = self.navigation_test_maneuver_direction(instruction)
-    return direction
-
-  def navigation_test_maneuver_class(self, instruction):
-    if instruction is None:
-      return "none"
-
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    modifier = instruction.get("maneuverModifier", "").lower()
-    primary_text = instruction.get("maneuverPrimaryText", "").lower()
-    direction = self.navigation_test_maneuver_direction(instruction)
-    display_direction = self.navigation_test_maneuver_display_direction(instruction)
-    text = f"{maneuver_type} {modifier} {primary_text}"
-
-    if display_direction == "uturn" or "uturn" in text or "u-turn" in text:
-      return "uturn"
+    # Text overrides for cases that don't reduce to a single turn angle.
     if "arrive" in text or "destination" in text:
       return "arrive"
-    if "roundabout" in text or "rotary" in text:
+    if "roundabout" in text_type or "rotary" in text_type:
       return "roundabout"
-    if "ramp" in maneuver_type or "exit" in primary_text or "take exit" in text:
-      return "highway_exit"
-    if "fork" in text or ("keep" in maneuver_type and direction in ("left", "right")):
-      return "highway_fork"
-    if "merge" in text:
-      return "highway_merge"
-    if direction in ("left", "right"):
-      return "normal_turn"
-    if "straight" in text or "continue" in text:
+
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    if not valid:
+      return "unknown"
+
+    abs_angle = abs(angle)
+    if abs_angle >= NAV_ANGLE_UTURN_MIN_DEG:
+      return "uturn"
+    if abs_angle < NAV_ANGLE_CONTINUE_MAX_DEG:
       return "continue"
-    return "unknown"
+
+    try:
+      v_ego = float(self.sm['carState'].vEgo)
+    except Exception:
+      v_ego = 0.0
+
+    if v_ego >= NAV_HIGHWAY_SPEED_MIN_MS:
+      if abs_angle >= NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG:
+        return "normal_turn"
+      if abs_angle >= NAV_ANGLE_HIGHWAY_EXIT_MIN_DEG:
+        return "highway_exit"
+      if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+        return "highway_fork"
+      return "highway_merge"
+
+    # Surface / low-speed context.
+    if abs_angle >= NAV_ANGLE_NORMAL_TURN_MIN_DEG:
+      return "normal_turn"
+    if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+      return "highway_fork"
+    return "continue"
 
   def navigation_test_is_lane_positioning_maneuver(self, maneuver_class):
     # Only output lane-change intents for maneuvers where being in a side lane
     # matters. The car still follows road curvature through the actual turn/fork.
     return maneuver_class in ("highway_exit", "highway_fork", "normal_turn", "uturn")
-
-  def turn_slowdown_speed_Old(self, maneuver_class, distance_to_maneuver):
-    if maneuver_class not in TURN_SLOWDOWN_MANEUVER_CLASSES:
-      return 0.0
-    if distance_to_maneuver is None or distance_to_maneuver > TURN_SLOWDOWN_DISTANCE_M:
-      return 0.0
-    d = max(distance_to_maneuver, 0.0)
-    return float(interp(d, [0.0, TURN_SLOWDOWN_DISTANCE_M],
-                        [TURN_SLOWDOWN_MIN_SPEED_MS, TURN_SLOWDOWN_MAX_SPEED_MS]))
-
 
   def turn_slowdown_speed(self, maneuver_class, distance_to_maneuver):
     if maneuver_class not in TURN_SLOWDOWN_MANEUVER_CLASSES:
@@ -811,13 +911,8 @@ class RouteEngine:
     self.navigation_test_post_exit_recenter_done = True
     return ("laneChange", direction, direction, "postExitRecenter", 0.0, "none", "interior", "none", 0.65)
 
-  def navigation_test_is_exit_maneuver(self, instruction):
-    if instruction is None:
-      return False
-
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    primary_text = instruction.get("maneuverPrimaryText", "").lower()
-    return "ramp" in maneuver_type or "exit" in primary_text
+  def navigation_test_is_exit_maneuver(self, instruction, geometry=None, next_geometry=None):
+    return self.navigation_test_maneuver_class(instruction, geometry, next_geometry) == "highway_exit"
 
   def navigation_test_maneuver_key(self, instruction, geometry):
     if instruction is None:
@@ -839,7 +934,11 @@ class RouteEngine:
     if instruction is None or direction not in ("left", "right"):
       return None
 
-    maneuver_class = self.navigation_test_maneuver_class(instruction)
+    next_geometry = (self.route_geometry[self.step_idx + 1]
+                     if (self.route_geometry is not None and self.step_idx is not None
+                         and self.step_idx + 1 < len(self.route_geometry))
+                     else None)
+    maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
     if maneuver_class not in ("normal_turn", "uturn"):
       return None
 
@@ -879,16 +978,6 @@ class RouteEngine:
   def navigation_test_exit_prep_distance(self):
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_EXIT_PREP_SECONDS)
-
-  def navigation_test_highway_exit_prep_distance_OLD(self):
-    v_ego = self.sm['carState'].vEgo
-    if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
-      return self.navigation_test_exit_prep_distance()
-    return min(
-      NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX,
-      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
-    )
-
 
   def navigation_test_highway_exit_prep_distance(self):
     v_ego = max(self.sm['carState'].vEgo, 0.1) # Prevent div by zero
@@ -1045,17 +1134,23 @@ class RouteEngine:
       if instruction is None:
         continue
 
-      direction = self.navigation_test_maneuver_direction(instruction)
-      display_direction = self.navigation_test_maneuver_display_direction(instruction)
+      step_geometry = self.route_geometry[i] if (self.route_geometry is not None and i < len(self.route_geometry)) else None
+      step_next_geometry = self.route_geometry[i + 1] if (self.route_geometry is not None and i + 1 < len(self.route_geometry)) else None
+      direction = self.navigation_test_maneuver_direction(instruction, step_geometry, step_next_geometry)
+      display_direction = self.navigation_test_maneuver_display_direction(instruction, step_geometry, step_next_geometry)
       if direction != "none" or display_direction == "uturn":
         return direction, cumulative_distance, instruction
 
     return "none", None, None
 
   def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
-    direction = self.navigation_test_maneuver_direction(instruction)
-    display_direction = self.navigation_test_maneuver_display_direction(instruction)
-    maneuver_class = self.navigation_test_maneuver_class(instruction)
+    next_geometry = (self.route_geometry[self.step_idx + 1]
+                     if (self.route_geometry is not None and self.step_idx is not None
+                         and self.step_idx + 1 < len(self.route_geometry))
+                     else None)
+    direction = self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
+    display_direction = self.navigation_test_maneuver_display_direction(instruction, geometry, next_geometry)
+    maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
     road_context = self.navigation_test_road_context(maneuver_class)
     target_lane_zone = self.navigation_test_target_zone_for_direction(direction)
     left_available, right_available, lane_confidence = self.navigation_test_lane_availability()
@@ -1624,7 +1719,11 @@ class RouteEngine:
     navigation_test_lane_belief = "unknown"
     navigation_test_lane_left_available = None
     navigation_test_lane_right_available = None
-    navigation_test_maneuver_class = self.navigation_test_maneuver_class(instruction)
+    navigation_test_next_geometry = (self.route_geometry[self.step_idx + 1]
+                                     if (self.route_geometry is not None
+                                         and self.step_idx + 1 < len(self.route_geometry))
+                                     else None)
+    navigation_test_maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, navigation_test_next_geometry)
     navigation_test_road_context = self.navigation_test_road_context(navigation_test_maneuver_class)
     navigation_test_command_block_reason = "none"
     navigation_test_urgency = 0.0
@@ -1816,8 +1915,9 @@ class RouteEngine:
 
     if self.should_transition_to_next_step(distance_to_maneuver_along_geometry):
       if self.step_idx + 1 < len(self.route):
-        if self.navigation_test_is_exit_maneuver(instruction):
-          self.start_navigation_test_post_exit_recenter(self.navigation_test_maneuver_direction(instruction))
+        if self.navigation_test_is_exit_maneuver(instruction, geometry, navigation_test_next_geometry):
+          self.start_navigation_test_post_exit_recenter(
+            self.navigation_test_maneuver_direction(instruction, geometry, navigation_test_next_geometry))
         self.step_idx += 1
         self.reset_recompute_limits()
 
