@@ -60,16 +60,35 @@ NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE = 80
 NAVIGATION_TEST_DESTINATION_MISSED_DRIFT = 30
 NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN = 2
 NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
-NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
+NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.24 # 0.5
 # Navigation test control is intentionally conservative: navd is a lane-preparation
 # planner, not a steering/turn controller. It should only ask FrogPilot for lane
 # changes when a route maneuver needs side-lane positioning.
-NAVIGATION_TEST_DEBUG_LOG_VERSION = 0.1
+NAVIGATION_TEST_DEBUG_LOG_VERSION = 6
 NAVIGATION_TEST_MAX_BEARING_ERROR = 55.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 80.0
 NAVIGATION_TEST_LANE_CHANGE_COOLDOWN_SECONDS = 10.0
 NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY = 0.35
+# Treat model outer-lane probabilities as a soft signal. Low probability is not
+# enough to prove that no adjacent lane exists, especially on urban roads with
+# weak/dirty lane markings. BSM and adjacent-lane lead checks remain hard gates.
+NAVIGATION_TEST_ADJACENT_LANE_ABSENT_PROBABILITY = 0.08
+NAVIGATION_TEST_ROAD_EDGE_NO_LANE_M = 3.0
+NAVIGATION_TEST_ROUTE_APPLY_GRACE_SECONDS = 5.0
+NAVIGATION_TEST_ROUTE_GRACE_CROSS_TRACK_M = 70.0
+NAVIGATION_TEST_BEARING_CHECK_MIN_SPEED = 8.0
+NAVIGATION_TEST_BEARING_CROSS_TRACK_TRUST_M = 8.0
+NAVIGATION_TEST_ROUTE_GRACE_LATE_TURN_HOLD_DISTANCE_M = 80.0
+# Lane-change command prerequisites. navd can only request a lane-change intent;
+# the actual FrogPilot lane-change stack must still make the final safety decision.
+NAVIGATION_TEST_LANE_CHANGE_MIN_LEAD_GAP_M = 14.0
+NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS = 1.8
+NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS = 2.2
+NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS = 18.0
+NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN = 120.0
+NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
+NAVIGATION_TEST_SURFACE_TURN_LATE_LOCKOUT_DISTANCE_MIN = 35.0
 NAVIGATION_TEST_POST_EXIT_RECENTER_SECONDS = 20.0
 NAVIGATION_TEST_POST_EXIT_RECENTER_CONFLICT_DISTANCE = 500.0
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
@@ -102,6 +121,19 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "lane_belief",
   "lane_left_available",
   "lane_right_available",
+  "lane_left_score",
+  "lane_right_score",
+  "left_road_edge_y",
+  "right_road_edge_y",
+  "route_grace_active",
+  "turn_slowdown_speed",
+  "nav_speed_limit",
+  "approaching_turn",
+  "lane_change_safe",
+  "lane_change_block_reason",
+  "target_lane_blindspot",
+  "target_lane_lead_d_rel",
+  "target_lane_lead_v_rel",
   "route_confident",
   "route_confidence",
   "route_bearing_error",
@@ -165,6 +197,13 @@ class RouteEngine:
     self.navigation_test_post_exit_recenter_started_at = 0.0
     self.navigation_test_post_exit_recenter_expires_at = 0.0
     self.navigation_test_post_exit_recenter_done = False
+    self.navigation_test_route_applied_at = 0.0
+    self.navigation_test_lane_left_score = None
+    self.navigation_test_lane_right_score = None
+    self.navigation_test_left_road_edge_y = None
+    self.navigation_test_right_road_edge_y = None
+    self.navigation_test_surface_turn_commanded_keys = set()
+    self.navigation_test_debug_last_signature = None
 
     # Threading variables
     self.route_thread = None
@@ -342,7 +381,7 @@ class RouteEngine:
     self.navigation_test_shared_destination_retry_at = 0.0
     return self.navigation_test_shared_destination
 
-  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_lane_zone="none", lane_belief="unknown", maneuver_class="unknown", road_context="unknown", route_confidence=0.0, command_block_reason="none", urgency=0.0):
+  def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_lane_zone="none", lane_belief="unknown", maneuver_class="unknown", road_context="unknown", route_confidence=0.0, command_block_reason="none", urgency=0.0, lane_change_safe=True, lane_change_block_reason="none", target_lane_blindspot=False, target_lane_lead_d_rel=None, target_lane_lead_v_rel=None):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     post_exit_recenter_active = self.navigation_test_post_exit_recenter_active()
     command = json.dumps({
@@ -361,6 +400,11 @@ class RouteEngine:
       "routeConfidence": max(min(route_confidence, 1.0), 0.0),
       "commandBlockReason": command_block_reason,
       "urgency": max(min(urgency, 1.0), 0.0),
+      "laneChangeSafe": bool(lane_change_safe),
+      "laneChangeBlockReason": lane_change_block_reason,
+      "targetLaneBlindspot": bool(target_lane_blindspot),
+      "targetLaneLeadDRel": target_lane_lead_d_rel if target_lane_lead_d_rel is not None else -1.0,
+      "targetLaneLeadVRel": target_lane_lead_v_rel if target_lane_lead_v_rel is not None else 0.0,
       "migrationActive": self.navigation_test_exit_migration_key is not None,
       "migrationAgeSeconds": max(migration_age, 0.0),
       "migrationStartDistance": max(self.navigation_test_exit_migration_start_distance, 0.0),
@@ -427,9 +471,11 @@ class RouteEngine:
     return "unknown"
 
   def navigation_test_is_lane_positioning_maneuver(self, maneuver_class):
-    return maneuver_class in ("highway_exit", "highway_fork")
+    # Only output lane-change intents for maneuvers where being in a side lane
+    # matters. The car still follows road curvature through the actual turn/fork.
+    return maneuver_class in ("highway_exit", "highway_fork", "normal_turn", "uturn")
 
-  def turn_slowdown_speed(self, maneuver_class, distance_to_maneuver):
+  def turn_slowdown_speed_Old(self, maneuver_class, distance_to_maneuver):
     if maneuver_class not in TURN_SLOWDOWN_MANEUVER_CLASSES:
       return 0.0
     if distance_to_maneuver is None or distance_to_maneuver > TURN_SLOWDOWN_DISTANCE_M:
@@ -437,6 +483,32 @@ class RouteEngine:
     d = max(distance_to_maneuver, 0.0)
     return float(interp(d, [0.0, TURN_SLOWDOWN_DISTANCE_M],
                         [TURN_SLOWDOWN_MIN_SPEED_MS, TURN_SLOWDOWN_MAX_SPEED_MS]))
+
+
+  def turn_slowdown_speed(self, maneuver_class, distance_to_maneuver):
+    if maneuver_class not in TURN_SLOWDOWN_MANEUVER_CLASSES:
+      return 0.0
+    if distance_to_maneuver is None:
+      return 0.0
+
+    # Use current speed and a comfortable decel estimate to start slowing only
+    # when the turn is close enough to need it. Avoid returning a target above
+    # current speed when already crawling below the desired turn speed.
+    comfortable_decel = 1.5
+    v_ego = max(float(self.sm['carState'].vEgo), 0.0)
+    if v_ego <= TURN_SLOWDOWN_MIN_SPEED_MS + 0.5:
+      return 0.0
+
+    required_braking_distance = (v_ego**2 - TURN_SLOWDOWN_MIN_SPEED_MS**2) / (2.0 * comfortable_decel)
+    required_braking_distance = max(required_braking_distance, 50.0)
+
+    if distance_to_maneuver > required_braking_distance:
+      return 0.0
+
+    d = max(distance_to_maneuver, 0.0)
+    return float(interp(d, [0.0, required_braking_distance],
+                        [TURN_SLOWDOWN_MIN_SPEED_MS, v_ego]))
+
 
   def navigation_test_road_context(self, maneuver_class):
     v_ego = self.sm['carState'].vEgo
@@ -448,38 +520,115 @@ class RouteEngine:
       return "highway"
     return "surface"
 
+
   def navigation_test_lane_availability(self):
-    # Best-effort adjacent-lane estimate from modelV2 lane-line probabilities.
-    # It is intentionally used as a soft gate only. The actual lane-change module
-    # should still veto if the requested adjacent lane is not available.
     left_available = None
     right_available = None
     confidence = 0.0
+    self.navigation_test_lane_left_score = None
+    self.navigation_test_lane_right_score = None
+    self.navigation_test_left_road_edge_y = None
+    self.navigation_test_right_road_edge_y = None
+
+    try:
+      model = self.sm['modelV2']
+
+      # 1. Outer lane-line probabilities are positive indicators only.
+      # A high outer-line probability suggests an adjacent lane exists, but a
+      # low probability is not reliable enough to prove a lane is absent.
+      lane_line_probs = list(model.laneLineProbs)
+      if len(lane_line_probs) >= 4:
+        left_score = float(lane_line_probs[0])
+        right_score = float(lane_line_probs[3])
+        self.navigation_test_lane_left_score = left_score
+        self.navigation_test_lane_right_score = right_score
+
+        if left_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY:
+          left_available = True
+        if right_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY:
+          right_available = True
+
+        confidence = max(left_score, right_score)
+
+      # 2. Road edges are negative indicators. Use them as a hard boundary only
+      # when the sign and distance are plausible. This avoids treating noisy or
+      # sign-flipped edge predictions as proof that no adjacent lane exists.
+      road_edges = list(model.roadEdges)
+      if len(road_edges) >= 2:
+        try:
+          left_edge_y = float(road_edges[0].y[0]) if len(road_edges[0].y) > 0 else None
+        except Exception:
+          left_edge_y = None
+        try:
+          right_edge_y = float(road_edges[1].y[0]) if len(road_edges[1].y) > 0 else None
+        except Exception:
+          right_edge_y = None
+
+        self.navigation_test_left_road_edge_y = left_edge_y
+        self.navigation_test_right_road_edge_y = right_edge_y
+
+        # Treat road-edge lateral sign as branch/model dependent. The latest
+        # logs showed left/right edge signs reversed, so use absolute distance
+        # as the hard no-lane boundary while still logging the raw signed value.
+        if left_edge_y is not None and 0.0 < abs(left_edge_y) < NAVIGATION_TEST_ROAD_EDGE_NO_LANE_M:
+          left_available = False
+        if right_edge_y is not None and 0.0 < abs(right_edge_y) < NAVIGATION_TEST_ROAD_EDGE_NO_LANE_M:
+          right_available = False
+
+    except Exception:
+      pass
+
+    return left_available, right_available, confidence
+
+
+  def navigation_test_lane_availability_OLD(self):
+    # Best-effort adjacent-lane estimate from modelV2 lane-line probabilities.
+    # Important: low outer-lane probability is treated as UNKNOWN, not a hard
+    # "no lane". On surface roads the outer lane lines are frequently missing,
+    # dirty, occluded, or not part of the model output, so hard-blocking here
+    # prevented all lane-positioning commands in the short drive log.
+    left_available = None
+    right_available = None
+    confidence = 0.0
+    self.navigation_test_lane_left_score = None
+    self.navigation_test_lane_right_score = None
     try:
       model = self.sm['modelV2']
       lane_line_probs = list(model.laneLineProbs)
       if len(lane_line_probs) >= 4:
         # openpilot models expose four lane-line probabilities. The outer lane
-        # lines are a useful proxy for adjacent-lane availability.
+        # lines are a useful positive proxy for adjacent-lane availability, but
+        # a low score is not reliable enough to prove that the adjacent lane is
+        # absent. Let FrogPilot's lane-change stack perform the final veto.
         left_score = float(lane_line_probs[0])
         right_score = float(lane_line_probs[3])
-        left_available = left_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY
-        right_available = right_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY
+        self.navigation_test_lane_left_score = left_score
+        self.navigation_test_lane_right_score = right_score
+        left_available = True if left_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY else None
+        right_available = True if right_score >= NAVIGATION_TEST_ADJACENT_LANE_PROBABILITY else None
         confidence = max(left_score, right_score)
     except Exception:
       pass
     return left_available, right_available, confidence
 
   def navigation_test_lane_belief(self, left_available=None, right_available=None):
-    if left_available is None or right_available is None:
-      return "unknown"
-    if left_available and right_available:
+    if left_available is True and right_available is True:
       return "interior"
-    if left_available and not right_available:
+    if left_available is True and right_available is False:
       return "right_edge"
-    if not left_available and right_available:
+    if left_available is False and right_available is True:
       return "left_edge"
-    return "single_or_unknown"
+    if left_available is False and right_available is False:
+      return "single_or_unknown"
+    if left_available is True and right_available is None:
+      return "probable_right_edge"
+    if left_available is None and right_available is True:
+      return "probable_left_edge"
+    if left_available is False and right_available is None:
+      return "probable_left_edge"
+    if left_available is None and right_available is False:
+      return "probable_right_edge"
+    return "unknown"
 
   def navigation_test_direction_available(self, direction, left_available=None, right_available=None):
     if direction == "left":
@@ -496,7 +645,15 @@ class RouteEngine:
     return "none"
 
   def navigation_test_target_edge_reached(self, target_lane_zone, lane_belief):
-    return target_lane_zone != "none" and lane_belief == target_lane_zone
+    if target_lane_zone == "none":
+      return False
+    if lane_belief == target_lane_zone:
+      return True
+    if target_lane_zone == "right_edge" and lane_belief == "probable_right_edge":
+      return True
+    if target_lane_zone == "left_edge" and lane_belief == "probable_left_edge":
+      return True
+    return False
 
   def navigation_test_late_lane_change_lockout_distance(self):
     v_ego = self.sm['carState'].vEgo
@@ -542,6 +699,12 @@ class RouteEngine:
         closest_bearing = self.navigation_test_bearing_between(path[i], path[i + 1])
     return closest_bearing
 
+  def navigation_test_route_grace_active(self):
+    return (
+      self.navigation_test_route_applied_at > 0.0 and
+      time.monotonic() - self.navigation_test_route_applied_at <= NAVIGATION_TEST_ROUTE_APPLY_GRACE_SECONDS
+    )
+
   def navigation_test_route_confidence(self, geometry, cross_track_error):
     route_bearing_error = None
     if not self.gps_ok:
@@ -549,17 +712,33 @@ class RouteEngine:
     if not self.localizer_valid:
       return False, 0.0, route_bearing_error, "localizerInvalid"
 
+    route_grace_active = self.navigation_test_route_grace_active()
     score = 1.0
     if cross_track_error is not None:
       score = min(score, max(0.0, 1.0 - cross_track_error / max(NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR, 1.0)))
-      if cross_track_error > NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR:
+      cross_track_limit = NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR
+      if route_grace_active:
+        cross_track_limit = max(cross_track_limit, NAVIGATION_TEST_ROUTE_GRACE_CROSS_TRACK_M, self.navigation_test_command_distance())
+      if cross_track_error > cross_track_limit:
         return False, score, route_bearing_error, "crossTrackError"
 
     route_bearing = self.navigation_test_closest_segment_bearing(geometry)
     if route_bearing is not None and self.last_bearing is not None:
       route_bearing_error = abs(self.navigation_test_angle_diff(self.last_bearing, route_bearing))
       score = min(score, max(0.0, 1.0 - route_bearing_error / 90.0))
-      if self.sm['carState'].vEgo > 5.0 and route_bearing_error > NAVIGATION_TEST_MAX_BEARING_ERROR:
+      # Bearing can be temporarily wrong immediately after a route recalculation
+      # or while crawling through urban turns. Do not reject the route on bearing
+      # alone during that grace period / low-speed context.
+      laterally_on_route = (
+        cross_track_error is not None and
+        cross_track_error < NAVIGATION_TEST_BEARING_CROSS_TRACK_TRUST_M
+      )
+      bearing_gate_active = (
+        not route_grace_active and
+        not laterally_on_route and
+        self.sm['carState'].vEgo > NAVIGATION_TEST_BEARING_CHECK_MIN_SPEED
+      )
+      if bearing_gate_active and route_bearing_error > NAVIGATION_TEST_MAX_BEARING_ERROR:
         return False, score, route_bearing_error, "bearingError"
 
     return True, score, route_bearing_error, "none"
@@ -610,9 +789,12 @@ class RouteEngine:
 
     direction = self.navigation_test_post_exit_recenter_direction
     left_available, right_available, _ = self.navigation_test_lane_availability()
-    if not self.navigation_test_direction_available(direction, left_available, right_available):
-      self.navigation_test_post_exit_recenter_done = True
-      return None
+    lane_safe, safety_reason, _, _, _ = self.navigation_test_lane_change_prerequisites(direction, left_available, right_available)
+    if not lane_safe:
+      if safety_reason == "adjacentLaneUnavailable":
+        self.navigation_test_post_exit_recenter_done = True
+        return None
+      return ("upcoming", direction, direction, "postExitRecenterBlocked", 0.0, safety_reason, "interior", safety_reason, 0.35)
 
     allowed, block_reason = self.navigation_test_lane_command_allowed(direction)
     if not allowed:
@@ -645,6 +827,26 @@ class RouteEngine:
       maneuver_longitude,
     )
 
+
+  def navigation_test_surface_turn_command_key(self, instruction, geometry, direction):
+    if instruction is None or direction not in ("left", "right"):
+      return None
+
+    maneuver_class = self.navigation_test_maneuver_class(instruction)
+    if maneuver_class not in ("normal_turn", "uturn"):
+      return None
+
+    return self.navigation_test_maneuver_key(instruction, geometry)
+
+  def navigation_test_surface_turn_already_commanded(self, instruction, geometry, direction):
+    command_key = self.navigation_test_surface_turn_command_key(instruction, geometry, direction)
+    return command_key is not None and command_key in self.navigation_test_surface_turn_commanded_keys
+
+  def record_navigation_test_surface_turn_command(self, instruction, geometry, direction):
+    command_key = self.navigation_test_surface_turn_command_key(instruction, geometry, direction)
+    if command_key is not None:
+      self.navigation_test_surface_turn_commanded_keys.add(command_key)
+
   def reset_navigation_test_exit_migration(self):
     self.navigation_test_exit_migration_key = None
     self.navigation_test_exit_migration_direction = "none"
@@ -671,7 +873,7 @@ class RouteEngine:
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_EXIT_PREP_SECONDS)
 
-  def navigation_test_highway_exit_prep_distance(self):
+  def navigation_test_highway_exit_prep_distance_OLD(self):
     v_ego = self.sm['carState'].vEgo
     if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
       return self.navigation_test_exit_prep_distance()
@@ -679,6 +881,144 @@ class RouteEngine:
       NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX,
       max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS),
     )
+
+
+  def navigation_test_highway_exit_prep_distance(self):
+    v_ego = max(self.sm['carState'].vEgo, 0.1) # Prevent div by zero
+    
+    # Phase 1: Lane Sweep Distance
+    # Assume worst case: we need to cross 2.5 lanes, and need ~12 seconds per lane to find gaps/move
+    estimated_lanes_to_cross = 2.5 
+    seconds_per_lane = 12.0
+    lane_sweep_distance = v_ego * (estimated_lanes_to_cross * seconds_per_lane)
+    
+    # Phase 2: Kinematic Deceleration Distance
+    # Assume we need to slow from current speed down to ~15 m/s (54 km/h) for the off-ramp
+    target_exit_speed = 15.0
+    comfortable_decel = 1.2 # Gentler deceleration for highways
+    
+    if v_ego > target_exit_speed:
+        decel_distance = (v_ego**2 - target_exit_speed**2) / (2 * comfortable_decel)
+    else:
+        decel_distance = 0.0
+        
+    total_prep_distance = lane_sweep_distance + decel_distance
+    
+    # Return the dynamically calculated distance, but clamp it to safe real-world minimums/maximums
+    return min(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX, 
+               max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, total_prep_distance))
+
+
+  def navigation_test_surface_turn_prep_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    return min(
+      NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX,
+      max(NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS),
+    )
+
+  def navigation_test_prep_distance_for_maneuver(self, maneuver_class, road_context):
+    if maneuver_class in ("normal_turn", "uturn"):
+      return self.navigation_test_surface_turn_prep_distance()
+    if road_context == "highway":
+      return self.navigation_test_highway_exit_prep_distance()
+    return self.navigation_test_exit_prep_distance()
+
+  def navigation_test_late_lockout_distance_for_maneuver(self, maneuver_class):
+    v_ego = self.sm['carState'].vEgo
+    if maneuver_class in ("normal_turn", "uturn"):
+      return max(NAVIGATION_TEST_SURFACE_TURN_LATE_LOCKOUT_DISTANCE_MIN, v_ego * NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS)
+    return self.navigation_test_late_lane_change_lockout_distance()
+
+  def navigation_test_blindspot_active(self, direction):
+    try:
+      car_state = self.sm['carState']
+    except Exception:
+      return False
+
+    if direction == "left":
+      field_names = ("leftBlindspot", "leftBlindSpot", "leftBlindspotDetected", "leftBlindSpotDetected")
+    elif direction == "right":
+      field_names = ("rightBlindspot", "rightBlindSpot", "rightBlindspotDetected", "rightBlindSpotDetected")
+    else:
+      return False
+
+    for field_name in field_names:
+      try:
+        return bool(getattr(car_state, field_name))
+      except Exception:
+        continue
+    return False
+
+  def navigation_test_target_lane_lead(self, direction):
+    # Standard openpilot does not expose target-lane leads in every branch. Some
+    # forks do, so read them defensively when available and otherwise leave this
+    # as an unknown/soft signal.
+    try:
+      radar_state = self.sm['radarState']
+    except Exception:
+      return None
+
+    candidate_fields = (
+      ("leadLeft", "leftLead", "leadOneLeft", "leadLeft1") if direction == "left" else
+      ("leadRight", "rightLead", "leadOneRight", "leadRight1") if direction == "right" else
+      ()
+    )
+    for field_name in candidate_fields:
+      try:
+        lead = getattr(radar_state, field_name)
+        if lead is not None:
+          return lead
+      except Exception:
+        continue
+    return None
+
+  def navigation_test_target_lane_lead_metrics(self, direction):
+    lead = self.navigation_test_target_lane_lead(direction)
+    if lead is None:
+      return None, None, None
+
+    try:
+      if not bool(getattr(lead, "status")):
+        return False, None, None
+    except Exception:
+      return None, None, None
+
+    try:
+      d_rel = float(getattr(lead, "dRel"))
+    except Exception:
+      d_rel = None
+    try:
+      v_rel = float(getattr(lead, "vRel"))
+    except Exception:
+      v_rel = None
+    return True, d_rel, v_rel
+
+  def navigation_test_lane_change_prerequisites(self, direction, left_available=None, right_available=None):
+    target_lane_blindspot = self.navigation_test_blindspot_active(direction)
+    target_lane_lead_status, target_lane_lead_d_rel, target_lane_lead_v_rel = self.navigation_test_target_lane_lead_metrics(direction)
+
+    if direction == "none":
+      return False, "invalidDirection", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
+
+    if not self.navigation_test_direction_available(direction, left_available, right_available):
+      return False, "adjacentLaneUnavailable", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
+
+    if target_lane_blindspot:
+      return False, "targetBlindspot", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
+
+    if target_lane_lead_status is True:
+      if target_lane_lead_d_rel is None:
+        return False, "targetLaneLeadUnknownDistance", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
+      v_ego = max(float(self.sm['carState'].vEgo), 0.0)
+      closing_speed = max(-(target_lane_lead_v_rel or 0.0), 0.0)
+      required_gap = max(
+        NAVIGATION_TEST_LANE_CHANGE_MIN_LEAD_GAP_M,
+        v_ego * NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS + closing_speed * NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS,
+      )
+      if target_lane_lead_d_rel < required_gap:
+        return False, "targetLaneLeadTooClose", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
+
+    return True, "none", target_lane_blindspot, target_lane_lead_d_rel, target_lane_lead_v_rel
 
   def navigation_test_next_maneuver(self, distance_to_maneuver_along_geometry):
     if self.route is None or self.step_idx is None:
@@ -722,9 +1062,9 @@ class RouteEngine:
       self.reset_navigation_test_exit_migration()
       return action, direction, display_direction, strategy_phase, strategy_threshold, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, urgency
 
-    # Normal surface-street turns, u-turns, roundabouts, and arrival instructions are
-    # guidance only. FrogPilot will follow road curvature, but navd should not convert
-    # them into lane-change requests.
+    # Roundabouts, merge prompts, arrivals, and straight/continue instructions are
+    # guidance only. For exits/forks/normal turns/u-turns, navd may ask for lane
+    # positioning; the actual turn is still handled by openpilot following road curvature.
     if not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
       self.reset_navigation_test_exit_migration()
       if distance_to_maneuver_along_geometry <= command_distance:
@@ -732,9 +1072,8 @@ class RouteEngine:
       return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, 0.0
 
     standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
-    highway_exit_prep_distance = self.navigation_test_highway_exit_prep_distance()
-    active_prep_distance = highway_exit_prep_distance if road_context == "highway" else standard_exit_prep_distance
-    late_lockout_distance = self.navigation_test_late_lane_change_lockout_distance()
+    active_prep_distance = self.navigation_test_prep_distance_for_maneuver(maneuver_class, road_context)
+    late_lockout_distance = self.navigation_test_late_lockout_distance_for_maneuver(maneuver_class)
     strategy_threshold = active_prep_distance
     urgency = max(0.0, min(1.0, 1.0 - distance_to_maneuver_along_geometry / max(active_prep_distance, 1.0)))
 
@@ -755,14 +1094,28 @@ class RouteEngine:
       self.reset_navigation_test_exit_migration()
       return "upcoming", direction, display_direction, "consecutiveConflictHold", active_prep_distance, "conflictingNextManeuver", target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "conflictingNextManeuver", urgency
 
+    if (
+      maneuver_class in ("normal_turn", "uturn") and
+      self.navigation_test_route_grace_active() and
+      distance_to_maneuver_along_geometry <= NAVIGATION_TEST_ROUTE_GRACE_LATE_TURN_HOLD_DISTANCE_M
+    ):
+      return "guidanceOnly", direction, display_direction, "routeGraceLateHold", NAVIGATION_TEST_ROUTE_GRACE_LATE_TURN_HOLD_DISTANCE_M, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "routeGraceLateTurnHold", 1.0
+
     if distance_to_maneuver_along_geometry <= late_lockout_distance:
       return "guidanceOnly", direction, display_direction, "maneuverLockout", late_lockout_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "lateLaneChangeLockout", 1.0
 
     if self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
       return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "targetEdgeReached", urgency
 
-    if not self.navigation_test_direction_available(direction, left_available, right_available):
-      return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "adjacentLaneUnavailable", urgency
+    if (
+      maneuver_class in ("normal_turn", "uturn") and
+      self.navigation_test_surface_turn_already_commanded(instruction, geometry, direction)
+    ):
+      return "upcoming", direction, display_direction, "surfaceTurnCommandedHold", active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, "surfaceTurnAlreadyCommanded", urgency
+
+    lane_safe, safety_reason, _, _, _ = self.navigation_test_lane_change_prerequisites(direction, left_available, right_available)
+    if not lane_safe:
+      return "upcoming", direction, display_direction, "laneChangeBlocked", active_prep_distance, safety_reason, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, safety_reason, urgency
 
     allowed, block_reason = self.navigation_test_lane_command_allowed(direction)
     if not allowed:
@@ -771,7 +1124,9 @@ class RouteEngine:
         strategy_constraint = "conflictingNextManeuver"
       return "upcoming", direction, display_direction, strategy_phase, active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, block_reason, urgency
 
-    if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
+    if maneuver_class in ("normal_turn", "uturn"):
+      strategy_phase = "turnLanePositioning"
+    elif distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
       strategy_phase = "exitMigration"
     else:
       strategy_phase = "highwayExitMigration"
@@ -779,6 +1134,8 @@ class RouteEngine:
     if conflict_soon:
       strategy_constraint = "conflictingNextManeuver"
 
+    if maneuver_class in ("normal_turn", "uturn"):
+      self.record_navigation_test_surface_turn_command(instruction, geometry, direction)
     self.record_navigation_test_lane_command(direction, distance_to_maneuver_along_geometry)
     return "laneChange", direction, display_direction, strategy_phase, active_prep_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, urgency
 
@@ -867,14 +1224,17 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, maneuver_class="unknown", road_context="unknown", target_lane_zone="none", lane_belief="unknown", lane_left_available=None, lane_right_available=None, route_confident=False, route_confidence=0.0, route_bearing_error=None, command_block_reason="none", urgency=0.0):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, maneuver_class="unknown", road_context="unknown", target_lane_zone="none", lane_belief="unknown", lane_left_available=None, lane_right_available=None, route_confident=False, route_confidence=0.0, route_bearing_error=None, command_block_reason="none", urgency=0.0, lane_change_safe=True, lane_change_block_reason="none", target_lane_blindspot=False, target_lane_lead_d_rel=None, target_lane_lead_v_rel=None):
     if not self.params.get_bool("NavigationTestControl"):
       return
 
     now = time.monotonic()
-    if now - self.navigation_test_debug_last_log_time < NAVIGATION_TEST_DEBUG_LOG_INTERVAL:
+    debug_signature = (action, direction, strategy_phase, command_block_reason)
+    force_debug_log = action == "laneChange" or debug_signature != self.navigation_test_debug_last_signature
+    if not force_debug_log and now - self.navigation_test_debug_last_log_time < NAVIGATION_TEST_DEBUG_LOG_INTERVAL:
       return
     self.navigation_test_debug_last_log_time = now
+    self.navigation_test_debug_last_signature = debug_signature
 
     maneuver_coordinate = geometry[-1] if geometry else None
     distance_to_maneuver_straight = self.last_position.distance_to(maneuver_coordinate) if self.last_position is not None and maneuver_coordinate is not None else None
@@ -913,6 +1273,19 @@ class RouteEngine:
       "lane_belief": lane_belief,
       "lane_left_available": lane_left_available if lane_left_available is not None else "unknown",
       "lane_right_available": lane_right_available if lane_right_available is not None else "unknown",
+      "lane_left_score": f"{self.navigation_test_lane_left_score:.2f}" if self.navigation_test_lane_left_score is not None else "",
+      "lane_right_score": f"{self.navigation_test_lane_right_score:.2f}" if self.navigation_test_lane_right_score is not None else "",
+      "left_road_edge_y": f"{self.navigation_test_left_road_edge_y:.2f}" if self.navigation_test_left_road_edge_y is not None else "",
+      "right_road_edge_y": f"{self.navigation_test_right_road_edge_y:.2f}" if self.navigation_test_right_road_edge_y is not None else "",
+      "route_grace_active": self.navigation_test_route_grace_active(),
+      "turn_slowdown_speed": f"{self.turn_slowdown_speed(maneuver_class, distance_to_maneuver_along_geometry):.2f}",
+      "nav_speed_limit": f"{self.nav_speed_limit:.2f}" if self.nav_speed_limit else "0.00",
+      "approaching_turn": self.approaching_turn,
+      "lane_change_safe": lane_change_safe,
+      "lane_change_block_reason": lane_change_block_reason,
+      "target_lane_blindspot": target_lane_blindspot,
+      "target_lane_lead_d_rel": f"{target_lane_lead_d_rel:.2f}" if target_lane_lead_d_rel is not None else "",
+      "target_lane_lead_v_rel": f"{target_lane_lead_v_rel:.2f}" if target_lane_lead_v_rel is not None else "",
       "route_confident": route_confident,
       "route_confidence": f"{route_confidence:.2f}",
       "route_bearing_error": f"{route_bearing_error:.2f}" if route_bearing_error is not None else "",
@@ -1011,6 +1384,9 @@ class RouteEngine:
       return
 
     cloudlog.warning(f"Calculating route {self.last_position} -> {destination}")
+    if self.nav_destination != destination:
+      self.navigation_test_surface_turn_commanded_keys.clear()
+      self.navigation_test_debug_last_signature = None
     self.nav_destination = destination
     self.reset_navigation_test_destination_tracking(destination)
     
@@ -1166,6 +1542,7 @@ class RouteEngine:
         maxspeed_idx -= 1 
 
       self.step_idx = 0
+      self.navigation_test_route_applied_at = time.monotonic()
     else:
       cloudlog.warning("Got empty route response in applied data")
       self.clear_route()
@@ -1217,6 +1594,11 @@ class RouteEngine:
     navigation_test_road_context = self.navigation_test_road_context(navigation_test_maneuver_class)
     navigation_test_command_block_reason = "none"
     navigation_test_urgency = 0.0
+    navigation_test_lane_change_safe = True
+    navigation_test_lane_change_block_reason = "none"
+    navigation_test_target_lane_blindspot = False
+    navigation_test_target_lane_lead_d_rel = None
+    navigation_test_target_lane_lead_v_rel = None
     navigation_test_route_confident = False
     navigation_test_route_confidence = 0.0
     navigation_test_route_bearing_error = None
@@ -1242,6 +1624,8 @@ class RouteEngine:
         navigation_test_strategy_phase = "routeMismatch"
         navigation_test_strategy_constraint = "routeMismatch"
         navigation_test_command_block_reason = route_block_reason
+        navigation_test_lane_change_safe = False
+        navigation_test_lane_change_block_reason = "routeMismatch"
         self.reset_navigation_test_exit_migration()
       else:
         (
@@ -1268,6 +1652,26 @@ class RouteEngine:
           next_maneuver_distance_after_current,
         )
 
+      if navigation_test_direction in ("left", "right"):
+        (
+          navigation_test_lane_change_safe,
+          navigation_test_lane_change_block_reason,
+          navigation_test_target_lane_blindspot,
+          navigation_test_target_lane_lead_d_rel,
+          navigation_test_target_lane_lead_v_rel,
+        ) = self.navigation_test_lane_change_prerequisites(
+          navigation_test_direction,
+          navigation_test_lane_left_available,
+          navigation_test_lane_right_available,
+        )
+      else:
+        if navigation_test_action == "routeMismatch":
+          navigation_test_lane_change_safe = False
+          navigation_test_lane_change_block_reason = "routeMismatch"
+        else:
+          navigation_test_lane_change_safe = navigation_test_action != "laneChange"
+          navigation_test_lane_change_block_reason = navigation_test_command_block_reason
+
       self.log_navigation_test_debug(
         instruction,
         geometry,
@@ -1292,6 +1696,11 @@ class RouteEngine:
         navigation_test_route_bearing_error,
         navigation_test_command_block_reason,
         navigation_test_urgency,
+        navigation_test_lane_change_safe,
+        navigation_test_lane_change_block_reason,
+        navigation_test_target_lane_blindspot,
+        navigation_test_target_lane_lead_d_rel,
+        navigation_test_target_lane_lead_v_rel,
       )
 
     maneuvers = []
@@ -1345,6 +1754,11 @@ class RouteEngine:
         route_confidence=navigation_test_route_confidence,
         command_block_reason=navigation_test_command_block_reason,
         urgency=navigation_test_urgency,
+        lane_change_safe=navigation_test_lane_change_safe,
+        lane_change_block_reason=navigation_test_lane_change_block_reason,
+        target_lane_blindspot=navigation_test_target_lane_blindspot,
+        target_lane_lead_d_rel=navigation_test_target_lane_lead_d_rel,
+        target_lane_lead_v_rel=navigation_test_target_lane_lead_v_rel,
       )
 
     closest_idx, closest = min(enumerate(geometry), key=lambda p: p[1].distance_to(self.last_position))
@@ -1428,9 +1842,12 @@ class RouteEngine:
     self.route_geometry = None
     self.step_idx = None
     self.nav_destination = None
+    self.navigation_test_route_applied_at = 0.0
     self.navigation_test_reroute_counter = 0
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
+    self.navigation_test_surface_turn_commanded_keys.clear()
+    self.navigation_test_debug_last_signature = None
     self.reset_navigation_test_exit_migration()
     self.reset_navigation_test_post_exit_recenter()
 
@@ -1507,9 +1924,10 @@ class RouteEngine:
 
 def main():
   pm = messaging.PubMaster(['navInstruction', 'navRoute', 'frogpilotNavigation'])
-  sm = messaging.SubMaster(['carState', 'liveLocationKalman', 'managerState', 'frogpilotPlan', 'modelV2'])
+  sm = messaging.SubMaster(['carState', 'liveLocationKalman', 'managerState', 'frogpilotPlan', 'modelV2', 'radarState'])
 
-  rk = Ratekeeper(1.0)
+  #rk = Ratekeeper(1.0)
+  rk = Ratekeeper(2.0)  # runs twice per second
   route_engine = RouteEngine(sm, pm)
   while True:
     route_engine.update()
