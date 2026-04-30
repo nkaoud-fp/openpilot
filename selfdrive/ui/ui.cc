@@ -6,6 +6,7 @@
 
 #include <QtConcurrent>
 
+#include "common/transformations/coordinates.hpp"
 #include "common/transformations/orientation.hpp"
 #include "common/params.h"
 #include "common/swaglog.h"
@@ -167,6 +168,70 @@ void update_model(UIState *s, FrogPilotUIState *fs,
   update_line_data(s, lane_lines[5], frogpilot_scene.lane_width_right / 2.0f, 0, &frogpilot_scene.track_adjacent_vertices[1], max_idx, false);
 
   frogpilot_scene.model_length = model.getPosition().getX()[33 - 1];
+}
+
+void update_nav_route(UIState *s, FrogPilotUIState *fs) {
+  FrogPilotUIScene &fp = fs->frogpilot_scene;
+  fp.nav_route_vertices.clear();
+
+  if (!Params().getBool("NavigationTestControl")) return;
+
+  SubMaster &sm = *(s->sm);
+  auto llk = sm["liveLocationKalman"].getLiveLocationKalman();
+  if (llk.getStatus() != cereal::LiveLocationKalman::Status::VALID) return;
+
+  auto coords = sm["navRoute"].getNavRoute().getCoordinates();
+  if (coords.size() < 2) return;
+
+  auto pos = llk.getPositionECEF().getValue();
+  auto orient = llk.getCalibratedOrientationECEF().getValue();
+  if (pos.size() != 3 || orient.size() != 3) return;
+
+  Eigen::Vector3d ecef_pos(pos[0], pos[1], pos[2]);
+  Eigen::Vector3d eulers(orient[0], orient[1], orient[2]);
+  Eigen::Matrix3d local_from_ecef = euler2rot(eulers).transpose();
+
+  auto pos_geo = llk.getPositionGeodetic().getValue();
+  double veh_alt = (pos_geo.size() == 3) ? pos_geo[2] : 0.0;
+
+  // Project route into the calibrated/device frame (x_fwd, y_left, z_up).
+  std::vector<Eigen::Vector3d> locals;
+  locals.reserve(coords.size());
+  for (auto const &c : coords) {
+    Geodetic g{(double)c.getLatitude(), (double)c.getLongitude(), veh_alt};
+    ECEF e = geodetic2ecef(g);
+    Eigen::Vector3d delta(e.x - ecef_pos[0], e.y - ecef_pos[1], e.z - ecef_pos[2]);
+    locals.push_back(local_from_ecef * delta);
+  }
+
+  // Densify and clip to a 50m forward horizon so curves stay smooth even when
+  // mapbox's polyline only emits waypoints every tens of meters.
+  constexpr float MAX_DIST = 50.0f;
+  constexpr float STEP = 1.0f;
+
+  QPolygonF poly;
+  bool past_horizon = false;
+  for (size_t i = 0; i + 1 < locals.size() && !past_horizon; i++) {
+    Eigen::Vector3d seg = locals[i + 1] - locals[i];
+    float seg_len = (float)seg.norm();
+    if (seg_len < 1e-3f) continue;
+    int steps = std::max(1, (int)std::ceil(seg_len / STEP));
+    for (int k = (i == 0 ? 0 : 1); k <= steps; k++) {
+      float t = (float)k / (float)steps;
+      Eigen::Vector3d p = locals[i] + t * seg;
+      float fx = (float)p[0], fy = (float)p[1];
+      if (fx < 0.0f) continue;
+      if (std::sqrt(fx * fx + fy * fy) > MAX_DIST) { past_horizon = true; break; }
+      QPointF pt;
+      if (calib_frame_to_full_frame(s, fx, fy, 1.22f, &pt)) {
+        poly.push_back(pt);
+      }
+    }
+  }
+
+  if (poly.size() >= 2) {
+    fp.nav_route_vertices = poly;
+  }
 }
 
 void update_dmonitoring(UIState *s, const cereal::DriverStateV2::Reader &driverstate, float dm_fade_state, bool is_rhd) {
