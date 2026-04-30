@@ -417,8 +417,8 @@ void FrogPilotNavigationPanel::updateState(const UIState &s, const FrogPilotUISt
       updateSpeedLimitsToggle->setValue(QString::fromStdString(params_memory.get("UpdateSpeedLimitsStatus")));
     }
   } else {
-    selectNavdButton->setEnabled(parked && !navdCandidates().isEmpty());
-    selectNavdButton->setValue(parked ? currentNavdSelection() : tr("Not parked"));
+    selectNavdButton->setEnabled(!navdCandidates().isEmpty());
+    selectNavdButton->setValue(currentNavdSelection());
 
     updateSpeedLimitsToggle->setEnabledButton(1, fs.frogpilot_scene.online && util::system_time_valid() && parked);
     updateSpeedLimitsToggle->setValue(fs.frogpilot_scene.online ? (parked ? "" : "Not parked") : tr("Offline..."));
