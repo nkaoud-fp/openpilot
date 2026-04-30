@@ -473,6 +473,18 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, c
   painter.setBrush(bg);
   painter.drawPolygon(scene.track_vertices);
 
+  // nav route overlay (drawn on top of model path so it stays visible)
+  if (frogpilot_scene.nav_route_vertices.size() >= 2) {
+    QPen nav_pen(QColor(0x31, 0xa1, 0xee, 0xb4));
+    nav_pen.setWidth(6);
+    nav_pen.setCapStyle(Qt::RoundCap);
+    nav_pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(nav_pen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawPolyline(frogpilot_scene.nav_route_vertices);
+    painter.setPen(Qt::NoPen);
+  }
+
   // paint path edges
   if (frogpilot_toggles.value("adjacent_path_metrics").toBool() || frogpilot_toggles.value("adjacent_paths").toBool()) {
     frogpilot_nvg->paintAdjacentPaths(painter, sm["carState"].getCarState(), frogpilot_scene, frogpilot_toggles);
@@ -655,6 +667,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
 
   if (s->scene.world_objects_visible && !frogpilot_toggles.value("headless_mode").toBool() && !long_debug_graph) {
     update_model(s, fs, model, sm["uiPlan"].getUiPlan(), frogpilot_toggles);
+    update_nav_route(s, fs);
     drawLaneLines(painter, s, fs);
 
     if (s->scene.longitudinal_control && sm.rcv_frame("radarState") > s->scene.started_frame && !frogpilot_toggles.value("hide_lead_marker").toBool()) {

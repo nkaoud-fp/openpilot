@@ -54,6 +54,7 @@ struct FrogPilotUIScene {
 
   QPointF lead_vertices[2];
 
+  QPolygonF nav_route_vertices;
   QPolygonF track_adjacent_vertices[2];
   QPolygonF track_edge_vertices;
 };
