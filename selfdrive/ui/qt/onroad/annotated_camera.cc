@@ -2,6 +2,7 @@
 #include "selfdrive/ui/qt/onroad/annotated_camera.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <algorithm>
 #include <cmath>
 
@@ -484,12 +485,26 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, c
   // nav route overlay (drawn on top of model path so it stays visible)
   if (frogpilot_scene.nav_route_vertices.size() >= 2) {
     QPen nav_pen(QColor(0x31, 0xa1, 0xee, 0xb4));
-    nav_pen.setWidth(6);
+    nav_pen.setWidth(30);  // ~3mm on the comma 3 display
     nav_pen.setCapStyle(Qt::RoundCap);
     nav_pen.setJoinStyle(Qt::RoundJoin);
     painter.setPen(nav_pen);
     painter.setBrush(Qt::NoBrush);
-    painter.drawPolyline(frogpilot_scene.nav_route_vertices);
+
+    // quadratic bezier through segment midpoints -> C1-smooth curve
+    const QPolygonF &nav_pts = frogpilot_scene.nav_route_vertices;
+    QPainterPath nav_path(nav_pts.first());
+    if (nav_pts.size() == 2) {
+      nav_path.lineTo(nav_pts[1]);
+    } else {
+      for (int i = 1; i < nav_pts.size() - 1; ++i) {
+        QPointF mid((nav_pts[i].x() + nav_pts[i + 1].x()) * 0.5,
+                    (nav_pts[i].y() + nav_pts[i + 1].y()) * 0.5);
+        nav_path.quadTo(nav_pts[i], mid);
+      }
+      nav_path.lineTo(nav_pts.last());
+    }
+    painter.drawPath(nav_path);
     painter.setPen(Qt::NoPen);
   }
 
