@@ -64,7 +64,7 @@ NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.24 # 0.5
 # Navigation test control is intentionally conservative: navd is a lane-preparation
 # planner, not a steering/turn controller. It should only ask FrogPilot for lane
 # changes when a route maneuver needs side-lane positioning.
-NAVIGATION_TEST_DEBUG_LOG_VERSION = 5
+NAVIGATION_TEST_DEBUG_LOG_VERSION = 5.1
 NAVIGATION_TEST_MAX_BEARING_ERROR = 55.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 80.0
