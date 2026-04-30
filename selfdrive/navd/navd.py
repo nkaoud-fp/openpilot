@@ -64,7 +64,7 @@ NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.24 # 0.5
 # Navigation test control is intentionally conservative: navd is a lane-preparation
 # planner, not a steering/turn controller. It should only ask FrogPilot for lane
 # changes when a route maneuver needs side-lane positioning.
-NAVIGATION_TEST_DEBUG_LOG_VERSION = 7
+NAVIGATION_TEST_DEBUG_LOG_VERSION = 8
 NAVIGATION_TEST_MAX_BEARING_ERROR = 55.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 80.0
@@ -132,6 +132,8 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "maneuver_text",
   "maneuver_class",
   "road_context",
+  "turn_angle_deg",
+  "turn_angle_valid",
   "maneuver_lat",
   "maneuver_lon",
   "distance_to_maneuver_along_route",
@@ -1353,7 +1355,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, maneuver_class="unknown", road_context="unknown", target_lane_zone="none", lane_belief="unknown", lane_left_available=None, lane_right_available=None, route_confident=False, route_confidence=0.0, route_bearing_error=None, command_block_reason="none", urgency=0.0, lane_change_safe=True, lane_change_block_reason="none", target_lane_blindspot=False, target_lane_lead_d_rel=None, target_lane_lead_v_rel=None):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, maneuver_class="unknown", road_context="unknown", target_lane_zone="none", lane_belief="unknown", lane_left_available=None, lane_right_available=None, route_confident=False, route_confidence=0.0, route_bearing_error=None, command_block_reason="none", urgency=0.0, lane_change_safe=True, lane_change_block_reason="none", target_lane_blindspot=False, target_lane_lead_d_rel=None, target_lane_lead_v_rel=None, turn_angle_deg=None, turn_angle_valid=False):
     if not self.params.get_bool("NavigationTestControl"):
       return
 
@@ -1389,6 +1391,8 @@ class RouteEngine:
       "maneuver_text": instruction.get("maneuverPrimaryText", "") if instruction is not None else "",
       "maneuver_class": maneuver_class,
       "road_context": road_context,
+      "turn_angle_deg": f"{turn_angle_deg:.2f}" if turn_angle_deg is not None else "",
+      "turn_angle_valid": turn_angle_valid,
       "maneuver_lat": f"{maneuver_coordinate.latitude:.7f}" if maneuver_coordinate is not None else "",
       "maneuver_lon": f"{maneuver_coordinate.longitude:.7f}" if maneuver_coordinate is not None else "",
       "distance_to_maneuver_along_route": f"{distance_to_maneuver_along_geometry:.2f}",
@@ -1723,6 +1727,7 @@ class RouteEngine:
                                      if (self.route_geometry is not None
                                          and self.step_idx + 1 < len(self.route_geometry))
                                      else None)
+    navigation_test_turn_angle_deg, navigation_test_turn_angle_valid = self.navigation_test_compute_maneuver_angle(geometry, navigation_test_next_geometry)
     navigation_test_maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, navigation_test_next_geometry)
     navigation_test_road_context = self.navigation_test_road_context(navigation_test_maneuver_class)
     navigation_test_command_block_reason = "none"
@@ -1834,6 +1839,8 @@ class RouteEngine:
         navigation_test_target_lane_blindspot,
         navigation_test_target_lane_lead_d_rel,
         navigation_test_target_lane_lead_v_rel,
+        navigation_test_turn_angle_deg,
+        navigation_test_turn_angle_valid,
       )
 
     maneuvers = []
