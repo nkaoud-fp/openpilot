@@ -205,6 +205,7 @@ class RouteEngine:
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
     self.navigation_test_command = None
+    self.navigation_test_forced_blinker = None
     self.navigation_test_shared_destination = None
     self.navigation_test_shared_destination_retry_at = 0.0
     self.navigation_test_last_handled_share_selection_token = ""
@@ -439,6 +440,18 @@ class RouteEngine:
     if command != self.navigation_test_command:
       self.params.put("NavigationTestTurnCommand", command)
       self.navigation_test_command = command
+
+    # Synthesize a blinker pulse so the desire_helper FSM kicks off a real
+    # lane change instead of relying on the (unreliable) bare desire pulse.
+    # The fake blinker is consumed only by desire_helper; carState itself is
+    # not modified.
+    if action == "laneChange" and direction in ("left", "right"):
+      forced_blinker = direction
+    else:
+      forced_blinker = "none"
+    if forced_blinker != self.navigation_test_forced_blinker:
+      self.params.put("NavigationTestForceBlinker", forced_blinker)
+      self.navigation_test_forced_blinker = forced_blinker
 
   def navigation_test_compute_maneuver_angle(self, geometry, next_geometry=None):
     """Compute the signed turn angle (degrees) at the maneuver point of the

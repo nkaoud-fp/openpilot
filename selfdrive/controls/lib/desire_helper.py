@@ -123,7 +123,16 @@ class DesireHelper:
 
   def update(self, carstate, lateral_active, lane_change_prob, frogpilotPlan, frogpilotRadarState, frogpilot_toggles):
     v_ego = carstate.vEgo
-    one_blinker = carstate.leftBlinker != carstate.rightBlinker
+
+    # navd may request a lane change by writing NavigationTestForceBlinker.
+    # OR it into the blinker view used by the FSM (carState itself is not
+    # modified). The FSM then drives the lane change through the same path
+    # as a manual blinker, so the model receives the desire pulse with the
+    # blinker context it was trained on.
+    forced_blinker = self.params.get("NavigationTestForceBlinker", encoding="utf-8") or "none"
+    left_blinker = carstate.leftBlinker or (forced_blinker == "left")
+    right_blinker = carstate.rightBlinker or (forced_blinker == "right")
+    one_blinker = left_blinker != right_blinker
     below_lane_change_speed = v_ego < frogpilot_toggles.minimum_lane_change_speed
 
     if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX or not frogpilot_toggles.lane_changes:
@@ -142,7 +151,7 @@ class DesireHelper:
 
         # Set lane change direction
         self.lane_change_direction = LaneChangeDirection.left if \
-          carstate.leftBlinker else LaneChangeDirection.right
+          left_blinker else LaneChangeDirection.right
 
         torque_applied = carstate.steeringPressed and \
                          ((carstate.steeringTorque > 0 and self.lane_change_direction == LaneChangeDirection.left) or
@@ -151,7 +160,7 @@ class DesireHelper:
         if torque_applied:
           self.lane_change_wait_timer = frogpilot_toggles.lane_change_delay
         else:
-          desired_lane_width = frogpilotPlan.laneWidthLeft if carstate.leftBlinker else frogpilotPlan.laneWidthRight
+          desired_lane_width = frogpilotPlan.laneWidthLeft if left_blinker else frogpilotPlan.laneWidthRight
           lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
           torque_applied = lane_available and self.lane_change_wait_timer >= frogpilot_toggles.lane_change_delay and frogpilot_toggles.nudgeless
 
@@ -195,21 +204,19 @@ class DesireHelper:
     self.lane_change_completed &= one_blinker
     self.prev_one_blinker = one_blinker
 
+    # Lane changes requested by navd are now driven via NavigationTestForceBlinker,
+    # which feeds the FSM at the top of this update(); the FSM then produces the
+    # desire through the standard DESIRES table below. The direct-desire branch
+    # was unreliable because the model needs the blinker context it was trained on.
     navigation_test_action, navigation_test_direction = self.navigation_test_command()
     navigation_test_turn_direction = NAVIGATION_TEST_DIRECTIONS.get(navigation_test_direction, TurnDirection.none) if navigation_test_action == "turn" else TurnDirection.none
-    navigation_test_lane_change_desire = NAVIGATION_TEST_LANE_CHANGE_DESIRES.get(navigation_test_direction, log.Desire.none) if navigation_test_action == "laneChange" else log.Desire.none
-    navigation_test_lane_change_active = navigation_test_lane_change_desire != log.Desire.none
-    navigation_test_lane_change_active &= self.navigation_test_lane_change_conditions_stable(navigation_test_action, navigation_test_direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
     navigation_test_turn_active = navigation_test_turn_direction != TurnDirection.none and lateral_active and not carstate.standstill
 
-    if navigation_test_lane_change_active:
-      self.turn_direction = TurnDirection.none
-      self.desire = navigation_test_lane_change_desire
-    elif navigation_test_turn_active:
+    if navigation_test_turn_active:
       self.turn_direction = navigation_test_turn_direction
       self.desire = TURN_DESIRES[self.turn_direction]
     elif one_blinker and below_lane_change_speed and not carstate.standstill and frogpilot_toggles.use_turn_desires:
-      self.turn_direction = TurnDirection.turnLeft if carstate.leftBlinker else TurnDirection.turnRight
+      self.turn_direction = TurnDirection.turnLeft if left_blinker else TurnDirection.turnRight
       self.desire = TURN_DESIRES[self.turn_direction]
     else:
       self.turn_direction = TurnDirection.none
