@@ -136,16 +136,16 @@ class FrogPilotVCruise:
       return 0
 
     action = command_json.get("action", "none")
-    if action not in ("laneChange", "turn"):
+    target_speed_from_nav = float(command_json.get("targetSpeed", 0.0))
+    if target_speed_from_nav <= 0.0:
+      target_speed_from_nav = 0.0
+
+    if action not in ("laneChange", "turn", "upcoming"):
       return 0
 
     distance = float(command_json.get("distance", 0.0))
     if distance <= 0:
       return 0
-
-    target_speed_from_nav = float(command_json.get("targetSpeed", 0.0))
-    if target_speed_from_nav <= 0.0:
-      target_speed_from_nav = 0.0
 
     display_direction = str(command_json.get("displayDirection", "none")).lower()
     is_sharp_turn = display_direction in ("sharp_left", "sharp_right", "uturn")
@@ -153,6 +153,8 @@ class FrogPilotVCruise:
     strategy_phase = command_json.get("strategyPhase", "none")
     if action == "laneChange" or "Exit" in strategy_phase:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_EXIT_TARGET_SPEED
+    elif action in ("turn", "upcoming") and target_speed_from_nav > 0.0 and strategy_phase in ("turn", "turnLanePositioning", "targetEdgeHold", "maneuverLockout"):
+      target_speed = target_speed_from_nav
     elif action == "turn" and is_sharp_turn:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_TURN_TARGET_SPEED_SHARP
     else:

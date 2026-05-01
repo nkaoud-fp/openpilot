@@ -12,6 +12,8 @@ TurnDirection = log.Desire
 LANE_CHANGE_SPEED_MIN = 20 * CV.MPH_TO_MS
 LANE_CHANGE_TIME_MAX = 10.
 NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE = 30.0
+NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS = 1.8
+NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS = 2.2
 NAVIGATION_TEST_LANE_CHANGE_CONDITION_TIME = 2.0
 NAVIGATION_TEST_LANE_CHANGE_COMPLETE_PROB = 0.02
 NAVIGATION_TEST_LANE_CHANGE_COMPLETE_TIME = 4.0
@@ -140,7 +142,15 @@ class DesireHelper:
     lane_available = self.navigation_test_lane_available(direction, frogpilotPlan, frogpilot_toggles)
     blindspot_detected = (carstate.leftBlindspot and direction == "left") or (carstate.rightBlindspot and direction == "right")
     adjacent_lead = frogpilotRadarState.leadLeft if direction == "left" else frogpilotRadarState.leadRight
-    adjacent_lead_too_close = adjacent_lead.status and adjacent_lead.dRel < NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE
+    closing_speed = 0.0
+    if adjacent_lead.status:
+      closing_speed = max(float(-adjacent_lead.vRel), 0.0)
+
+    required_gap = max(
+      NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE,
+      float(carstate.vEgo) * NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS + closing_speed * NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS,
+    )
+    adjacent_lead_too_close = adjacent_lead.status and adjacent_lead.dRel < required_gap
     return lane_available and not blindspot_detected and not adjacent_lead_too_close
 
   def navigation_test_lane_change_desire_active(self, action, direction, command_json, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed, lane_change_prob):

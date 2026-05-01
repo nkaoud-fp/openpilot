@@ -47,7 +47,7 @@ NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS = 180
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN = 1500
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX = 5000
 NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE = 400
-NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 15 # 35 #15
+NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 35
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
 NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE = 50
@@ -59,8 +59,23 @@ NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_DISTANCE = 100.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE = 600.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE = 500.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_COMMAND_SECONDS = 10.0
+NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS = 18.0
+NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN = 120.0
+NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
+NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
+NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 35.0
 NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
+TURN_SLOWDOWN_MIN_SPEED_MS = 25.0 / 3.6
+
+NAV_HIGHWAY_SPEED_MIN_MS = 18.0
+NAV_ANGLE_CONTINUE_MAX_DEG = 5.0
+NAV_ANGLE_FORK_MIN_DEG = 5.0
+NAV_ANGLE_HIGHWAY_EXIT_MIN_DEG = 15.0
+NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG = 45.0
+NAV_ANGLE_NORMAL_TURN_MIN_DEG = 15.0
+NAV_ANGLE_UTURN_MIN_DEG = 135.0
+NAV_ANGLE_ANCHOR_M = 8.0
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "time",
   "gps_ok",
@@ -357,55 +372,156 @@ class RouteEngine:
       self.params.put("NavigationTestTurnCommand", command)
       self.navigation_test_command = command
 
-  def navigation_test_maneuver_direction(self, instruction):
+  def navigation_test_angle_diff(self, a, b):
+    return (a - b + 180.0) % 360.0 - 180.0
+
+  def navigation_test_bearing_between(self, a, b):
+    lat1 = math.radians(a.latitude)
+    lat2 = math.radians(b.latitude)
+    d_lon = math.radians(b.longitude - a.longitude)
+    y = math.sin(d_lon) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(d_lon)
+    return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
+
+  def navigation_test_compute_maneuver_angle(self, geometry, next_geometry=None):
+    if geometry is None or len(geometry) < 2:
+      return 0.0, False
+
+    maneuver_point = geometry[-1]
+    pre_anchor = geometry[0]
+    accumulated = 0.0
+    for i in range(len(geometry) - 1, 0, -1):
+      accumulated += geometry[i].distance_to(geometry[i - 1])
+      pre_anchor = geometry[i - 1]
+      if accumulated >= NAV_ANGLE_ANCHOR_M:
+        break
+    if pre_anchor.distance_to(maneuver_point) < 1e-3:
+      return 0.0, False
+    bearing_in = self.navigation_test_bearing_between(pre_anchor, maneuver_point)
+
+    if next_geometry is None and self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry):
+      next_geometry = self.route_geometry[self.step_idx + 1]
+
+    post_anchor = None
+    if next_geometry and len(next_geometry) >= 2:
+      accumulated = 0.0
+      for i in range(len(next_geometry) - 1):
+        accumulated += next_geometry[i].distance_to(next_geometry[i + 1])
+        post_anchor = next_geometry[i + 1]
+        if accumulated >= NAV_ANGLE_ANCHOR_M:
+          break
+
+    if post_anchor is None or post_anchor.distance_to(maneuver_point) < 1e-3:
+      if len(geometry) < 3:
+        return 0.0, False
+      bearing_in = self.navigation_test_bearing_between(geometry[-3], geometry[-2])
+      bearing_out = self.navigation_test_bearing_between(geometry[-2], geometry[-1])
+    else:
+      bearing_out = self.navigation_test_bearing_between(maneuver_point, post_anchor)
+
+    return self.navigation_test_angle_diff(bearing_out, bearing_in), True
+
+  def navigation_test_maneuver_direction(self, instruction, geometry=None, next_geometry=None):
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    if valid:
+      if angle > NAV_ANGLE_CONTINUE_MAX_DEG:
+        return "right"
+      if angle < -NAV_ANGLE_CONTINUE_MAX_DEG:
+        return "left"
+      return "none"
+
     if instruction is None:
       return "none"
 
-    modifier = instruction.get("maneuverModifier", "").lower()
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    direction_text = f"{maneuver_type} {modifier}"
-    if "left" in direction_text:
+    text = (instruction.get("maneuverType", "") + " " + instruction.get("maneuverModifier", "")).lower()
+    if "left" in text:
       return "left"
-    if "right" in direction_text:
+    if "right" in text:
       return "right"
     return "none"
 
-  def navigation_test_maneuver_display_direction(self, instruction):
-    if instruction is None:
+  def navigation_test_maneuver_display_direction(self, instruction, geometry=None, next_geometry=None):
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+
+    text_modifier = "" if instruction is None else instruction.get("maneuverModifier", "").lower().replace(" ", "_")
+    text_type = "" if instruction is None else instruction.get("maneuverType", "").lower().replace(" ", "_")
+    if "uturn" in (text_modifier, text_type):
+      return "uturn"
+
+    if not valid:
+      return self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
+
+    abs_angle = abs(angle)
+    if abs_angle >= NAV_ANGLE_UTURN_MIN_DEG:
+      return "uturn"
+    side = "right" if angle > 0 else "left"
+    if abs_angle >= NAV_ANGLE_NORMAL_TURN_MIN_DEG:
+      return side
+    if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+      return f"slight_{side}"
+    return "none"
+
+  def navigation_test_maneuver_class(self, instruction, geometry=None, next_geometry=None):
+    if instruction is None and (geometry is None or len(geometry) < 2):
       return "none"
 
-    modifier = instruction.get("maneuverModifier", "").lower().replace(" ", "_")
-    maneuver_type = instruction.get("maneuverType", "").lower().replace(" ", "_")
-    if "uturn" in (modifier, maneuver_type):
+    text_type = "" if instruction is None else instruction.get("maneuverType", "").lower()
+    text_primary = "" if instruction is None else instruction.get("maneuverPrimaryText", "").lower()
+    text = f"{text_type} {text_primary}"
+
+    if "arrive" in text or "destination" in text:
+      return "arrive"
+    if "roundabout" in text_type or "rotary" in text_type:
+      return "roundabout"
+    if "merge" in text_type or "on ramp" in text or "merge" in text_primary:
+      return "highway_merge"
+
+    angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    if not valid:
+      if "fork" in text_type:
+        return "highway_fork"
+      if "ramp" in text_type or "exit" in text_primary:
+        return "highway_exit"
+      if "turn" in text_type or "end of road" in text_type:
+        return "normal_turn"
+      return "unknown"
+
+    abs_angle = abs(angle)
+    if abs_angle >= NAV_ANGLE_UTURN_MIN_DEG:
       return "uturn"
-    if modifier in ("slight_left", "sharp_left", "left", "slight_right", "sharp_right", "right"):
-      return modifier
+    if abs_angle < NAV_ANGLE_CONTINUE_MAX_DEG:
+      return "continue"
 
-    direction = self.navigation_test_maneuver_direction(instruction)
-    return direction
+    v_ego = float(self.sm['carState'].vEgo)
+    if v_ego >= NAV_HIGHWAY_SPEED_MIN_MS:
+      if abs_angle >= NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG:
+        return "normal_turn"
+      if abs_angle >= NAV_ANGLE_HIGHWAY_EXIT_MIN_DEG:
+        return "highway_exit"
+      if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+        return "highway_fork"
+      return "highway_merge"
 
-  def navigation_test_is_control_turn(self, instruction):
+    if abs_angle >= NAV_ANGLE_NORMAL_TURN_MIN_DEG:
+      return "normal_turn"
+    if abs_angle >= NAV_ANGLE_FORK_MIN_DEG:
+      return "highway_fork"
+    return "continue"
+
+  def navigation_test_is_lane_positioning_maneuver(self, maneuver_class):
+    return maneuver_class in ("highway_exit", "highway_fork", "highway_merge", "normal_turn", "uturn")
+
+  def navigation_test_is_control_turn(self, instruction, geometry=None, next_geometry=None):
     if instruction is None:
       return False
 
-    # Only these should create an actual near-maneuver control turn.
-    # Highway guidance such as fork/continue/merge/new name can contain
-    # a left/right modifier, but it is lane guidance, not a real turn.
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    modifier = instruction.get("maneuverModifier", "").lower()
+    return self.navigation_test_maneuver_class(instruction, geometry, next_geometry) in ("normal_turn", "uturn")
 
-    if modifier not in ("left", "right", "slight left", "slight right", "sharp left", "sharp right"):
-      return False
+  def navigation_test_is_exit_maneuver(self, instruction, geometry=None, next_geometry=None):
+    return self.navigation_test_maneuver_class(instruction, geometry, next_geometry) == "highway_exit"
 
-    return maneuver_type in ("turn", "end of road")
-
-  def navigation_test_is_exit_maneuver(self, instruction):
-    if instruction is None:
-      return False
-
-    maneuver_type = instruction.get("maneuverType", "").lower()
-    primary_text = instruction.get("maneuverPrimaryText", "").lower()
-    return "ramp" in maneuver_type or "exit" in primary_text
+  def navigation_test_is_merge_maneuver(self, instruction, geometry=None, next_geometry=None):
+    return self.navigation_test_maneuver_class(instruction, geometry, next_geometry) == "highway_merge"
 
   def navigation_test_maneuver_key(self, instruction, geometry):
     if instruction is None:
@@ -553,16 +669,84 @@ class RouteEngine:
     return max(NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN, v_ego * max(NAVIGATION_TEST_EXIT_PREP_SECONDS, lane_prep_seconds))
 
   def navigation_test_highway_exit_prep_distance(self):
-    v_ego = self.sm['carState'].vEgo
+    v_ego = max(self.sm['carState'].vEgo, 0.1)
     if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
       return self.navigation_test_exit_prep_distance()
-    lane_prep_seconds = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES * (
-      NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS + NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN
-    )
+
+    estimated_lanes_to_cross = 2.5
+    seconds_per_lane = 12.0
+    lane_sweep_distance = v_ego * (estimated_lanes_to_cross * seconds_per_lane)
+
+    target_exit_speed = 15.0
+    comfortable_decel = 1.2
+    decel_distance = (v_ego**2 - target_exit_speed**2) / (2 * comfortable_decel) if v_ego > target_exit_speed else 0.0
+    total_prep_distance = lane_sweep_distance + decel_distance
+
     return min(
       NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX,
-      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, v_ego * max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS, lane_prep_seconds)),
+      max(NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN, total_prep_distance),
     )
+
+  def navigation_test_surface_turn_prep_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    return min(
+      NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX,
+      max(NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN, v_ego * NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS),
+    )
+
+  def navigation_test_prep_distance_for_maneuver(self, maneuver_class):
+    if maneuver_class in ("normal_turn", "uturn"):
+      return self.navigation_test_surface_turn_prep_distance()
+    if maneuver_class in ("highway_exit", "highway_fork", "highway_merge"):
+      return self.navigation_test_highway_exit_prep_distance()
+    return self.navigation_test_exit_prep_distance()
+
+  def navigation_test_late_lane_change_lockout_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    return max(NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN, v_ego * NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS)
+
+  def navigation_test_late_lockout_distance_for_maneuver(self, maneuver_class):
+    if maneuver_class in ("normal_turn", "uturn"):
+      return self.navigation_test_late_lane_change_lockout_distance()
+    return self.navigation_test_command_distance()
+
+  def navigation_test_lane_availability(self):
+    lane_detection_enabled = getattr(self.frogpilot_toggles, "lane_detection", False)
+    required_width = float(getattr(self.frogpilot_toggles, "lane_detection_width", 0.0))
+
+    try:
+      lane_width_left = float(self.sm['frogpilotPlan'].laneWidthLeft)
+      lane_width_right = float(self.sm['frogpilotPlan'].laneWidthRight)
+    except Exception:
+      return None, None
+
+    if not lane_detection_enabled:
+      return None, None
+
+    left_available = lane_width_left >= required_width
+    right_available = lane_width_right >= required_width
+    return left_available, right_available
+
+  def navigation_test_lane_belief(self, left_available=None, right_available=None):
+    if left_available is True and right_available is True:
+      return "interior"
+    if left_available is True and right_available is False:
+      return "right_edge"
+    if left_available is False and right_available is True:
+      return "left_edge"
+    if left_available is False and right_available is False:
+      return "single_or_unknown"
+    return "unknown"
+
+  def navigation_test_target_zone_for_direction(self, direction):
+    if direction == "left":
+      return "left_edge"
+    if direction == "right":
+      return "right_edge"
+    return "none"
+
+  def navigation_test_target_edge_reached(self, target_lane_zone, lane_belief):
+    return target_lane_zone != "none" and lane_belief == target_lane_zone
 
   def navigation_test_next_maneuver(self, distance_to_maneuver_along_geometry):
     if self.route is None or self.step_idx is None:
@@ -575,20 +759,27 @@ class RouteEngine:
       if instruction is None:
         continue
 
-      direction = self.navigation_test_maneuver_direction(instruction)
-      display_direction = self.navigation_test_maneuver_display_direction(instruction)
+      step_geometry = self.route_geometry[i] if (self.route_geometry is not None and i < len(self.route_geometry)) else None
+      step_next_geometry = self.route_geometry[i + 1] if (self.route_geometry is not None and i + 1 < len(self.route_geometry)) else None
+      direction = self.navigation_test_maneuver_direction(instruction, step_geometry, step_next_geometry)
+      display_direction = self.navigation_test_maneuver_display_direction(instruction, step_geometry, step_next_geometry)
       if direction != "none" or display_direction == "uturn":
         return direction, cumulative_distance, instruction
 
     return "none", None, None
 
   def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
-    direction = self.navigation_test_maneuver_direction(instruction)
-    display_direction = self.navigation_test_maneuver_display_direction(instruction)
+    next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry)) else None
+    direction = self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
+    display_direction = self.navigation_test_maneuver_display_direction(instruction, geometry, next_geometry)
+    maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
     strategy_phase = "none"
     strategy_threshold = 0.0
     strategy_constraint = "none"
     action = "none"
+    left_available, right_available = self.navigation_test_lane_availability()
+    lane_belief = self.navigation_test_lane_belief(left_available, right_available)
+    target_lane_zone = self.navigation_test_target_zone_for_direction(direction)
 
     if direction == "none" and display_direction != "uturn":
       self.reset_navigation_test_exit_migration()
@@ -596,51 +787,68 @@ class RouteEngine:
 
     if distance_to_maneuver_along_geometry <= command_distance:
       self.reset_navigation_test_exit_migration()
-      if self.navigation_test_is_control_turn(instruction):
+      if self.navigation_test_is_control_turn(instruction, geometry, next_geometry):
         return "turn", direction, display_direction, "turn", command_distance, strategy_constraint
       return "upcoming", "none", display_direction, "upcoming", command_distance, "displayOnly"
 
-    if self.navigation_test_is_exit_maneuver(instruction):
-      standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
-      highway_exit_prep_distance = self.navigation_test_highway_exit_prep_distance()
-      conflict_soon = (
-        next_maneuver_direction in ("left", "right") and
-        next_maneuver_direction != direction and
-        next_maneuver_distance_after_current is not None and
-        0.0 < next_maneuver_distance_after_current <= NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE
-      )
+    if not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
+      self.reset_navigation_test_exit_migration()
+      return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
 
-      # --- TRAP LANE RECOVERY ---
-      # Handle standard right-side exits (merge left to escape the trap lane)
-      #if direction == "right" and next_maneuver_direction != "right" and (next_maneuver_distance_after_current is None or next_maneuver_distance_after_current > 200.0):
-        #strategy_constraint = "postExitMergeLeft"
-        
-      # Handle left-side exits (merge right to escape the trap lane)
-      #elif direction == "left" and next_maneuver_direction != "left" and (next_maneuver_distance_after_current is None or next_maneuver_distance_after_current > 200.0):
-        #strategy_constraint = "postExitMergeRight"
+    active_prep_distance = self.navigation_test_prep_distance_for_maneuver(maneuver_class)
+    standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
+    late_lockout_distance = self.navigation_test_late_lockout_distance_for_maneuver(maneuver_class)
+    conflict_soon = (
+      next_maneuver_direction in ("left", "right") and
+      next_maneuver_direction != direction and
+      next_maneuver_distance_after_current is not None and
+      0.0 < next_maneuver_distance_after_current <= NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE
+    )
 
-      if distance_to_maneuver_along_geometry <= standard_exit_prep_distance:
-        self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
-        if conflict_soon:
-          strategy_constraint = "conflictingNextManeuver"
-        return "laneChange", direction, display_direction, "exitMigration", standard_exit_prep_distance, strategy_constraint
-      if distance_to_maneuver_along_geometry <= highway_exit_prep_distance:
-        if conflict_soon:
-          self.reset_navigation_test_exit_migration()
-          return "upcoming", direction, display_direction, "consecutiveConflictHold", highway_exit_prep_distance, "conflictingNextManeuver"
-        self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
-        return "laneChange", direction, display_direction, "highwayExitMigration", highway_exit_prep_distance, strategy_constraint
+    if distance_to_maneuver_along_geometry > active_prep_distance:
+      self.reset_navigation_test_exit_migration()
+      return "upcoming", direction, display_direction, "upcoming", active_prep_distance, strategy_constraint
+
+    self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
+
+    if self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
+      return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, "targetEdgeReached"
+
+    if conflict_soon and maneuver_class in ("highway_exit", "highway_fork", "highway_merge") and distance_to_maneuver_along_geometry > standard_exit_prep_distance:
+      self.reset_navigation_test_exit_migration()
+      return "upcoming", direction, display_direction, "consecutiveConflictHold", active_prep_distance, "conflictingNextManeuver"
+
+    if maneuver_class in ("normal_turn", "uturn") and distance_to_maneuver_along_geometry <= late_lockout_distance:
+      return "upcoming", direction, display_direction, "maneuverLockout", late_lockout_distance, "lateLaneChangeLockout"
+
+    if maneuver_class in ("normal_turn", "uturn"):
+      return "laneChange", direction, display_direction, "turnLanePositioning", active_prep_distance, strategy_constraint
+
+    if maneuver_class == "highway_fork":
+      return "laneChange", direction, display_direction, "forkLanePositioning", active_prep_distance, strategy_constraint
+
+    if maneuver_class == "highway_merge":
+      return "laneChange", direction, display_direction, "mergeLanePositioning", active_prep_distance, strategy_constraint
+
+    if maneuver_class == "highway_exit":
+      phase = "exitMigration" if distance_to_maneuver_along_geometry <= standard_exit_prep_distance else "highwayExitMigration"
+      return "laneChange", direction, display_direction, phase, active_prep_distance, strategy_constraint
 
     self.reset_navigation_test_exit_migration()
     return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
 
-  def navigation_test_maneuver_target_speed(self, instruction, current_geometry):
+  def navigation_test_maneuver_target_speed(self, instruction, current_geometry, maneuver_class=None):
     if instruction is None:
       return 0.0, "none"
 
-    # --- 80 KM/H EXIT FALLBACK ---
-    # Intercepts exits before Mapbox maxspeed logic is applied
-    if self.navigation_test_is_exit_maneuver(instruction):
+    if maneuver_class is None:
+      next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry)) else None
+      maneuver_class = self.navigation_test_maneuver_class(instruction, current_geometry, next_geometry)
+
+    if maneuver_class in ("normal_turn", "uturn"):
+      return TURN_SLOWDOWN_MIN_SPEED_MS, "hardcodedTurn25kph"
+
+    if maneuver_class == "highway_exit":
       return 22.22, "hardcodedExit80kph"
 
     # Pull nearby route-annotation speeds around the maneuver: last points of current step plus first points of next step.
@@ -1140,12 +1348,15 @@ class RouteEngine:
             navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold, navigation_test_strategy_constraint = post_exit_recovery
             navigation_test_command_max_lane_changes = 1
 
-        navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry)
+        next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
+        maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
+        navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry, maneuver_class)
         if navigation_test_strategy_phase == "postExitLaneRecovery":
           navigation_test_target_speed = 0.0
           navigation_test_target_speed_source = "none"
 
       navigation_test_actionable = navigation_test_action in ("laneChange", "turn") and navigation_test_direction in ("left", "right")
+      navigation_test_speed_active = navigation_test_target_speed > 0.0 and navigation_test_action not in ("none", "routeMismatch", "routeError", "routing", "waitingGps")
       navigation_test_command_direction = navigation_test_direction if navigation_test_actionable else "none"
       navigation_test_display_active = navigation_test_action not in ("none", "routeMismatch", "routeError", "routing", "waitingGps")
       navigation_test_command_display_direction = navigation_test_display_direction if navigation_test_display_active else "none"
@@ -1182,14 +1393,14 @@ class RouteEngine:
       else:
         distance_to_maneuver = distance_to_maneuver_along_geometry + sum(self.route[j]['distance'] for j in range(self.step_idx+1, i+1))
 
-      instruction = parse_banner_instructions(step_i['bannerInstructions'], distance_to_maneuver)
-      if instruction is None:
+      instruction_i = parse_banner_instructions(step_i['bannerInstructions'], distance_to_maneuver)
+      if instruction_i is None:
         continue
       maneuver = {'distance': distance_to_maneuver}
-      if 'maneuverType' in instruction:
-        maneuver['type'] = instruction['maneuverType']
-      if 'maneuverModifier' in instruction:
-        maneuver['modifier'] = instruction['maneuverModifier']
+      if 'maneuverType' in instruction_i:
+        maneuver['type'] = instruction_i['maneuverType']
+      if 'maneuverModifier' in instruction_i:
+        maneuver['modifier'] = instruction_i['maneuverModifier']
       maneuvers.append(maneuver)
 
     msg.navInstruction.allManeuvers = maneuvers
@@ -1217,8 +1428,8 @@ class RouteEngine:
         navigation_test_command_display_direction,
         strategy_phase=navigation_test_strategy_phase,
         strategy_constraint=navigation_test_strategy_constraint,
-        target_speed=navigation_test_target_speed if navigation_test_actionable else 0.0,
-        target_speed_source=navigation_test_target_speed_source if navigation_test_actionable else "none",
+        target_speed=navigation_test_target_speed if navigation_test_speed_active else 0.0,
+        target_speed_source=navigation_test_target_speed_source if navigation_test_speed_active else "none",
         max_lane_changes=navigation_test_command_max_lane_changes,
       )
 
@@ -1243,10 +1454,12 @@ class RouteEngine:
 
     if self.should_transition_to_next_step(distance_to_maneuver_along_geometry):
       completed_instruction = instruction
-      completed_direction = self.navigation_test_maneuver_direction(completed_instruction)
+      completed_next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
+      completed_direction = self.navigation_test_maneuver_direction(completed_instruction, geometry, completed_next_geometry)
+      completed_maneuver_class = self.navigation_test_maneuver_class(completed_instruction, geometry, completed_next_geometry)
 
       if self.step_idx + 1 < len(self.route):
-        if self.navigation_test_is_exit_maneuver(completed_instruction) and completed_direction in ("left", "right"):
+        if completed_maneuver_class in ("highway_exit", "highway_merge") and completed_direction in ("left", "right"):
           self.start_navigation_test_post_exit_recovery(completed_instruction, geometry, completed_direction)
         self.step_idx += 1
         self.reset_recompute_limits()
