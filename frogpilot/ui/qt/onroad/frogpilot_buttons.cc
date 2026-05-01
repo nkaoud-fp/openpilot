@@ -1,5 +1,6 @@
 #include "frogpilot/ui/qt/onroad/frogpilot_buttons.h"
 
+#include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
@@ -10,6 +11,7 @@ namespace {
 
 QString navigationTestDestinationLabel(const std::string &destination) {
   if (destination == "home") return "HOM";
+  if (destination == "share") return "SHR";
   if (destination == "work") return "WRK";
   if (destination == "school") return "SCH";
   return "NAV";
@@ -96,7 +98,6 @@ NavigationTestButton::NavigationTestButton(QWidget *parent) : QPushButton(parent
       params.putBool("NavigationTestControl", false);
       params.remove("NavDestination");
       params.remove("NavDestinationWaypoints");
-      params.remove("NavigationTestPrepStatus");
       params.remove("NavigationTestTurnCommand");
     } else {
       emit destinationPickerRequested();
@@ -146,9 +147,14 @@ NavigationDestinationButton::NavigationDestinationButton(const QString &label, c
 
 void NavigationDestinationButton::selectDestination() {
   params.put("NavigationTestSelectedDestination", destination_id.toStdString());
-  params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
+  if (destination_id == "share") {
+    const std::string selection_token = std::to_string(QDateTime::currentMSecsSinceEpoch());
+    params.put("NavigationTestShareSelectionToken", selection_token);
+    params.remove("NavDestination");
+  } else {
+    params.put("NavDestination", navigationTestDestinationJson(latitude, longitude, place_name).toStdString());
+  }
   params.remove("NavDestinationWaypoints");
-  params.remove("NavigationTestPrepStatus");
   params.remove("NavigationTestTurnCommand");
   params.putBool("NavigationTestControl", true);
   emit destinationSelected();

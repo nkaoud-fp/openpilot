@@ -185,6 +185,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"NavigationTestEmailTo", PERSISTENT},
     {"NavigationTestLastDriveLog", PERSISTENT},
     {"NavigationTestSelectedDestination", PERSISTENT},
+    {"NavigationTestShareSelectionToken", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavigationTestPrepStatus", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavigationTestTurnCommand", CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION},
     {"NavPastDestinations", PERSISTENT},
