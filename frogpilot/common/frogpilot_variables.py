@@ -402,6 +402,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("NavigationTestTurnLockoutDistanceMin", "35", 3, "35"),
   ("NavigationTestTurnPrepDistanceMax", "650", 3, "650"),
   ("NavigationTestTurnPrepDistanceMin", "120", 3, "120"),
+  ("NavigationTestTurnSlowdownStartDistance", "150", 3, "150"),
   ("NavigationTestTurnSlowdownSpeed", "25", 3, "25"),
   ("NavSettingLeftSide", "0", 0, "0"),
   ("NavSettingTime24h", "0", 0, "0"),
@@ -1040,6 +1041,7 @@ class FrogPilotVariables:
     toggle.navigation_test_turn_prep_distance_min = params.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMin"] else default.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion
     toggle.navigation_test_turn_prep_distance_max = params.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMax"] else default.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion
     toggle.navigation_test_turn_lockout_distance_min = params.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnLockoutDistanceMin"] else default.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion
+    toggle.navigation_test_turn_slowdown_start_distance = params.get_float("NavigationTestTurnSlowdownStartDistance") * distance_conversion if tuning_level >= level["NavigationTestTurnSlowdownStartDistance"] else default.get_float("NavigationTestTurnSlowdownStartDistance") * distance_conversion
     toggle.navigation_test_turn_slowdown_speed = params.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion if tuning_level >= level["NavigationTestTurnSlowdownSpeed"] else default.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion
     toggle.road_name_ui = toggle.navigation_ui and (params.get_bool("RoadNameUI") if tuning_level >= level["RoadNameUI"] else default.get_bool("RoadNameUI"))
     toggle.show_speed_limits = toggle.navigation_ui and (params.get_bool("ShowSpeedLimits") if tuning_level >= level["ShowSpeedLimits"] else default.get_bool("ShowSpeedLimits"))

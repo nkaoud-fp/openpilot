@@ -71,6 +71,11 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
                                                                 "", 5, 250, QString(), std::map<float, QString>(), 5, true);
   settingsList->addItem(turnLockoutDistanceMinToggle);
 
+  turnSlowdownStartDistanceToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownStartDistance", tr("Turn Slowdown Start Distance"),
+                                                                   tr("<b>Distance before a branching turn where navigation starts reducing speed.</b> Lane positioning can still begin earlier."),
+                                                                   "", 25, 1000, QString(), std::map<float, QString>(), 5, true);
+  settingsList->addItem(turnSlowdownStartDistanceToggle);
+
   turnSlowdownSpeedToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownSpeed", tr("Turn Slowdown Target Speed"),
                                                            tr("<b>Target speed at the turn itself</b> for the gradual navigation slowdown profile."),
                                                            "", 5, 120, QString(), std::map<float, QString>(), 1, true);
@@ -217,6 +222,7 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       turnLockoutDistanceMinToggle->showDescription();
       turnPrepDistanceMaxToggle->showDescription();
       turnPrepDistanceMinToggle->showDescription();
+      turnSlowdownStartDistanceToggle->showDescription();
       turnSlowdownSpeedToggle->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
@@ -251,6 +257,7 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
     turnLockoutDistanceMinToggle->showDescription();
     turnPrepDistanceMaxToggle->showDescription();
     turnPrepDistanceMinToggle->showDescription();
+    turnSlowdownStartDistanceToggle->showDescription();
     turnSlowdownSpeedToggle->showDescription();
     updateSpeedLimitsToggle->showDescription();
   }
@@ -320,6 +327,7 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
       turnLockoutDistanceMinToggle->showDescription();
       turnPrepDistanceMaxToggle->showDescription();
       turnPrepDistanceMinToggle->showDescription();
+      turnSlowdownStartDistanceToggle->showDescription();
       turnSlowdownSpeedToggle->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
@@ -416,6 +424,7 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMin", params.getFloat("NavigationTestTurnPrepDistanceMin") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMax", params.getFloat("NavigationTestTurnPrepDistanceMax") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnLockoutDistanceMin", params.getFloat("NavigationTestTurnLockoutDistanceMin") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnSlowdownStartDistance", params.getFloat("NavigationTestTurnSlowdownStartDistance") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnSlowdownSpeed", params.getFloat("NavigationTestTurnSlowdownSpeed") * speedConversion);
   }
   previousMetric = metric;
@@ -458,6 +467,7 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     turnPrepDistanceMinToggle->updateControl(25, 1000, metricDistanceLabels);
     turnPrepDistanceMaxToggle->updateControl(50, 1000, metricDistanceLabels);
     turnLockoutDistanceMinToggle->updateControl(5, 250, metricDistanceLabels);
+    turnSlowdownStartDistanceToggle->updateControl(25, 1000, metricDistanceLabels);
     turnSlowdownSpeedToggle->updateControl(5, 120, metricSpeedLabels);
   } else {
     highwayPrepDistanceMinToggle->updateControl(300, 20000, imperialHighwayDistanceLabels);
@@ -465,6 +475,7 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     turnPrepDistanceMinToggle->updateControl(100, 3500, imperialDistanceLabels);
     turnPrepDistanceMaxToggle->updateControl(150, 3500, imperialDistanceLabels);
     turnLockoutDistanceMinToggle->updateControl(15, 800, imperialDistanceLabels);
+    turnSlowdownStartDistanceToggle->updateControl(100, 3500, imperialDistanceLabels);
     turnSlowdownSpeedToggle->updateControl(5, 75, imperialSpeedLabels);
   }
 }

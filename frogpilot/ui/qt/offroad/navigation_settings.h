@@ -52,6 +52,7 @@ private:
   FrogPilotParamValueControl *turnLockoutDistanceMinToggle;
   FrogPilotParamValueControl *turnPrepDistanceMaxToggle;
   FrogPilotParamValueControl *turnPrepDistanceMinToggle;
+  FrogPilotParamValueControl *turnSlowdownStartDistanceToggle;
   FrogPilotParamValueControl *turnSlowdownSpeedToggle;
   FrogPilotButtonControl *updateSpeedLimitsToggle;
 

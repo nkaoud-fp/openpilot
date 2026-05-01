@@ -99,7 +99,7 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
-    self.navigation_prep_target = self.update_navigation_prep_target(v_cruise)
+    self.navigation_prep_target = self.update_navigation_prep_target(v_cruise, frogpilot_toggles)
 
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
@@ -122,7 +122,7 @@ class FrogPilotVCruise:
 
     return v_cruise
 
-  def update_navigation_prep_target(self, v_cruise):
+  def update_navigation_prep_target(self, v_cruise, frogpilot_toggles):
     if not params.get_bool("NavigationTestControl"):
       return 0
 
@@ -151,9 +151,17 @@ class FrogPilotVCruise:
     is_sharp_turn = display_direction in ("sharp_left", "sharp_right", "uturn")
 
     strategy_phase = command_json.get("strategyPhase", "none")
+    turn_related_phase = strategy_phase in ("turn", "turnLanePositioning", "targetEdgeHold", "maneuverLockout")
+    turn_slowdown_start_distance = max(
+      0.0,
+      float(getattr(frogpilot_toggles, "navigation_test_turn_slowdown_start_distance", 0.0)),
+    )
+    if turn_related_phase and turn_slowdown_start_distance > 0.0 and distance > turn_slowdown_start_distance:
+      return 0
+
     if action == "laneChange" or "Exit" in strategy_phase:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_EXIT_TARGET_SPEED
-    elif action in ("turn", "upcoming") and target_speed_from_nav > 0.0 and strategy_phase in ("turn", "turnLanePositioning", "targetEdgeHold", "maneuverLockout"):
+    elif action in ("turn", "upcoming") and target_speed_from_nav > 0.0 and turn_related_phase:
       target_speed = target_speed_from_nav
     elif action == "turn" and is_sharp_turn:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_TURN_TARGET_SPEED_SHARP
