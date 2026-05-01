@@ -22,12 +22,14 @@ private:
   void mousePressEvent(QMouseEvent *event);
   void updateButtons();
   void updateEmailControls();
+  void updateMetric(bool metric, bool bootRun = false);
   void updateState(const UIState &s, const FrogPilotUIState &fs);
   void updateStep();
 
   bool forceOpenDescriptions;
   bool mapboxPublicKeySet;
   bool mapboxSecretKeySet;
+  bool previousMetric = false;
   bool setupCompleted;
   bool updatingLimits;
 
@@ -45,6 +47,12 @@ private:
 
   ParamControl *autoEmailToggle;
   ParamControl *driveLoggingToggle;
+  FrogPilotParamValueControl *highwayPrepDistanceMaxToggle;
+  FrogPilotParamValueControl *highwayPrepDistanceMinToggle;
+  FrogPilotParamValueControl *turnLockoutDistanceMinToggle;
+  FrogPilotParamValueControl *turnPrepDistanceMaxToggle;
+  FrogPilotParamValueControl *turnPrepDistanceMinToggle;
+  FrogPilotParamValueControl *turnSlowdownSpeedToggle;
   FrogPilotButtonControl *updateSpeedLimitsToggle;
 
   FrogPilotButtonsControl *searchInput;

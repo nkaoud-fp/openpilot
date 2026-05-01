@@ -388,6 +388,8 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("NavigationTestControl", "0", 3, "0"),
   ("NavigationTestCurrentLog", "", 3, ""),
   ("NavigationTestDriveLogging", "0", 3, "0"),
+  ("NavigationTestHighwayPrepDistanceMax", "5000", 3, "5000"),
+  ("NavigationTestHighwayPrepDistanceMin", "1500", 3, "1500"),
   ("NavigationTestEmailFrom", "", 3, ""),
   ("NavigationTestEmailLastStatus", "", 3, ""),
   ("NavigationTestEmailPendingLog", "", 3, ""),
@@ -397,6 +399,10 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("NavigationTestEmailSMTPUser", "", 3, ""),
   ("NavigationTestEmailTo", "", 3, ""),
   ("NavigationTestLastDriveLog", "", 3, ""),
+  ("NavigationTestTurnLockoutDistanceMin", "35", 3, "35"),
+  ("NavigationTestTurnPrepDistanceMax", "650", 3, "650"),
+  ("NavigationTestTurnPrepDistanceMin", "120", 3, "120"),
+  ("NavigationTestTurnSlowdownSpeed", "25", 3, "25"),
   ("NavSettingLeftSide", "0", 0, "0"),
   ("NavSettingTime24h", "0", 0, "0"),
   ("NewLongAPI", "1", 3, "1"),
@@ -1029,6 +1035,12 @@ class FrogPilotVariables:
     toggle.big_map = toggle.navigation_ui and (params.get_bool("BigMap") if tuning_level >= level["BigMap"] else default.get_bool("BigMap"))
     toggle.full_map = toggle.big_map and (params.get_bool("FullMap") if tuning_level >= level["FullMap"] else default.get_bool("FullMap"))
     toggle.map_style = params.get_int("MapStyle") if toggle.navigation_ui and tuning_level >= level["MapStyle"] else default.get_int("MapStyle")
+    toggle.navigation_test_highway_prep_distance_min = params.get_float("NavigationTestHighwayPrepDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestHighwayPrepDistanceMin"] else default.get_float("NavigationTestHighwayPrepDistanceMin") * distance_conversion
+    toggle.navigation_test_highway_prep_distance_max = params.get_float("NavigationTestHighwayPrepDistanceMax") * distance_conversion if tuning_level >= level["NavigationTestHighwayPrepDistanceMax"] else default.get_float("NavigationTestHighwayPrepDistanceMax") * distance_conversion
+    toggle.navigation_test_turn_prep_distance_min = params.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMin"] else default.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion
+    toggle.navigation_test_turn_prep_distance_max = params.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMax"] else default.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion
+    toggle.navigation_test_turn_lockout_distance_min = params.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnLockoutDistanceMin"] else default.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion
+    toggle.navigation_test_turn_slowdown_speed = params.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion if tuning_level >= level["NavigationTestTurnSlowdownSpeed"] else default.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion
     toggle.road_name_ui = toggle.navigation_ui and (params.get_bool("RoadNameUI") if tuning_level >= level["RoadNameUI"] else default.get_bool("RoadNameUI"))
     toggle.show_speed_limits = toggle.navigation_ui and (params.get_bool("ShowSpeedLimits") if tuning_level >= level["ShowSpeedLimits"] else default.get_bool("ShowSpeedLimits"))
     toggle.speed_limit_vienna = toggle.navigation_ui and (params.get_bool("UseVienna") if tuning_level >= level["UseVienna"] else default.get_bool("UseVienna"))

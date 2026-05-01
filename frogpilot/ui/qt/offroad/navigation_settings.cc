@@ -46,6 +46,36 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
                                         "");
   settingsList->addItem(driveLoggingToggle);
 
+  highwayPrepDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestHighwayPrepDistanceMin", tr("Highway Prep Distance Min"),
+                                                                tr("<b>Minimum distance before exits, forks, and merges where navigation can start lane positioning.</b>"),
+                                                                "", 100, 6000, QString(), std::map<float, QString>(), 50, true);
+  settingsList->addItem(highwayPrepDistanceMinToggle);
+
+  highwayPrepDistanceMaxToggle = new FrogPilotParamValueControl("NavigationTestHighwayPrepDistanceMax", tr("Highway Prep Distance Max"),
+                                                                tr("<b>Maximum distance before exits, forks, and merges where navigation can start lane positioning.</b>"),
+                                                                "", 200, 6000, QString(), std::map<float, QString>(), 50, true);
+  settingsList->addItem(highwayPrepDistanceMaxToggle);
+
+  turnPrepDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestTurnPrepDistanceMin", tr("Turn Prep Distance Min"),
+                                                             tr("<b>Minimum distance before a branching turn where navigation can start lane positioning.</b>"),
+                                                             "", 25, 1000, QString(), std::map<float, QString>(), 5, true);
+  settingsList->addItem(turnPrepDistanceMinToggle);
+
+  turnPrepDistanceMaxToggle = new FrogPilotParamValueControl("NavigationTestTurnPrepDistanceMax", tr("Turn Prep Distance Max"),
+                                                             tr("<b>Maximum distance before a branching turn where navigation can start lane positioning.</b>"),
+                                                             "", 50, 1000, QString(), std::map<float, QString>(), 5, true);
+  settingsList->addItem(turnPrepDistanceMaxToggle);
+
+  turnLockoutDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestTurnLockoutDistanceMin", tr("Turn Lane Change Lockout Distance"),
+                                                                tr("<b>Minimum remaining distance near a turn where navigation stops asking for more lane changes and commits to the maneuver.</b>"),
+                                                                "", 5, 250, QString(), std::map<float, QString>(), 5, true);
+  settingsList->addItem(turnLockoutDistanceMinToggle);
+
+  turnSlowdownSpeedToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownSpeed", tr("Turn Slowdown Target Speed"),
+                                                           tr("<b>Target speed at the turn itself</b> for the gradual navigation slowdown profile."),
+                                                           "", 5, 120, QString(), std::map<float, QString>(), 1, true);
+  settingsList->addItem(turnSlowdownSpeedToggle);
+
   lastLogLabel = new LabelControl(tr("Latest Navigation Test Log"), tr("Waiting for first drive..."));
   settingsList->addItem(lastLogLabel);
 
@@ -174,6 +204,8 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       driveLoggingToggle->showDescription();
       emailFromControl->showDescription();
       emailToControl->showDescription();
+      highwayPrepDistanceMaxToggle->showDescription();
+      highwayPrepDistanceMinToggle->showDescription();
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
@@ -182,6 +214,10 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       smtpPasswordControl->showDescription();
       smtpPortControl->showDescription();
       smtpUserControl->showDescription();
+      turnLockoutDistanceMinToggle->showDescription();
+      turnPrepDistanceMaxToggle->showDescription();
+      turnPrepDistanceMinToggle->showDescription();
+      turnSlowdownSpeedToggle->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
   });
@@ -202,6 +238,8 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
     driveLoggingToggle->showDescription();
     emailFromControl->showDescription();
     emailToControl->showDescription();
+    highwayPrepDistanceMaxToggle->showDescription();
+    highwayPrepDistanceMinToggle->showDescription();
     publicMapboxKeyControl->showDescription();
     searchInput->showDescription();
     secretMapboxKeyControl->showDescription();
@@ -210,6 +248,10 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
     smtpPasswordControl->showDescription();
     smtpPortControl->showDescription();
     smtpUserControl->showDescription();
+    turnLockoutDistanceMinToggle->showDescription();
+    turnPrepDistanceMaxToggle->showDescription();
+    turnPrepDistanceMinToggle->showDescription();
+    turnSlowdownSpeedToggle->showDescription();
     updateSpeedLimitsToggle->showDescription();
   }
 
@@ -222,6 +264,7 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
   ipLabel->setText(ipAddress.isEmpty() ? tr("Offline...") : QString("%1:8082").arg(ipAddress));
 
   updateButtons();
+  updateMetric(params.getBool("IsMetric"), true);
 
   setupCompleted = mapboxPublicKeySet && mapboxSecretKeySet;
   updatingLimits = !params_memory.get("UpdateSpeedLimitsStatus").empty() && QString::fromStdString(params_memory.get("UpdateSpeedLimitsStatus")) != "Completed!";
@@ -264,6 +307,8 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
       driveLoggingToggle->showDescription();
       emailFromControl->showDescription();
       emailToControl->showDescription();
+      highwayPrepDistanceMaxToggle->showDescription();
+      highwayPrepDistanceMinToggle->showDescription();
       publicMapboxKeyControl->showDescription();
       searchInput->showDescription();
       secretMapboxKeyControl->showDescription();
@@ -272,6 +317,10 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
       smtpPasswordControl->showDescription();
       smtpPortControl->showDescription();
       smtpUserControl->showDescription();
+      turnLockoutDistanceMinToggle->showDescription();
+      turnPrepDistanceMaxToggle->showDescription();
+      turnPrepDistanceMinToggle->showDescription();
+      turnSlowdownSpeedToggle->showDescription();
       updateSpeedLimitsToggle->showDescription();
     }
   }
@@ -357,6 +406,69 @@ void FrogPilotNavigationPanel::updateButtons() {
   secretMapboxKeyControl->setText(mapboxSecretKeySet ? tr("REMOVE") : tr("ADD"));
 }
 
+void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
+  if (metric != previousMetric && !bootRun) {
+    double distanceConversion = metric ? FOOT_TO_METER : METER_TO_FOOT;
+    double speedConversion = metric ? MILE_TO_KM : KM_TO_MILE;
+
+    params.putFloatNonBlocking("NavigationTestHighwayPrepDistanceMin", params.getFloat("NavigationTestHighwayPrepDistanceMin") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestHighwayPrepDistanceMax", params.getFloat("NavigationTestHighwayPrepDistanceMax") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMin", params.getFloat("NavigationTestTurnPrepDistanceMin") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMax", params.getFloat("NavigationTestTurnPrepDistanceMax") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnLockoutDistanceMin", params.getFloat("NavigationTestTurnLockoutDistanceMin") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnSlowdownSpeed", params.getFloat("NavigationTestTurnSlowdownSpeed") * speedConversion);
+  }
+  previousMetric = metric;
+
+  static std::map<float, QString> imperialDistanceLabels;
+  static std::map<float, QString> imperialHighwayDistanceLabels;
+  static std::map<float, QString> imperialSpeedLabels;
+  static std::map<float, QString> metricDistanceLabels;
+  static std::map<float, QString> metricHighwayDistanceLabels;
+  static std::map<float, QString> metricSpeedLabels;
+
+  static bool labelsInitialized = false;
+  if (!labelsInitialized) {
+    for (int i = 0; i <= 3500; i += 5) {
+      imperialDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" foot") : QString::number(i) + tr(" feet");
+    }
+    for (int i = 0; i <= 20000; i += 50) {
+      imperialHighwayDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" foot") : QString::number(i) + tr(" feet");
+    }
+    for (int i = 0; i <= 75; ++i) {
+      imperialSpeedLabels[i] = QString::number(i) + tr(" mph");
+    }
+
+    for (int i = 0; i <= 1000; i += 5) {
+      metricDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" meter") : QString::number(i) + tr(" meters");
+    }
+    for (int i = 0; i <= 6000; i += 50) {
+      metricHighwayDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" meter") : QString::number(i) + tr(" meters");
+    }
+    for (int i = 0; i <= 120; ++i) {
+      metricSpeedLabels[i] = QString::number(i) + tr(" km/h");
+    }
+
+    labelsInitialized = true;
+  }
+
+  if (metric) {
+    highwayPrepDistanceMinToggle->updateControl(100, 6000, metricHighwayDistanceLabels);
+    highwayPrepDistanceMaxToggle->updateControl(200, 6000, metricHighwayDistanceLabels);
+    turnPrepDistanceMinToggle->updateControl(25, 1000, metricDistanceLabels);
+    turnPrepDistanceMaxToggle->updateControl(50, 1000, metricDistanceLabels);
+    turnLockoutDistanceMinToggle->updateControl(5, 250, metricDistanceLabels);
+    turnSlowdownSpeedToggle->updateControl(5, 120, metricSpeedLabels);
+  } else {
+    highwayPrepDistanceMinToggle->updateControl(300, 20000, imperialHighwayDistanceLabels);
+    highwayPrepDistanceMaxToggle->updateControl(500, 20000, imperialHighwayDistanceLabels);
+    turnPrepDistanceMinToggle->updateControl(100, 3500, imperialDistanceLabels);
+    turnPrepDistanceMaxToggle->updateControl(150, 3500, imperialDistanceLabels);
+    turnLockoutDistanceMinToggle->updateControl(15, 800, imperialDistanceLabels);
+    turnSlowdownSpeedToggle->updateControl(5, 75, imperialSpeedLabels);
+  }
+}
+
 void FrogPilotNavigationPanel::updateEmailControls() {
   bool driveLoggingEnabled = params.getBool("NavigationTestDriveLogging");
   bool autoEmailEnabled = params.getBool("NavigationTestAutoEmail");
@@ -389,6 +501,7 @@ void FrogPilotNavigationPanel::updateState(const UIState &s, const FrogPilotUISt
 
   updateButtons();
   updateEmailControls();
+  updateMetric(params.getBool("IsMetric"));
   updateStep();
 
   bool parked = !s.scene.started || fs.frogpilot_scene.parked || fs.frogpilot_toggles.value("frogs_go_moo").toBool();
