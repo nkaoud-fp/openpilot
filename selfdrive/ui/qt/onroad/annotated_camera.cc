@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "common/params.h"
 #include "common/swaglog.h"
 #include "selfdrive/ui/qt/onroad/buttons.h"
 #include "selfdrive/ui/qt/util.h"
@@ -61,6 +62,17 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
     navigation_test_btn->updateState();
   });
   QObject::connect(navigation_school_btn, &NavigationDestinationButton::destinationSelected, [this] {
+    navigation_destination_picker_visible = false;
+    navigation_test_btn->updateState();
+  });
+  QObject::connect(uiState(), &UIState::offroadTransition, [this] {
+    Params params;
+    params.putBool("NavigationTestControl", false);
+    params.remove("NavDestination");
+    params.remove("NavDestinationWaypoints");
+    params.remove("NavigationTestTurnCommand");
+    params.remove("NavigationTestPrepStatus");
+
     navigation_destination_picker_visible = false;
     navigation_test_btn->updateState();
   });
