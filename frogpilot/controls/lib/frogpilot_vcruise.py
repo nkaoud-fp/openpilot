@@ -113,12 +113,12 @@ class FrogPilotVCruise:
       self.tracked_model_length = self.frogpilot_planner.model_length
 
       targets = [self.braking_target, self.csc_target, v_cruise]
-      if self.navigation_prep_target > CRUISING_SPEED:
-        targets.append(self.navigation_prep_target)
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
 
       v_cruise = min([target if target > CRUISING_SPEED else v_cruise for target in targets])
+      if self.navigation_prep_target > 0:
+        v_cruise = min(v_cruise, self.navigation_prep_target)
 
     return v_cruise
 
@@ -171,4 +171,4 @@ class FrogPilotVCruise:
     decel = min(NAVIGATION_PREP_DECEL, COMFORT_BRAKE)
     speed_target_now = (target_speed ** 2 + 2.0 * decel * distance) ** 0.5
 
-    return float(min(v_cruise, max(speed_target_now, target_speed, CRUISING_SPEED)))
+    return float(min(v_cruise, max(speed_target_now, target_speed)))

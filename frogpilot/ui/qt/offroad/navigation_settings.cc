@@ -47,38 +47,38 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
   settingsList->addItem(driveLoggingToggle);
 
   highwayPrepDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestHighwayPrepDistanceMin", tr("Highway Prep Distance Min"),
-                                                                tr("<b>Minimum distance before exits, forks, and merges where navigation can start lane positioning.</b>"),
-                                                                "", 100, 6000, QString(), std::map<float, QString>(), 50, true);
+                                                                tr("<b>Sets the earliest highway prep window used for exits, forks, and merges.</b> Lower values make lane positioning start later; higher values allow earlier preparation for tuning and testing."),
+                                                                "", 20, 30000, QString(), std::map<float, QString>(), 10, true);
   settingsList->addItem(highwayPrepDistanceMinToggle);
 
   highwayPrepDistanceMaxToggle = new FrogPilotParamValueControl("NavigationTestHighwayPrepDistanceMax", tr("Highway Prep Distance Max"),
-                                                                tr("<b>Maximum distance before exits, forks, and merges where navigation can start lane positioning.</b>"),
-                                                                "", 200, 6000, QString(), std::map<float, QString>(), 50, true);
+                                                                tr("<b>Caps how early highway lane positioning can begin.</b> Use larger values to test very early migration, or smaller values to keep prep closer to the maneuver."),
+                                                                "", 40, 30000, QString(), std::map<float, QString>(), 10, true);
   settingsList->addItem(highwayPrepDistanceMaxToggle);
 
   turnPrepDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestTurnPrepDistanceMin", tr("Turn Prep Distance Min"),
-                                                             tr("<b>Minimum distance before a branching turn where navigation can start lane positioning.</b>"),
-                                                             "", 25, 1000, QString(), std::map<float, QString>(), 5, true);
+                                                             tr("<b>Sets the earliest branching-turn prep window.</b> Lower values make turn lane positioning happen later; higher values let it start earlier for tuning and testing."),
+                                                             "", 5, 5000, QString(), std::map<float, QString>(), 5, true);
   settingsList->addItem(turnPrepDistanceMinToggle);
 
   turnPrepDistanceMaxToggle = new FrogPilotParamValueControl("NavigationTestTurnPrepDistanceMax", tr("Turn Prep Distance Max"),
-                                                             tr("<b>Maximum distance before a branching turn where navigation can start lane positioning.</b>"),
-                                                             "", 50, 1000, QString(), std::map<float, QString>(), 5, true);
+                                                             tr("<b>Caps how early branching-turn lane positioning can begin.</b> Useful when you want to prevent very early migration on long approaches."),
+                                                             "", 10, 5000, QString(), std::map<float, QString>(), 5, true);
   settingsList->addItem(turnPrepDistanceMaxToggle);
 
   turnLockoutDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestTurnLockoutDistanceMin", tr("Turn Lane Change Lockout Distance"),
-                                                                tr("<b>Minimum remaining distance near a turn where navigation stops asking for more lane changes and commits to the maneuver.</b>"),
-                                                                "", 5, 250, QString(), std::map<float, QString>(), 5, true);
+                                                                tr("<b>Within this remaining distance, navigation stops asking for more lane changes and commits to the maneuver.</b> Lower values keep repositioning active longer; higher values lock earlier."),
+                                                                "", 1, 1250, QString(), std::map<float, QString>(), 1, true);
   settingsList->addItem(turnLockoutDistanceMinToggle);
 
   turnSlowdownStartDistanceToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownStartDistance", tr("Turn Slowdown Start Distance"),
-                                                                   tr("<b>Distance before a branching turn where navigation starts reducing speed.</b> Lane positioning can still begin earlier."),
-                                                                   "", 25, 1000, QString(), std::map<float, QString>(), 5, true);
+                                                                   tr("<b>Controls when turn speed reduction begins.</b> Lane positioning can still begin earlier; this only changes when the gradual slowdown starts."),
+                                                                   "", 5, 5000, QString(), std::map<float, QString>(), 5, true);
   settingsList->addItem(turnSlowdownStartDistanceToggle);
 
   turnSlowdownSpeedToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownSpeed", tr("Turn Slowdown Target Speed"),
-                                                           tr("<b>Target speed at the turn itself</b> for the gradual navigation slowdown profile."),
-                                                           "", 5, 120, QString(), std::map<float, QString>(), 1, true);
+                                                           tr("<b>Target speed at the maneuver itself</b> for the gradual navigation slowdown profile. Lower values test stronger slowdown; higher values preserve more speed through the turn."),
+                                                           "", 1, 600, QString(), std::map<float, QString>(), 1, true);
   settingsList->addItem(turnSlowdownSpeedToggle);
 
   lastLogLabel = new LabelControl(tr("Latest Navigation Test Log"), tr("Waiting for first drive..."));
@@ -438,23 +438,23 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
 
   static bool labelsInitialized = false;
   if (!labelsInitialized) {
-    for (int i = 0; i <= 3500; i += 5) {
+    for (int i = 0; i <= 17500; ++i) {
       imperialDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" foot") : QString::number(i) + tr(" feet");
     }
-    for (int i = 0; i <= 20000; i += 50) {
+    for (int i = 0; i <= 100000; i += 10) {
       imperialHighwayDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" foot") : QString::number(i) + tr(" feet");
     }
-    for (int i = 0; i <= 75; ++i) {
+    for (int i = 0; i <= 375; ++i) {
       imperialSpeedLabels[i] = QString::number(i) + tr(" mph");
     }
 
-    for (int i = 0; i <= 1000; i += 5) {
+    for (int i = 0; i <= 5000; ++i) {
       metricDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" meter") : QString::number(i) + tr(" meters");
     }
-    for (int i = 0; i <= 6000; i += 50) {
+    for (int i = 0; i <= 30000; i += 10) {
       metricHighwayDistanceLabels[i] = i == 1 ? QString::number(i) + tr(" meter") : QString::number(i) + tr(" meters");
     }
-    for (int i = 0; i <= 120; ++i) {
+    for (int i = 0; i <= 600; ++i) {
       metricSpeedLabels[i] = QString::number(i) + tr(" km/h");
     }
 
@@ -462,21 +462,21 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
   }
 
   if (metric) {
-    highwayPrepDistanceMinToggle->updateControl(100, 6000, metricHighwayDistanceLabels);
-    highwayPrepDistanceMaxToggle->updateControl(200, 6000, metricHighwayDistanceLabels);
-    turnPrepDistanceMinToggle->updateControl(25, 1000, metricDistanceLabels);
-    turnPrepDistanceMaxToggle->updateControl(50, 1000, metricDistanceLabels);
-    turnLockoutDistanceMinToggle->updateControl(5, 250, metricDistanceLabels);
-    turnSlowdownStartDistanceToggle->updateControl(25, 1000, metricDistanceLabels);
-    turnSlowdownSpeedToggle->updateControl(5, 120, metricSpeedLabels);
+    highwayPrepDistanceMinToggle->updateControl(20, 30000, metricHighwayDistanceLabels);
+    highwayPrepDistanceMaxToggle->updateControl(40, 30000, metricHighwayDistanceLabels);
+    turnPrepDistanceMinToggle->updateControl(5, 5000, metricDistanceLabels);
+    turnPrepDistanceMaxToggle->updateControl(10, 5000, metricDistanceLabels);
+    turnLockoutDistanceMinToggle->updateControl(1, 1250, metricDistanceLabels);
+    turnSlowdownStartDistanceToggle->updateControl(5, 5000, metricDistanceLabels);
+    turnSlowdownSpeedToggle->updateControl(1, 600, metricSpeedLabels);
   } else {
-    highwayPrepDistanceMinToggle->updateControl(300, 20000, imperialHighwayDistanceLabels);
-    highwayPrepDistanceMaxToggle->updateControl(500, 20000, imperialHighwayDistanceLabels);
-    turnPrepDistanceMinToggle->updateControl(100, 3500, imperialDistanceLabels);
-    turnPrepDistanceMaxToggle->updateControl(150, 3500, imperialDistanceLabels);
-    turnLockoutDistanceMinToggle->updateControl(15, 800, imperialDistanceLabels);
-    turnSlowdownStartDistanceToggle->updateControl(100, 3500, imperialDistanceLabels);
-    turnSlowdownSpeedToggle->updateControl(5, 75, imperialSpeedLabels);
+    highwayPrepDistanceMinToggle->updateControl(60, 100000, imperialHighwayDistanceLabels);
+    highwayPrepDistanceMaxToggle->updateControl(100, 100000, imperialHighwayDistanceLabels);
+    turnPrepDistanceMinToggle->updateControl(20, 17500, imperialDistanceLabels);
+    turnPrepDistanceMaxToggle->updateControl(30, 17500, imperialDistanceLabels);
+    turnLockoutDistanceMinToggle->updateControl(3, 4000, imperialDistanceLabels);
+    turnSlowdownStartDistanceToggle->updateControl(20, 17500, imperialDistanceLabels);
+    turnSlowdownSpeedToggle->updateControl(1, 375, imperialSpeedLabels);
   }
 }
 

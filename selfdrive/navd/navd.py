@@ -709,7 +709,7 @@ class RouteEngine:
     total_prep_distance = lane_sweep_distance + decel_distance
 
     configured_min_distance = max(
-      50.0,
+      0.0,
       float(getattr(self.frogpilot_toggles, "navigation_test_highway_prep_distance_min", NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN)),
     )
     configured_max_distance = max(
@@ -725,7 +725,7 @@ class RouteEngine:
   def navigation_test_surface_turn_prep_distance(self):
     v_ego = self.sm['carState'].vEgo
     configured_min_distance = max(
-      15.0,
+      0.0,
       float(getattr(self.frogpilot_toggles, "navigation_test_turn_prep_distance_min", NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN)),
     )
     configured_max_distance = max(
@@ -747,7 +747,7 @@ class RouteEngine:
   def navigation_test_late_lane_change_lockout_distance(self):
     v_ego = self.sm['carState'].vEgo
     configured_min_distance = max(
-      5.0,
+      0.0,
       float(getattr(self.frogpilot_toggles, "navigation_test_turn_lockout_distance_min", NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN)),
     )
     return max(configured_min_distance, v_ego * NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS)
@@ -893,10 +893,7 @@ class RouteEngine:
       maneuver_class = self.navigation_test_maneuver_class(instruction, current_geometry, next_geometry)
 
     if maneuver_class in ("normal_turn", "uturn"):
-      configured_turn_speed = max(
-        CRUISING_SPEED,
-        float(getattr(self.frogpilot_toggles, "navigation_test_turn_slowdown_speed", TURN_SLOWDOWN_MIN_SPEED_MS)),
-      )
+      configured_turn_speed = max(0.0, float(getattr(self.frogpilot_toggles, "navigation_test_turn_slowdown_speed", TURN_SLOWDOWN_MIN_SPEED_MS)))
       return configured_turn_speed, "configTurnSlowdown"
 
     if maneuver_class == "highway_exit":
