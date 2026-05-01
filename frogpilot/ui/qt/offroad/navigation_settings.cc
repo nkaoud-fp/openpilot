@@ -415,7 +415,8 @@ void FrogPilotNavigationPanel::updateButtons() {
 }
 
 void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
-  if (metric != previousMetric && !bootRun) {
+  bool metricChanged = metric != previousMetric;
+  if (metricChanged && !bootRun) {
     double distanceConversion = metric ? FOOT_TO_METER : METER_TO_FOOT;
     double speedConversion = metric ? MILE_TO_KM : KM_TO_MILE;
 
@@ -427,7 +428,6 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     params.putFloatNonBlocking("NavigationTestTurnSlowdownStartDistance", params.getFloat("NavigationTestTurnSlowdownStartDistance") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnSlowdownSpeed", params.getFloat("NavigationTestTurnSlowdownSpeed") * speedConversion);
   }
-  previousMetric = metric;
 
   static std::map<float, QString> imperialDistanceLabels;
   static std::map<float, QString> imperialHighwayDistanceLabels;
@@ -461,23 +461,27 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     labelsInitialized = true;
   }
 
-  if (metric) {
-    highwayPrepDistanceMinToggle->updateControl(20, 30000, metricHighwayDistanceLabels);
-    highwayPrepDistanceMaxToggle->updateControl(40, 30000, metricHighwayDistanceLabels);
-    turnPrepDistanceMinToggle->updateControl(5, 5000, metricDistanceLabels);
-    turnPrepDistanceMaxToggle->updateControl(10, 5000, metricDistanceLabels);
-    turnLockoutDistanceMinToggle->updateControl(1, 1250, metricDistanceLabels);
-    turnSlowdownStartDistanceToggle->updateControl(5, 5000, metricDistanceLabels);
-    turnSlowdownSpeedToggle->updateControl(1, 600, metricSpeedLabels);
-  } else {
-    highwayPrepDistanceMinToggle->updateControl(60, 100000, imperialHighwayDistanceLabels);
-    highwayPrepDistanceMaxToggle->updateControl(100, 100000, imperialHighwayDistanceLabels);
-    turnPrepDistanceMinToggle->updateControl(20, 17500, imperialDistanceLabels);
-    turnPrepDistanceMaxToggle->updateControl(30, 17500, imperialDistanceLabels);
-    turnLockoutDistanceMinToggle->updateControl(3, 4000, imperialDistanceLabels);
-    turnSlowdownStartDistanceToggle->updateControl(20, 17500, imperialDistanceLabels);
-    turnSlowdownSpeedToggle->updateControl(1, 375, imperialSpeedLabels);
+  if (bootRun || metricChanged) {
+    if (metric) {
+      highwayPrepDistanceMinToggle->updateControl(20, 30000, metricHighwayDistanceLabels);
+      highwayPrepDistanceMaxToggle->updateControl(40, 30000, metricHighwayDistanceLabels);
+      turnPrepDistanceMinToggle->updateControl(5, 5000, metricDistanceLabels);
+      turnPrepDistanceMaxToggle->updateControl(10, 5000, metricDistanceLabels);
+      turnLockoutDistanceMinToggle->updateControl(1, 1250, metricDistanceLabels);
+      turnSlowdownStartDistanceToggle->updateControl(5, 5000, metricDistanceLabels);
+      turnSlowdownSpeedToggle->updateControl(1, 600, metricSpeedLabels);
+    } else {
+      highwayPrepDistanceMinToggle->updateControl(60, 100000, imperialHighwayDistanceLabels);
+      highwayPrepDistanceMaxToggle->updateControl(100, 100000, imperialHighwayDistanceLabels);
+      turnPrepDistanceMinToggle->updateControl(20, 17500, imperialDistanceLabels);
+      turnPrepDistanceMaxToggle->updateControl(30, 17500, imperialDistanceLabels);
+      turnLockoutDistanceMinToggle->updateControl(3, 4000, imperialDistanceLabels);
+      turnSlowdownStartDistanceToggle->updateControl(20, 17500, imperialDistanceLabels);
+      turnSlowdownSpeedToggle->updateControl(1, 375, imperialSpeedLabels);
+    }
   }
+
+  previousMetric = metric;
 }
 
 void FrogPilotNavigationPanel::updateEmailControls() {
