@@ -186,6 +186,8 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"NavigationTestEmailSMTPUser", PERSISTENT | DONT_LOG},
     {"NavigationTestEmailTo", PERSISTENT},
     {"NavigationTestLastDriveLog", PERSISTENT},
+    {"NavigationTestTurnCommandDistanceMin", PERSISTENT},
+    {"NavigationTestTurnCommandSeconds", PERSISTENT},
     {"NavigationTestTurnLockoutDistanceMin", PERSISTENT},
     {"NavigationTestTurnPrepDistanceMax", PERSISTENT},
     {"NavigationTestTurnPrepDistanceMin", PERSISTENT},

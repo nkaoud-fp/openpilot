@@ -49,6 +49,8 @@ private:
   ParamControl *driveLoggingToggle;
   FrogPilotParamValueControl *highwayPrepDistanceMaxToggle;
   FrogPilotParamValueControl *highwayPrepDistanceMinToggle;
+  FrogPilotParamValueControl *turnCommandDistanceMinToggle;
+  FrogPilotParamValueControl *turnCommandSecondsToggle;
   FrogPilotParamValueControl *turnLockoutDistanceMinToggle;
   FrogPilotParamValueControl *turnPrepDistanceMaxToggle;
   FrogPilotParamValueControl *turnPrepDistanceMinToggle;

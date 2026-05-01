@@ -399,6 +399,8 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("NavigationTestEmailSMTPUser", "", 3, ""),
   ("NavigationTestEmailTo", "", 3, ""),
   ("NavigationTestLastDriveLog", "", 3, ""),
+  ("NavigationTestTurnCommandDistanceMin", "35", 3, "35"),
+  ("NavigationTestTurnCommandSeconds", "8", 3, "8"),
   ("NavigationTestTurnLockoutDistanceMin", "35", 3, "35"),
   ("NavigationTestTurnPrepDistanceMax", "650", 3, "650"),
   ("NavigationTestTurnPrepDistanceMin", "120", 3, "120"),
@@ -1038,6 +1040,8 @@ class FrogPilotVariables:
     toggle.map_style = params.get_int("MapStyle") if toggle.navigation_ui and tuning_level >= level["MapStyle"] else default.get_int("MapStyle")
     toggle.navigation_test_highway_prep_distance_min = params.get_float("NavigationTestHighwayPrepDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestHighwayPrepDistanceMin"] else default.get_float("NavigationTestHighwayPrepDistanceMin") * distance_conversion
     toggle.navigation_test_highway_prep_distance_max = params.get_float("NavigationTestHighwayPrepDistanceMax") * distance_conversion if tuning_level >= level["NavigationTestHighwayPrepDistanceMax"] else default.get_float("NavigationTestHighwayPrepDistanceMax") * distance_conversion
+    toggle.navigation_test_turn_command_distance_min = params.get_float("NavigationTestTurnCommandDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnCommandDistanceMin"] else default.get_float("NavigationTestTurnCommandDistanceMin") * distance_conversion
+    toggle.navigation_test_turn_command_seconds = params.get_float("NavigationTestTurnCommandSeconds") if tuning_level >= level["NavigationTestTurnCommandSeconds"] else default.get_float("NavigationTestTurnCommandSeconds")
     toggle.navigation_test_turn_prep_distance_min = params.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMin"] else default.get_float("NavigationTestTurnPrepDistanceMin") * distance_conversion
     toggle.navigation_test_turn_prep_distance_max = params.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion if tuning_level >= level["NavigationTestTurnPrepDistanceMax"] else default.get_float("NavigationTestTurnPrepDistanceMax") * distance_conversion
     toggle.navigation_test_turn_lockout_distance_min = params.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnLockoutDistanceMin"] else default.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion

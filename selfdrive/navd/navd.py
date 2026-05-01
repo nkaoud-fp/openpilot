@@ -59,6 +59,8 @@ NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_DISTANCE = 100.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE = 600.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE = 500.0
 NAVIGATION_TEST_POST_EXIT_RECOVERY_COMMAND_SECONDS = 10.0
+NAVIGATION_TEST_TURN_COMMAND_DISTANCE_MIN = 35.0
+NAVIGATION_TEST_TURN_COMMAND_SECONDS = 8.0
 NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS = 18.0
 NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN = 120.0
 NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
@@ -687,6 +689,18 @@ class RouteEngine:
     v_ego = self.sm['carState'].vEgo
     return max(NAVIGATION_TEST_COMMAND_DISTANCE, v_ego * NAVIGATION_TEST_COMMAND_SECONDS)
 
+  def navigation_test_turn_command_distance(self):
+    v_ego = self.sm['carState'].vEgo
+    configured_min_distance = max(
+      0.0,
+      float(getattr(self.frogpilot_toggles, "navigation_test_turn_command_distance_min", NAVIGATION_TEST_TURN_COMMAND_DISTANCE_MIN)),
+    )
+    configured_seconds = max(
+      0.0,
+      float(getattr(self.frogpilot_toggles, "navigation_test_turn_command_seconds", NAVIGATION_TEST_TURN_COMMAND_SECONDS)),
+    )
+    return max(configured_min_distance, v_ego * configured_seconds)
+
   def navigation_test_exit_prep_distance(self):
     v_ego = self.sm['carState'].vEgo
     lane_prep_seconds = NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES * (
@@ -832,11 +846,13 @@ class RouteEngine:
       self.reset_navigation_test_exit_migration()
       return action, direction, display_direction, strategy_phase, strategy_threshold, strategy_constraint
 
-    if distance_to_maneuver_along_geometry <= command_distance:
+    turn_command_distance = self.navigation_test_turn_command_distance() if maneuver_class in ("normal_turn", "uturn") else command_distance
+
+    if distance_to_maneuver_along_geometry <= turn_command_distance:
       self.reset_navigation_test_exit_migration()
       if self.navigation_test_is_control_turn(instruction, geometry, next_geometry):
-        return "turn", direction, display_direction, "turn", command_distance, strategy_constraint
-      return "upcoming", "none", display_direction, "upcoming", command_distance, "displayOnly"
+        return "turn", direction, display_direction, "turn", turn_command_distance, strategy_constraint
+      return "upcoming", "none", display_direction, "upcoming", turn_command_distance, "displayOnly"
 
     if not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
       self.reset_navigation_test_exit_migration()
@@ -1412,6 +1428,9 @@ class RouteEngine:
     
     if self.params.get_bool("NavigationTestControl"):
       command_distance = self.navigation_test_command_distance()
+      maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None)
+      if maneuver_class in ("normal_turn", "uturn"):
+        command_distance = self.navigation_test_turn_command_distance()
       cross_track_error = self.navigation_test_cross_track_error()
       next_maneuver_direction, next_maneuver_distance, _ = self.navigation_test_next_maneuver(distance_to_maneuver_along_geometry)
       if next_maneuver_distance is not None:
@@ -1447,7 +1466,6 @@ class RouteEngine:
             navigation_test_command_max_lane_changes = 1
 
         next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
-        maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry, maneuver_class)
         if navigation_test_strategy_phase == "postExitLaneRecovery":
           navigation_test_target_speed = 0.0

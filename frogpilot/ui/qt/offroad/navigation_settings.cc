@@ -71,6 +71,16 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
                                                                 "", 1, 1250, QString(), std::map<float, QString>(), 1, true);
   settingsList->addItem(turnLockoutDistanceMinToggle);
 
+  turnCommandDistanceMinToggle = new FrogPilotParamValueControl("NavigationTestTurnCommandDistanceMin", tr("Turn Command Minimum Distance"),
+                                                                tr("<b>Sets the absolute minimum distance for issuing the final turn command.</b> Lower values fire the turn desire later; higher values allow it to start earlier."),
+                                                                "", 1, 1250, QString(), std::map<float, QString>(), 1, true);
+  settingsList->addItem(turnCommandDistanceMinToggle);
+
+  turnCommandSecondsToggle = new FrogPilotParamValueControl("NavigationTestTurnCommandSeconds", tr("Turn Command Start Seconds"),
+                                                            tr("<b>Sets the speed-based lookahead for the final turn command.</b> The active turn-command threshold becomes the larger of this time-based distance and the minimum turn-command distance."),
+                                                            "", 1, 15, tr(" seconds"), std::map<float, QString>(), 0.5, true);
+  settingsList->addItem(turnCommandSecondsToggle);
+
   turnSlowdownStartDistanceToggle = new FrogPilotParamValueControl("NavigationTestTurnSlowdownStartDistance", tr("Turn Slowdown Start Distance"),
                                                                    tr("<b>Controls when turn speed reduction begins.</b> Lane positioning can still begin earlier; this only changes when the gradual slowdown starts."),
                                                                    "", 5, 5000, QString(), std::map<float, QString>(), 5, true);
@@ -219,6 +229,8 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       smtpPasswordControl->showDescription();
       smtpPortControl->showDescription();
       smtpUserControl->showDescription();
+      turnCommandDistanceMinToggle->showDescription();
+      turnCommandSecondsToggle->showDescription();
       turnLockoutDistanceMinToggle->showDescription();
       turnPrepDistanceMaxToggle->showDescription();
       turnPrepDistanceMinToggle->showDescription();
@@ -254,6 +266,8 @@ void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
     smtpPasswordControl->showDescription();
     smtpPortControl->showDescription();
     smtpUserControl->showDescription();
+    turnCommandDistanceMinToggle->showDescription();
+    turnCommandSecondsToggle->showDescription();
     turnLockoutDistanceMinToggle->showDescription();
     turnPrepDistanceMaxToggle->showDescription();
     turnPrepDistanceMinToggle->showDescription();
@@ -324,6 +338,8 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
       smtpPasswordControl->showDescription();
       smtpPortControl->showDescription();
       smtpUserControl->showDescription();
+      turnCommandDistanceMinToggle->showDescription();
+      turnCommandSecondsToggle->showDescription();
       turnLockoutDistanceMinToggle->showDescription();
       turnPrepDistanceMaxToggle->showDescription();
       turnPrepDistanceMinToggle->showDescription();
@@ -422,6 +438,7 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
 
     params.putFloatNonBlocking("NavigationTestHighwayPrepDistanceMin", params.getFloat("NavigationTestHighwayPrepDistanceMin") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestHighwayPrepDistanceMax", params.getFloat("NavigationTestHighwayPrepDistanceMax") * distanceConversion);
+    params.putFloatNonBlocking("NavigationTestTurnCommandDistanceMin", params.getFloat("NavigationTestTurnCommandDistanceMin") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMin", params.getFloat("NavigationTestTurnPrepDistanceMin") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnPrepDistanceMax", params.getFloat("NavigationTestTurnPrepDistanceMax") * distanceConversion);
     params.putFloatNonBlocking("NavigationTestTurnLockoutDistanceMin", params.getFloat("NavigationTestTurnLockoutDistanceMin") * distanceConversion);
@@ -465,6 +482,8 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     if (metric) {
       highwayPrepDistanceMinToggle->updateControl(20, 30000, metricHighwayDistanceLabels);
       highwayPrepDistanceMaxToggle->updateControl(40, 30000, metricHighwayDistanceLabels);
+      turnCommandDistanceMinToggle->updateControl(1, 1250, metricDistanceLabels);
+      turnCommandSecondsToggle->updateControl(1, 15);
       turnPrepDistanceMinToggle->updateControl(5, 5000, metricDistanceLabels);
       turnPrepDistanceMaxToggle->updateControl(10, 5000, metricDistanceLabels);
       turnLockoutDistanceMinToggle->updateControl(1, 1250, metricDistanceLabels);
@@ -473,6 +492,8 @@ void FrogPilotNavigationPanel::updateMetric(bool metric, bool bootRun) {
     } else {
       highwayPrepDistanceMinToggle->updateControl(60, 100000, imperialHighwayDistanceLabels);
       highwayPrepDistanceMaxToggle->updateControl(100, 100000, imperialHighwayDistanceLabels);
+      turnCommandDistanceMinToggle->updateControl(3, 4000, imperialDistanceLabels);
+      turnCommandSecondsToggle->updateControl(1, 15);
       turnPrepDistanceMinToggle->updateControl(20, 17500, imperialDistanceLabels);
       turnPrepDistanceMaxToggle->updateControl(30, 17500, imperialDistanceLabels);
       turnLockoutDistanceMinToggle->updateControl(3, 4000, imperialDistanceLabels);
