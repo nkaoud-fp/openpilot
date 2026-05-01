@@ -64,7 +64,7 @@ NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.24 # 0.5
 # Navigation test control is intentionally conservative: navd is a lane-preparation
 # planner, not a steering/turn controller. It should only ask FrogPilot for lane
 # changes when a route maneuver needs side-lane positioning.
-NAVIGATION_TEST_DEBUG_LOG_VERSION = 8
+NAVIGATION_TEST_DEBUG_LOG_VERSION = 9
 NAVIGATION_TEST_MAX_BEARING_ERROR = 55.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 80.0
@@ -134,6 +134,10 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "road_context",
   "turn_angle_deg",
   "turn_angle_valid",
+  "model_desire_lc_left",
+  "model_desire_lc_right",
+  "model_desire_turn_left",
+  "model_desire_turn_right",
   "maneuver_lat",
   "maneuver_lon",
   "distance_to_maneuver_along_route",
@@ -1246,7 +1250,11 @@ class RouteEngine:
 
       self.record_navigation_test_surface_turn_command(instruction, geometry, direction)
       self.record_navigation_test_lane_command(direction, distance_to_maneuver_along_geometry)
-      return "laneChange", direction, display_direction, "turnAssist", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, 1.0
+      # Surface turns (normal_turn/uturn) are not lane changes - they go through
+      # an intersection. Dispatch as a turn-assist desire (turnLeft/turnRight),
+      # not a laneChange, so the model gets the right hint and the blinker FSM
+      # is not engaged.
+      return "turn", direction, display_direction, "turnAssist", turn_assist_distance, strategy_constraint, target_lane_zone, lane_belief, left_available, right_available, maneuver_class, road_context, command_block_reason, 1.0
 
     if (
       maneuver_class not in ("normal_turn", "uturn") and
@@ -1387,6 +1395,21 @@ class RouteEngine:
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
+
+    # Read back the desire vector the model actually received so we can verify
+    # the desire pulse made it through desire_helper (Desire enum: 0=none,
+    # 1=turnLeft, 2=turnRight, 3=laneChangeLeft, 4=laneChangeRight, ...).
+    model_desire_lc_left = model_desire_lc_right = 0.0
+    model_desire_turn_left = model_desire_turn_right = 0.0
+    try:
+      desire_state = list(self.sm['modelV2'].meta.desireState)
+      if len(desire_state) >= 5:
+        model_desire_turn_left = float(desire_state[1])
+        model_desire_turn_right = float(desire_state[2])
+        model_desire_lc_left = float(desire_state[3])
+        model_desire_lc_right = float(desire_state[4])
+    except Exception:
+      pass
     row = {
       "log_version": NAVIGATION_TEST_DEBUG_LOG_VERSION,
       "time": f"{time.time():.3f}",
@@ -1406,6 +1429,10 @@ class RouteEngine:
       "road_context": road_context,
       "turn_angle_deg": f"{turn_angle_deg:.2f}" if turn_angle_deg is not None else "",
       "turn_angle_valid": turn_angle_valid,
+      "model_desire_lc_left": f"{model_desire_lc_left:.3f}",
+      "model_desire_lc_right": f"{model_desire_lc_right:.3f}",
+      "model_desire_turn_left": f"{model_desire_turn_left:.3f}",
+      "model_desire_turn_right": f"{model_desire_turn_right:.3f}",
       "maneuver_lat": f"{maneuver_coordinate.latitude:.7f}" if maneuver_coordinate is not None else "",
       "maneuver_lon": f"{maneuver_coordinate.longitude:.7f}" if maneuver_coordinate is not None else "",
       "distance_to_maneuver_along_route": f"{distance_to_maneuver_along_geometry:.2f}",
