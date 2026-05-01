@@ -118,15 +118,19 @@ class DesireHelper:
     self.navigation_test_lane_change_condition_timer = 0.0
     self.navigation_test_lane_change_condition_direction = "none"
 
-  def update_navigation_test_prep_status(self, stage, direction="none", max_lane_changes=NAVIGATION_TEST_MAX_LANE_CHANGES, reason=""):
-    status = json.dumps({
+  def update_navigation_test_prep_status(self, stage, direction="none", max_lane_changes=NAVIGATION_TEST_MAX_LANE_CHANGES, reason="", diagnostics=None):
+    status_data = {
       "stage": stage,
       "direction": direction,
       "completedLaneChanges": self.navigation_test_lane_change_count,
       "maxLaneChanges": max_lane_changes,
       "cooldownRemaining": max(self.navigation_test_lane_change_cooldown_timer, 0.0),
       "reason": reason,
-    })
+    }
+    if diagnostics is not None:
+      status_data.update(diagnostics)
+
+    status = json.dumps(status_data)
     if status != self.navigation_test_prep_status:
       self.params.put("NavigationTestPrepStatus", status)
       self.navigation_test_prep_status = status
@@ -135,23 +139,37 @@ class DesireHelper:
     desired_lane_width = frogpilotPlan.laneWidthLeft if direction == "left" else frogpilotPlan.laneWidthRight
     return desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
 
-  def navigation_test_lane_change_allowed(self, direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
-    if below_lane_change_speed or not frogpilot_toggles.lane_changes:
-      return False
-
+  def navigation_test_lane_change_diagnostics(self, direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
     lane_available = self.navigation_test_lane_available(direction, frogpilotPlan, frogpilot_toggles)
     blindspot_detected = (carstate.leftBlindspot and direction == "left") or (carstate.rightBlindspot and direction == "right")
     adjacent_lead = frogpilotRadarState.leadLeft if direction == "left" else frogpilotRadarState.leadRight
-    closing_speed = 0.0
-    if adjacent_lead.status:
-      closing_speed = max(float(-adjacent_lead.vRel), 0.0)
 
+    lead_distance = float(adjacent_lead.dRel) if adjacent_lead.status else None
+    closing_speed = max(float(-adjacent_lead.vRel), 0.0) if adjacent_lead.status else 0.0
     required_gap = max(
       NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE,
       float(carstate.vEgo) * NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS + closing_speed * NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS,
     )
     adjacent_lead_too_close = adjacent_lead.status and adjacent_lead.dRel < required_gap
-    return lane_available and not blindspot_detected and not adjacent_lead_too_close
+    lane_changes_enabled = bool(frogpilot_toggles.lane_changes)
+    allowed = lane_changes_enabled and not below_lane_change_speed and lane_available and not blindspot_detected and not adjacent_lead_too_close
+
+    return {
+      "allowed": allowed,
+      "laneAvailable": lane_available,
+      "laneChangesEnabled": lane_changes_enabled,
+      "belowLaneChangeSpeed": below_lane_change_speed,
+      "blindspotDetected": blindspot_detected,
+      "adjacentLeadStatus": bool(adjacent_lead.status),
+      "adjacentLeadDistance": lead_distance,
+      "adjacentLeadClosingSpeed": closing_speed,
+      "requiredGap": required_gap,
+    }
+
+  def navigation_test_lane_change_allowed(self, direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
+    return self.navigation_test_lane_change_diagnostics(
+      direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed
+    )["allowed"]
 
   def navigation_test_lane_change_desire_active(self, action, direction, command_json, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed, lane_change_prob):
     if action != "laneChange" or direction not in NAVIGATION_TEST_LANE_CHANGE_DESIRES:
@@ -197,19 +215,33 @@ class DesireHelper:
       self.update_navigation_test_prep_status("cooldown", direction, max_lane_changes)
       return False
 
-    allowed = self.navigation_test_lane_change_allowed(direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
-    if not allowed:
-      self.update_navigation_test_prep_status("blocked", direction, max_lane_changes)
+    diagnostics = self.navigation_test_lane_change_diagnostics(
+      direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed
+    )
+    if not diagnostics["allowed"]:
+      if not diagnostics["laneChangesEnabled"]:
+        reason = "laneChangesDisabled"
+      elif diagnostics["belowLaneChangeSpeed"]:
+        reason = "belowLaneChangeSpeed"
+      elif not diagnostics["laneAvailable"]:
+        reason = "noTargetLane"
+      elif diagnostics["blindspotDetected"]:
+        reason = "blindspot"
+      elif diagnostics["adjacentLeadStatus"]:
+        reason = "adjacentLeadGap"
+      else:
+        reason = "unknown"
+      self.update_navigation_test_prep_status("blocked", direction, max_lane_changes, reason=reason, diagnostics=diagnostics)
       return False
 
     stable = self.navigation_test_lane_change_conditions_stable(action, direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed)
     if not stable:
-      self.update_navigation_test_prep_status("preparing", direction, max_lane_changes)
+      self.update_navigation_test_prep_status("preparing", direction, max_lane_changes, diagnostics=diagnostics)
       return False
 
     self.navigation_test_lane_change_active = True
     self.navigation_test_lane_change_timer = 0.0
-    self.update_navigation_test_prep_status("changing", direction, max_lane_changes)
+    self.update_navigation_test_prep_status("changing", direction, max_lane_changes, diagnostics=diagnostics)
     return True
 
   def navigation_test_lane_change_conditions_stable(self, action, direction, lateral_active, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):

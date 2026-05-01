@@ -90,6 +90,8 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "maneuver_type",
   "maneuver_modifier",
   "maneuver_text",
+  "maneuver_class",
+  "maneuver_angle_deg",
   "maneuver_lat",
   "maneuver_lon",
   "distance_to_maneuver_along_route",
@@ -98,6 +100,13 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "strategy_phase",
   "strategy_threshold",
   "strategy_constraint",
+  "lane_width_left",
+  "lane_width_right",
+  "left_lane_available",
+  "right_lane_available",
+  "lane_belief",
+  "target_lane_zone",
+  "target_edge_reached",
   "next_maneuver_direction",
   "next_maneuver_distance_after_current",
   "migration_active",
@@ -108,7 +117,24 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "command_actionable",
   "command_direction",
   "display_direction",
+  "command_speed_active",
+  "target_speed",
+  "target_speed_source",
   "command_max_lane_changes",
+  "prep_stage",
+  "prep_reason",
+  "prep_completed_lane_changes",
+  "prep_max_lane_changes",
+  "prep_cooldown_remaining",
+  "prep_allowed",
+  "prep_lane_available",
+  "prep_lane_changes_enabled",
+  "prep_below_lane_change_speed",
+  "prep_blindspot_detected",
+  "prep_adjacent_lead_status",
+  "prep_adjacent_lead_distance",
+  "prep_adjacent_lead_closing_speed",
+  "prep_required_gap",
   "post_exit_recovery_active",
   "post_exit_recovery_exit_direction",
   "post_exit_recovery_direction",
@@ -957,7 +983,7 @@ class RouteEngine:
     next_distance = self.path_minimum_distance(self.route_geometry[self.step_idx + 1])
     return current_distance is not None and next_distance is not None and next_distance < current_distance
 
-  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, command_actionable=False, command_direction="none", display_direction="none", current_step_error=None, global_route_error=None, command_max_lane_changes=NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES):
+  def log_navigation_test_debug(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, action, direction, cross_track_error=None, strategy_phase="none", strategy_threshold=0.0, strategy_constraint="none", next_maneuver_direction="none", next_maneuver_distance_after_current=None, command_actionable=False, command_direction="none", display_direction="none", current_step_error=None, global_route_error=None, command_max_lane_changes=NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES, target_speed=0.0, target_speed_source="none", command_speed_active=False):
     if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
       return
 
@@ -975,6 +1001,30 @@ class RouteEngine:
     if cross_track_error is None:
       cross_track_error = global_route_error
 
+    next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry)) else None
+    maneuver_class = self.navigation_test_maneuver_class(instruction, geometry, next_geometry)
+    maneuver_angle, maneuver_angle_valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
+    left_available, right_available = self.navigation_test_lane_availability()
+    lane_belief = self.navigation_test_lane_belief(left_available, right_available)
+    target_lane_zone = self.navigation_test_target_zone_for_direction(direction)
+    target_edge_reached = self.navigation_test_target_edge_reached(target_lane_zone, lane_belief)
+
+    lane_width_left = ""
+    lane_width_right = ""
+    try:
+      lane_width_left = f"{float(self.sm['frogpilotPlan'].laneWidthLeft):.2f}"
+      lane_width_right = f"{float(self.sm['frogpilotPlan'].laneWidthRight):.2f}"
+    except Exception:
+      pass
+
+    prep_status_raw = self.params.get("NavigationTestPrepStatus", encoding="utf8")
+    prep_status = {}
+    if prep_status_raw:
+      try:
+        prep_status = json.loads(prep_status_raw)
+      except json.JSONDecodeError:
+        prep_status = {"stage": "invalidJson", "reason": "jsonDecodeError"}
+
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
     row = {
@@ -991,6 +1041,8 @@ class RouteEngine:
       "maneuver_type": instruction.get("maneuverType", "") if instruction is not None else "",
       "maneuver_modifier": instruction.get("maneuverModifier", "") if instruction is not None else "",
       "maneuver_text": instruction.get("maneuverPrimaryText", "") if instruction is not None else "",
+      "maneuver_class": maneuver_class,
+      "maneuver_angle_deg": f"{maneuver_angle:.2f}" if maneuver_angle_valid else "",
       "maneuver_lat": f"{maneuver_coordinate.latitude:.7f}" if maneuver_coordinate is not None else "",
       "maneuver_lon": f"{maneuver_coordinate.longitude:.7f}" if maneuver_coordinate is not None else "",
       "distance_to_maneuver_along_route": f"{distance_to_maneuver_along_geometry:.2f}",
@@ -999,6 +1051,13 @@ class RouteEngine:
       "strategy_phase": strategy_phase,
       "strategy_threshold": f"{strategy_threshold:.2f}",
       "strategy_constraint": strategy_constraint,
+      "lane_width_left": lane_width_left,
+      "lane_width_right": lane_width_right,
+      "left_lane_available": left_available if left_available is not None else "",
+      "right_lane_available": right_available if right_available is not None else "",
+      "lane_belief": lane_belief,
+      "target_lane_zone": target_lane_zone,
+      "target_edge_reached": target_edge_reached,
       "next_maneuver_direction": next_maneuver_direction,
       "next_maneuver_distance_after_current": f"{next_maneuver_distance_after_current:.2f}" if next_maneuver_distance_after_current is not None else "",
       "migration_active": self.navigation_test_exit_migration_key is not None,
@@ -1009,7 +1068,24 @@ class RouteEngine:
       "command_actionable": command_actionable,
       "command_direction": command_direction,
       "display_direction": display_direction,
+      "command_speed_active": command_speed_active,
+      "target_speed": f"{target_speed:.2f}" if target_speed > 0.0 else "",
+      "target_speed_source": target_speed_source,
       "command_max_lane_changes": command_max_lane_changes,
+      "prep_stage": prep_status.get("stage", ""),
+      "prep_reason": prep_status.get("reason", ""),
+      "prep_completed_lane_changes": prep_status.get("completedLaneChanges", ""),
+      "prep_max_lane_changes": prep_status.get("maxLaneChanges", ""),
+      "prep_cooldown_remaining": f"{float(prep_status['cooldownRemaining']):.2f}" if prep_status.get("cooldownRemaining") is not None else "",
+      "prep_allowed": prep_status.get("allowed", ""),
+      "prep_lane_available": prep_status.get("laneAvailable", ""),
+      "prep_lane_changes_enabled": prep_status.get("laneChangesEnabled", ""),
+      "prep_below_lane_change_speed": prep_status.get("belowLaneChangeSpeed", ""),
+      "prep_blindspot_detected": prep_status.get("blindspotDetected", ""),
+      "prep_adjacent_lead_status": prep_status.get("adjacentLeadStatus", ""),
+      "prep_adjacent_lead_distance": f"{float(prep_status['adjacentLeadDistance']):.2f}" if prep_status.get("adjacentLeadDistance") is not None else "",
+      "prep_adjacent_lead_closing_speed": f"{float(prep_status['adjacentLeadClosingSpeed']):.2f}" if prep_status.get("adjacentLeadClosingSpeed") is not None else "",
+      "prep_required_gap": f"{float(prep_status['requiredGap']):.2f}" if prep_status.get("requiredGap") is not None else "",
       "post_exit_recovery_active": self.navigation_test_post_exit_recovery_key is not None and not self.navigation_test_post_exit_recovery_done,
       "post_exit_recovery_exit_direction": self.navigation_test_post_exit_recovery_exit_direction,
       "post_exit_recovery_direction": self.navigation_test_post_exit_recovery_direction,
@@ -1382,6 +1458,9 @@ class RouteEngine:
         current_step_error,
         global_route_error,
         navigation_test_command_max_lane_changes,
+        navigation_test_target_speed,
+        navigation_test_target_speed_source,
+        navigation_test_speed_active,
       )
 
     maneuvers = []
