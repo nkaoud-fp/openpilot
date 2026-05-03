@@ -221,6 +221,16 @@ struct FrogPilotPlan @0xa1680744031fdb2d {
   trackingLead @32 :Bool;
   unconfirmedSlcSpeedLimit @33 :Float32;
   vCruise @34 :Float32;
+  currentLane @35 :UInt8;
+  totalLanes @36 :UInt8;
+  laneConfidence @37 :LaneConfidence;
+
+  enum LaneConfidence {
+    unknown @0;
+    low @1;
+    medium @2;
+    high @3;
+  }
 }
 
 struct FrogPilotRadarState @0xcb9fd56c7057593a {

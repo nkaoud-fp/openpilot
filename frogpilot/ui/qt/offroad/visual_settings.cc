@@ -103,6 +103,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
     {"AdjacentPath", tr("Adjacent Lanes"), tr("<b>Show the driving paths for the left and right lanes.</b>"), ""},
     {"BlindSpotPath", tr("Blind Spot Path"), tr("<b>Show a red path when a vehicle is in that lane's blind spot.</b>"), ""},
     {"Compass", tr("Compass"), tr("<b>Show the current driving direction</b> with a simple on-screen compass."), ""},
+    {"LaneIndicator", tr("Lane Indicator"), tr("<b>Show which lane you're in</b> as a small pill above the navigation labels, with the model's confidence (H/M/L)."), ""},
     {"OnroadDistanceButton", tr("Driving Personality Button"), tr("<b>Control and view the current driving personality</b> via a driving screen widget."), ""},
     {"PedalsOnUI", tr("Gas / Brake Pedal Indicators"), tr("<b>On-screen gas and brake indicators.</b><br><br><b>Dynamic</b>: Opacity changes according to how much openpilot is accelerating or braking<br><b>Static</b>: Full when active, dim when not"), ""},
     {"RotatingWheel", tr("Rotating Steering Wheel"), tr("<b>Rotate the driving screen wheel</b> with the physical steering wheel."), ""},

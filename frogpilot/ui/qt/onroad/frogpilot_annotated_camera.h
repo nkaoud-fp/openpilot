@@ -74,6 +74,7 @@ private:
   void paintLongitudinalPaused(QPainter &p, FrogPilotUIScene &frogpilot_scene);
   void paintPedalIcons(QPainter &p, const cereal::CarState::Reader &carState, const cereal::FrogPilotCarState::Reader &frogpilotCarState, FrogPilotUIScene &frogpilot_scene, QJsonObject &frogpilot_toggles);
   void paintPendingSpeedLimit(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
+  void paintLaneIndicator(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan);
   void paintNavigationTestAction(QPainter &p);
   void paintRadarTracks(QPainter &p, const cereal::ModelDataV2::Reader &model, UIState &s, FrogPilotUIScene &frogpilot_scene, SubMaster &sm, SubMaster &fpsm);
   void paintRoadName(QPainter &p);

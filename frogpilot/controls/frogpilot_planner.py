@@ -12,7 +12,7 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import A_CHANGE_COST, DANGER_ZONE_COST, J_EGO_COST, STOP_DISTANCE
 
-from openpilot.frogpilot.common.frogpilot_utilities import calculate_lane_width, calculate_road_curvature
+from openpilot.frogpilot.common.frogpilot_utilities import calculate_lane_width, calculate_road_curvature, compute_lane_position
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, MINIMUM_LATERAL_ACCELERATION, PLANNER_TIME, THRESHOLD, params, params_memory
 from openpilot.frogpilot.controls.lib.conditional_experimental_mode import ConditionalExperimentalMode
 from openpilot.frogpilot.controls.lib.frogpilot_acceleration import FrogPilotAcceleration
@@ -52,6 +52,10 @@ class FrogPilotPlanner:
     self.lane_width_left = 0
     self.lane_width_right = 0
     self.lateral_acceleration = 0
+
+    self.current_lane = 0
+    self.total_lanes = 0
+    self.lane_confidence = "unknown"
     self.model_length = 0
     self.road_curvature = 0
     self.time_to_curve = 0
@@ -305,6 +309,8 @@ class FrogPilotPlanner:
     self.lateral_check |= not (sm["carState"].leftBlinker or sm["carState"].rightBlinker) and frogpilot_toggles.pause_lateral_below_signal
     self.lateral_check |= sm["carState"].standstill
 
+    self.current_lane, self.total_lanes, self.lane_confidence = compute_lane_position(sm["modelV2"])
+
     self.model_length = sm["modelV2"].position.x[-1]
 
     self.model_stopped = self.model_length < CRUISING_SPEED * PLANNER_TIME
@@ -382,5 +388,9 @@ class FrogPilotPlanner:
     frogpilotPlan.trackingLead = self.tracking_lead
 
     frogpilotPlan.vCruise = self.v_cruise
+
+    frogpilotPlan.currentLane = self.current_lane
+    frogpilotPlan.totalLanes = self.total_lanes
+    frogpilotPlan.laneConfidence = self.lane_confidence
 
     pm.send("frogpilotPlan", frogpilot_plan_send)

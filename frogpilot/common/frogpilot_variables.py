@@ -339,6 +339,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("LaneChanges", "1", 0, "1"),
   ("LaneChangeTime", "1.0", 1, "0"),
   ("LaneDetectionWidth", "0", 1, "0"),
+  ("LaneIndicator", "1", 0, "0"),
   ("LaneLinesWidth", "4", 2, "2"),
   ("LateralTune", "1", 1, "0"),
   ("LeadDepartingAlert", "0", 0, "0"),
@@ -1047,6 +1048,7 @@ class FrogPilotVariables:
     toggle.navigation_test_turn_lockout_distance_min = params.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion if tuning_level >= level["NavigationTestTurnLockoutDistanceMin"] else default.get_float("NavigationTestTurnLockoutDistanceMin") * distance_conversion
     toggle.navigation_test_turn_slowdown_start_distance = params.get_float("NavigationTestTurnSlowdownStartDistance") * distance_conversion if tuning_level >= level["NavigationTestTurnSlowdownStartDistance"] else default.get_float("NavigationTestTurnSlowdownStartDistance") * distance_conversion
     toggle.navigation_test_turn_slowdown_speed = params.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion if tuning_level >= level["NavigationTestTurnSlowdownSpeed"] else default.get_float("NavigationTestTurnSlowdownSpeed") * speed_conversion
+    toggle.lane_indicator = params.get_bool("LaneIndicator") if tuning_level >= level["LaneIndicator"] else default.get_bool("LaneIndicator")
     toggle.road_name_ui = toggle.navigation_ui and (params.get_bool("RoadNameUI") if tuning_level >= level["RoadNameUI"] else default.get_bool("RoadNameUI"))
     toggle.show_speed_limits = toggle.navigation_ui and (params.get_bool("ShowSpeedLimits") if tuning_level >= level["ShowSpeedLimits"] else default.get_bool("ShowSpeedLimits"))
     toggle.speed_limit_vienna = toggle.navigation_ui and (params.get_bool("UseVienna") if tuning_level >= level["UseVienna"] else default.get_bool("UseVienna"))
