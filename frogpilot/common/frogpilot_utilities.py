@@ -145,7 +145,8 @@ def compute_lane_position(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
 
   # Y axis: positive = left of car. Sort lane lines (with prob) descending by y so they go left -> right.
   lane_y_probs = []
-  for line, prob in zip(lane_lines, lane_probs, strict=True):
+  for i, line in enumerate(lane_lines):
+    prob = lane_probs[i] if i < len(lane_probs) else 0.0
     y = _interp_y_at_x(line, LANE_POSITION_REF_X)
     if y is None:
       continue
