@@ -99,81 +99,46 @@ def calculate_lane_width(lane, current_lane, road_edge=None):
 
   return float(distance_to_lane)
 
-LANE_PROB_HIGH = 0.6
-LANE_PROB_LOW = 0.3
-ROAD_EDGE_STD_HIGH = 1.0
-ROAD_EDGE_STD_LOW = 2.5
-LANE_POSITION_REF_X = 5.0  # metres ahead of the vehicle to evaluate lateral positions at
+LANE_PROB_HIGH = 0.5
+LANE_PROB_LOW = 0.25
 LANE_POSITION_MAX_LANES = 6
 
-def _interp_y_at_x(line, x_ref):
-  xs = np.asarray(line.x)
-  ys = np.asarray(line.y)
-  if xs.size == 0:
-    return None
-  return float(np.interp(x_ref, xs, ys))
-
 def compute_lane_position(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
-  """Estimate which lane the car is in from modelV2 lane lines and road edges.
+  """Estimate which lane the car is in from modelV2.laneLineProbs.
 
   Returns (current_lane, total_lanes, confidence) where confidence is one of
   "unknown" / "low" / "medium" / "high". current_lane is 1-indexed from the
   left; both values are 0 when unknown.
+
+  The model emits up to 4 lane lines in a fixed order: [outer-left, inner-left,
+  inner-right, outer-right]. Each line's probability tells us whether that
+  divider is visible. We treat the inner pair as "your lane's boundaries" and
+  the outer pair as "is there an adjacent lane on this side?". The model can
+  therefore resolve at most 3 lanes (you + up to one each side).
   """
-  lane_lines = list(modelV2.laneLines)
   lane_probs = list(modelV2.laneLineProbs)
-  road_edges = list(modelV2.roadEdges)
-  road_edge_stds = list(modelV2.roadEdgeStds)
-
-  if len(lane_lines) < 4 or len(road_edges) < 2:
+  if len(lane_probs) < 4:
     return 0, 0, "unknown"
 
-  left_edge_y = _interp_y_at_x(road_edges[0], LANE_POSITION_REF_X)
-  right_edge_y = _interp_y_at_x(road_edges[1], LANE_POSITION_REF_X)
-  if left_edge_y is None or right_edge_y is None:
-    return 0, 0, "unknown"
+  outer_left, inner_left, inner_right, outer_right = lane_probs[:4]
 
-  left_edge_ok = road_edge_stds[0] < ROAD_EDGE_STD_LOW
-  right_edge_ok = road_edge_stds[1] < ROAD_EDGE_STD_LOW
-  if not (left_edge_ok and right_edge_ok):
+  # Without both inner lines we don't know which lane we're in at all.
+  if inner_left < LANE_PROB_LOW or inner_right < LANE_PROB_LOW:
     return 0, 0, "low"
 
-  inner_left_y = _interp_y_at_x(lane_lines[1], LANE_POSITION_REF_X)
-  inner_right_y = _interp_y_at_x(lane_lines[2], LANE_POSITION_REF_X)
-  if inner_left_y is None or inner_right_y is None:
-    return 0, 0, "low"
+  has_left_adj = outer_left > LANE_PROB_LOW
+  has_right_adj = outer_right > LANE_PROB_LOW
 
-  # Y axis: positive = left of car. Sort lane lines (with prob) descending by y so they go left -> right.
-  lane_y_probs = []
-  for i, line in enumerate(lane_lines):
-    prob = lane_probs[i] if i < len(lane_probs) else 0.0
-    y = _interp_y_at_x(line, LANE_POSITION_REF_X)
-    if y is None:
-      continue
-    lane_y_probs.append((y, prob))
-  lane_y_probs.sort(key=lambda p: -p[0])
+  total_lanes = min(1 + int(has_left_adj) + int(has_right_adj), max_lanes)
+  current_lane = int(has_left_adj) + 1
 
-  # Keep only lines that lie inside the two road edges and have non-trivial probability.
-  inside = [(y, p) for (y, p) in lane_y_probs
-            if min(left_edge_y, right_edge_y) <= y <= max(left_edge_y, right_edge_y)
-            and p > LANE_PROB_LOW]
+  inner_strong = inner_left > LANE_PROB_HIGH and inner_right > LANE_PROB_HIGH
+  outer_left_decisive = outer_left > LANE_PROB_HIGH or outer_left < LANE_PROB_LOW
+  outer_right_decisive = outer_right > LANE_PROB_HIGH or outer_right < LANE_PROB_LOW
 
-  total_lanes = min(len(inside) + 1, max_lanes)
-  if total_lanes < 1:
-    return 0, 0, "low"
-
-  # Lines to the left of the car (y > 0) tell us how many lanes are to our left.
-  lanes_to_left = sum(1 for (y, _) in inside if y > 0)
-  current_lane = min(lanes_to_left + 1, total_lanes)
-
-  inner_left_prob = lane_probs[1] if len(lane_probs) > 1 else 0.0
-  inner_right_prob = lane_probs[2] if len(lane_probs) > 2 else 0.0
-  edges_strong = road_edge_stds[0] < ROAD_EDGE_STD_HIGH and road_edge_stds[1] < ROAD_EDGE_STD_HIGH
-  inner_strong = inner_left_prob > LANE_PROB_HIGH and inner_right_prob > LANE_PROB_HIGH
-
-  if edges_strong and inner_strong:
+  if inner_strong and outer_left_decisive and outer_right_decisive:
     confidence = "high"
-  elif inner_strong or edges_strong:
+  elif inner_strong:
     confidence = "medium"
   else:
     confidence = "low"
