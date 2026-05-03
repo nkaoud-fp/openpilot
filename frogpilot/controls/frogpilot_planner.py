@@ -3,6 +3,8 @@ import json
 import math
 import os ### only needed for greenlight hack
 
+from collections import Counter, deque
+
 import cereal.messaging as messaging
 
 from cereal import car, log
@@ -56,6 +58,7 @@ class FrogPilotPlanner:
     self.current_lane = 0
     self.total_lanes = 0
     self.lane_confidence = "unknown"
+    self.lane_history = deque(maxlen=10)  # 10 frames @ 20 Hz = 0.5 s mode window
     self.model_length = 0
     self.road_curvature = 0
     self.time_to_curve = 0
@@ -309,7 +312,11 @@ class FrogPilotPlanner:
     self.lateral_check |= not (sm["carState"].leftBlinker or sm["carState"].rightBlinker) and frogpilot_toggles.pause_lateral_below_signal
     self.lateral_check |= sm["carState"].standstill
 
-    self.current_lane, self.total_lanes, self.lane_confidence = compute_lane_position(sm["modelV2"])
+    raw_current, raw_total, raw_conf = compute_lane_position(sm["modelV2"])
+    self.lane_history.append((raw_current, raw_total, raw_conf))
+    (self.current_lane, self.total_lanes), lane_count = Counter((c, t) for c, t, _ in self.lane_history).most_common(1)[0]
+    raw_conf_mode, _ = Counter(c for _, _, c in self.lane_history).most_common(1)[0]
+    self.lane_confidence = raw_conf_mode if lane_count >= 0.8 * len(self.lane_history) else "low"
 
     self.model_length = sm["modelV2"].position.x[-1]
 
