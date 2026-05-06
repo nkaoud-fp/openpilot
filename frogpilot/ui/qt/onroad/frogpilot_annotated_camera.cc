@@ -714,70 +714,95 @@ void FrogPilotAnnotatedCameraWidget::paintPendingSpeedLimit(QPainter &p, const c
 }
 
 void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cereal::FrogPilotPlan::Reader &frogpilotPlan) {
-  const int total = frogpilotPlan.getTotalLanes();
-  const int current = frogpilotPlan.getCurrentLane();
-  const auto confEnum = frogpilotPlan.getLaneConfidence();
-
-  QString confLetter;
-  QColor confColor;
-  switch (confEnum) {
-    case cereal::FrogPilotPlan::LaneConfidence::HIGH:
-      confLetter = "H"; confColor = greenColor(); break;
-    case cereal::FrogPilotPlan::LaneConfidence::MEDIUM:
-      confLetter = "M"; confColor = QColor(255, 195, 0); break;
-    case cereal::FrogPilotPlan::LaneConfidence::LOW:
-      confLetter = "L"; confColor = redColor(); break;
-    default:
-      confLetter = "?"; confColor = QColor(160, 160, 160); break;
-  }
+  const auto positions = frogpilotPlan.getLanePositions();
+  const int n_methods = positions.size();
+  if (n_methods == 0) return;
 
   p.save();
 
   const int box_size = 22;
   const int box_gap = 8;
   const int side_pad = 22;
+  const int label_w = 30;
+  const int label_gap = 12;
   const int conf_gap = 14;
   const int conf_text_w = 24;
   const int pill_h = 50;
+  const int pill_v_gap = 8;
 
-  const int lanes_to_draw = (total > 0) ? std::min<int>(total, 6) : 0;
-  const int lanes_w = lanes_to_draw > 0
-                      ? lanes_to_draw * box_size + (lanes_to_draw - 1) * box_gap
-                      : 26;  // width of a "?" placeholder
-  const int pill_w = side_pad + lanes_w + conf_gap + conf_text_w + side_pad;
-
-  QRect pillRect((width() - pill_w) / 2, rect().bottom() - 280, pill_w, pill_h);
-
-  p.setBrush(blackColor(190));
-  p.setPen(QPen(whiteColor(180), 3));
-  p.drawRoundedRect(pillRect, 18, 18);
-
-  if (lanes_to_draw > 0) {
-    int x = pillRect.left() + side_pad;
-    const int y = pillRect.top() + (pill_h - box_size) / 2;
-    for (int i = 1; i <= lanes_to_draw; i++) {
-      QRect box(x, y, box_size, box_size);
-      if (i == current) {
-        p.setBrush(whiteColor());
-        p.setPen(QPen(whiteColor(), 2));
-      } else {
-        p.setBrush(Qt::NoBrush);
-        p.setPen(QPen(whiteColor(180), 2));
-      }
-      p.drawRoundedRect(box, 4, 4);
-      x += box_size + box_gap;
-    }
-  } else {
-    p.setFont(InterFont(28, QFont::DemiBold));
-    p.setPen(QPen(whiteColor(200), 2));
-    p.drawText(pillRect.adjusted(side_pad, 0, -(conf_gap + conf_text_w + side_pad), 0),
-               Qt::AlignVCenter | Qt::AlignLeft, "?");
+  // Pre-compute the widest pill so all rows share the same width and stay centered.
+  int max_lanes = 1;
+  for (auto pos : positions) {
+    max_lanes = std::max<int>(max_lanes, std::min<int>(pos.getTotalLanes(), 6));
   }
+  const int lanes_w = max_lanes * box_size + (max_lanes - 1) * box_gap;
+  const int pill_w = side_pad + label_w + label_gap + lanes_w + conf_gap + conf_text_w + side_pad;
 
-  p.setFont(InterFont(28, QFont::Bold));
-  p.setPen(QPen(confColor, 2));
-  QRect confRect(pillRect.right() - side_pad - conf_text_w, pillRect.top(), conf_text_w, pill_h);
-  p.drawText(confRect, Qt::AlignCenter, confLetter);
+  // Stack upward from the same base Y the single pill used to sit at.
+  const int base_bottom = rect().bottom() - 230;
+
+  for (int i = 0; i < n_methods; i++) {
+    const auto pos = positions[i];
+    const int total = pos.getTotalLanes();
+    const int current = pos.getCurrentLane();
+    const auto confEnum = pos.getConfidence();
+    const QString label = QString::fromUtf8(pos.getMethod().cStr());
+
+    QString confLetter;
+    QColor confColor;
+    switch (confEnum) {
+      case cereal::FrogPilotPlan::LaneConfidence::HIGH:
+        confLetter = "H"; confColor = greenColor(); break;
+      case cereal::FrogPilotPlan::LaneConfidence::MEDIUM:
+        confLetter = "M"; confColor = QColor(255, 195, 0); break;
+      case cereal::FrogPilotPlan::LaneConfidence::LOW:
+        confLetter = "L"; confColor = redColor(); break;
+      default:
+        confLetter = "?"; confColor = QColor(160, 160, 160); break;
+    }
+
+    const int row_top = base_bottom - pill_h - (n_methods - 1 - i) * (pill_h + pill_v_gap);
+    QRect pillRect((width() - pill_w) / 2, row_top, pill_w, pill_h);
+
+    p.setBrush(blackColor(190));
+    p.setPen(QPen(whiteColor(180), 3));
+    p.drawRoundedRect(pillRect, 18, 18);
+
+    p.setFont(InterFont(26, QFont::DemiBold));
+    p.setPen(QPen(whiteColor(220), 2));
+    QRect labelRect(pillRect.left() + side_pad, pillRect.top(), label_w, pill_h);
+    p.drawText(labelRect, Qt::AlignCenter, label);
+
+    const int lanes_to_draw = (total > 0) ? std::min<int>(total, 6) : 0;
+    int x = pillRect.left() + side_pad + label_w + label_gap
+            + (lanes_w - (lanes_to_draw > 0 ? lanes_to_draw * box_size + (lanes_to_draw - 1) * box_gap : 0)) / 2;
+    const int y = pillRect.top() + (pill_h - box_size) / 2;
+    if (lanes_to_draw > 0) {
+      for (int j = 1; j <= lanes_to_draw; j++) {
+        QRect box(x, y, box_size, box_size);
+        if (j == current) {
+          p.setBrush(whiteColor());
+          p.setPen(QPen(whiteColor(), 2));
+        } else {
+          p.setBrush(Qt::NoBrush);
+          p.setPen(QPen(whiteColor(180), 2));
+        }
+        p.drawRoundedRect(box, 4, 4);
+        x += box_size + box_gap;
+      }
+    } else {
+      p.setFont(InterFont(28, QFont::DemiBold));
+      p.setPen(QPen(whiteColor(200), 2));
+      QRect qmarkRect(pillRect.left() + side_pad + label_w + label_gap, pillRect.top(),
+                      lanes_w, pill_h);
+      p.drawText(qmarkRect, Qt::AlignCenter, "?");
+    }
+
+    p.setFont(InterFont(28, QFont::Bold));
+    p.setPen(QPen(confColor, 2));
+    QRect confRect(pillRect.right() - side_pad - conf_text_w, pillRect.top(), conf_text_w, pill_h);
+    p.drawText(confRect, Qt::AlignCenter, confLetter);
+  }
 
   p.restore();
 }

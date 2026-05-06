@@ -102,48 +102,90 @@ def calculate_lane_width(lane, current_lane, road_edge=None):
 LANE_PROB_HIGH = 0.5
 LANE_PROB_LOW = 0.25
 LANE_POSITION_MAX_LANES = 6
+LANE_POSITION_REF_X = 5.0  # metres ahead of the vehicle to evaluate lateral positions at
+ROAD_EDGE_STD_HIGH = 1.0
+ROAD_EDGE_STD_LOW = 2.5
+STANDARD_LANE_WIDTH = 3.7  # metres
+EDGE_RESIDUAL_TIGHT = 0.6  # leftover metres after dividing total width by lane width
 
-def compute_lane_position(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
-  """Estimate which lane the car is in from modelV2.laneLineProbs.
+def _interp_y_at_x(line, x_ref):
+  xs = np.asarray(line.x)
+  ys = np.asarray(line.y)
+  if xs.size == 0:
+    return None
+  return float(np.interp(x_ref, xs, ys))
 
-  Returns (current_lane, total_lanes, confidence) where confidence is one of
-  "unknown" / "low" / "medium" / "high". current_lane is 1-indexed from the
-  left; both values are 0 when unknown.
-
-  The model emits up to 4 lane lines in a fixed order: [outer-left, inner-left,
-  inner-right, outer-right]. Each line's probability tells us whether that
-  divider is visible. We treat the inner pair as "your lane's boundaries" and
-  the outer pair as "is there an adjacent lane on this side?". The model can
-  therefore resolve at most 3 lanes (you + up to one each side).
-  """
+def _lane_position_probs(modelV2, max_lanes):
+  """Probability-based: read laneLineProbs[0..3] as has-line indicators."""
   lane_probs = list(modelV2.laneLineProbs)
   if len(lane_probs) < 4:
     return 0, 0, "unknown"
-
   outer_left, inner_left, inner_right, outer_right = lane_probs[:4]
-
-  # Without both inner lines we don't know which lane we're in at all.
   if inner_left < LANE_PROB_LOW or inner_right < LANE_PROB_LOW:
     return 0, 0, "low"
-
   has_left_adj = outer_left > LANE_PROB_LOW
   has_right_adj = outer_right > LANE_PROB_LOW
-
   total_lanes = min(1 + int(has_left_adj) + int(has_right_adj), max_lanes)
   current_lane = int(has_left_adj) + 1
-
   inner_strong = inner_left > LANE_PROB_HIGH and inner_right > LANE_PROB_HIGH
   outer_left_decisive = outer_left > LANE_PROB_HIGH or outer_left < LANE_PROB_LOW
   outer_right_decisive = outer_right > LANE_PROB_HIGH or outer_right < LANE_PROB_LOW
-
   if inner_strong and outer_left_decisive and outer_right_decisive:
     confidence = "high"
   elif inner_strong:
     confidence = "medium"
   else:
     confidence = "low"
-
   return current_lane, total_lanes, confidence
+
+def _lane_position_edges(modelV2, max_lanes):
+  """Road-edge geometry: divide the gap between left/right road edges by a
+  standard lane width to estimate total lanes; place the car within them by
+  measuring the distance from y=0 to the left road edge."""
+  road_edges = list(modelV2.roadEdges)
+  road_edge_stds = list(modelV2.roadEdgeStds)
+  if len(road_edges) < 2 or len(road_edge_stds) < 2:
+    return 0, 0, "unknown"
+  left_edge_y = _interp_y_at_x(road_edges[0], LANE_POSITION_REF_X)
+  right_edge_y = _interp_y_at_x(road_edges[1], LANE_POSITION_REF_X)
+  if left_edge_y is None or right_edge_y is None:
+    return 0, 0, "unknown"
+
+  if road_edge_stds[0] >= ROAD_EDGE_STD_LOW or road_edge_stds[1] >= ROAD_EDGE_STD_LOW:
+    return 0, 0, "low"
+
+  dist_left = max(left_edge_y, 0.0)        # left edge has positive y
+  dist_right = max(-right_edge_y, 0.0)     # right edge has negative y
+  total_width = dist_left + dist_right
+  if total_width < STANDARD_LANE_WIDTH * 0.5:
+    return 0, 0, "low"
+
+  total_lanes = min(max(int(round(total_width / STANDARD_LANE_WIDTH)), 1), max_lanes)
+  current_lane = max(min(int(round(dist_left / STANDARD_LANE_WIDTH + 0.5)), total_lanes), 1)
+
+  residual = abs(total_width - total_lanes * STANDARD_LANE_WIDTH)
+  edges_strong = road_edge_stds[0] < ROAD_EDGE_STD_HIGH and road_edge_stds[1] < ROAD_EDGE_STD_HIGH
+  if edges_strong and residual < EDGE_RESIDUAL_TIGHT:
+    confidence = "high"
+  elif edges_strong or residual < EDGE_RESIDUAL_TIGHT:
+    confidence = "medium"
+  else:
+    confidence = "low"
+  return current_lane, total_lanes, confidence
+
+# Registry of (short_label, function). Order = stack order (top -> bottom).
+LANE_POSITION_METHODS = (
+  ("P", _lane_position_probs),
+  ("E", _lane_position_edges),
+)
+
+def compute_lane_positions(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
+  """Run every registered method; return a list of (label, current, total, confidence)."""
+  return [(label, *fn(modelV2, max_lanes)) for label, fn in LANE_POSITION_METHODS]
+
+def compute_lane_position(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
+  """Primary (probs-based) estimate, kept for callers that want a single answer."""
+  return _lane_position_probs(modelV2, max_lanes)
 
 # Credit goes to Pfeiferj!
 def calculate_road_curvature(modelData, v_ego):

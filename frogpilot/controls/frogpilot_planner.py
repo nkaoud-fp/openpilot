@@ -14,7 +14,7 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import A_CHANGE_COST, DANGER_ZONE_COST, J_EGO_COST, STOP_DISTANCE
 
-from openpilot.frogpilot.common.frogpilot_utilities import calculate_lane_width, calculate_road_curvature, compute_lane_position
+from openpilot.frogpilot.common.frogpilot_utilities import calculate_lane_width, calculate_road_curvature, compute_lane_positions, LANE_POSITION_METHODS
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, MINIMUM_LATERAL_ACCELERATION, PLANNER_TIME, THRESHOLD, params, params_memory
 from openpilot.frogpilot.controls.lib.conditional_experimental_mode import ConditionalExperimentalMode
 from openpilot.frogpilot.controls.lib.frogpilot_acceleration import FrogPilotAcceleration
@@ -55,10 +55,8 @@ class FrogPilotPlanner:
     self.lane_width_right = 0
     self.lateral_acceleration = 0
 
-    self.current_lane = 0
-    self.total_lanes = 0
-    self.lane_confidence = "unknown"
-    self.lane_history = deque(maxlen=10)  # 10 frames @ 20 Hz = 0.5 s mode window
+    self.lane_positions = [(label, 0, 0, "unknown") for label, _ in LANE_POSITION_METHODS]
+    self.lane_history = {label: deque(maxlen=10) for label, _ in LANE_POSITION_METHODS}  # 0.5 s mode window per method
     self.model_length = 0
     self.road_curvature = 0
     self.time_to_curve = 0
@@ -312,11 +310,15 @@ class FrogPilotPlanner:
     self.lateral_check |= not (sm["carState"].leftBlinker or sm["carState"].rightBlinker) and frogpilot_toggles.pause_lateral_below_signal
     self.lateral_check |= sm["carState"].standstill
 
-    raw_current, raw_total, raw_conf = compute_lane_position(sm["modelV2"])
-    self.lane_history.append((raw_current, raw_total, raw_conf))
-    (self.current_lane, self.total_lanes), lane_count = Counter((c, t) for c, t, _ in self.lane_history).most_common(1)[0]
-    raw_conf_mode, _ = Counter(c for _, _, c in self.lane_history).most_common(1)[0]
-    self.lane_confidence = raw_conf_mode if lane_count >= 0.8 * len(self.lane_history) else "low"
+    smoothed = []
+    for label, raw_current, raw_total, raw_conf in compute_lane_positions(sm["modelV2"]):
+      hist = self.lane_history[label]
+      hist.append((raw_current, raw_total, raw_conf))
+      (cur, tot), lane_count = Counter((c, t) for c, t, _ in hist).most_common(1)[0]
+      conf_mode, _ = Counter(c for _, _, c in hist).most_common(1)[0]
+      conf = conf_mode if lane_count >= 0.8 * len(hist) else "low"
+      smoothed.append((label, cur, tot, conf))
+    self.lane_positions = smoothed
 
     self.model_length = sm["modelV2"].position.x[-1]
 
@@ -396,8 +398,16 @@ class FrogPilotPlanner:
 
     frogpilotPlan.vCruise = self.v_cruise
 
-    frogpilotPlan.currentLane = self.current_lane
-    frogpilotPlan.totalLanes = self.total_lanes
-    frogpilotPlan.laneConfidence = self.lane_confidence
+    primary = self.lane_positions[0] if self.lane_positions else (None, 0, 0, "unknown")
+    frogpilotPlan.currentLane = primary[1]
+    frogpilotPlan.totalLanes = primary[2]
+    frogpilotPlan.laneConfidence = primary[3]
+
+    lane_positions_msg = frogpilotPlan.init("lanePositions", len(self.lane_positions))
+    for i, (label, cur, tot, conf) in enumerate(self.lane_positions):
+      lane_positions_msg[i].method = label
+      lane_positions_msg[i].currentLane = cur
+      lane_positions_msg[i].totalLanes = tot
+      lane_positions_msg[i].confidence = conf
 
     pm.send("frogpilotPlan", frogpilot_plan_send)

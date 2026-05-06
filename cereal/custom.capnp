@@ -224,12 +224,20 @@ struct FrogPilotPlan @0xa1680744031fdb2d {
   currentLane @35 :UInt8;
   totalLanes @36 :UInt8;
   laneConfidence @37 :LaneConfidence;
+  lanePositions @38 :List(LanePosition);
 
   enum LaneConfidence {
     unknown @0;
     low @1;
     medium @2;
     high @3;
+  }
+
+  struct LanePosition {
+    method @0 :Text;
+    currentLane @1 :UInt8;
+    totalLanes @2 :UInt8;
+    confidence @3 :LaneConfidence;
   }
 }
 
