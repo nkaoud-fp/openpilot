@@ -24,9 +24,17 @@ from openpilot.common.swaglog import cloudlog
 
 from openpilot.frogpilot.common.frogpilot_variables import get_frogpilot_toggles
 
+
+# Distance from the current route before standard navd considers the car off-route.
 REROUTE_DISTANCE = 25
+
+# Distance past a maneuver before navd transitions to the next route step.
 MANEUVER_TRANSITION_THRESHOLD = 10
+
+# Number of consecutive off-route checks before standard navd triggers a reroute.
 REROUTE_COUNTER_MIN = 3
+
+
 NAVIGATION_TEST_DESTINATIONS = {
   "home": ("Navigation test - Home", Coordinate(24.675764, 46.581478)),
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
@@ -34,50 +42,139 @@ NAVIGATION_TEST_DESTINATIONS = {
 }
 NAVIGATION_TEST_SHARED_DESTINATION_URL = "https://frihtcjnhcayqvcphczr.supabase.co/rest/v1/shared_destination?id=eq.1&select=lat,lng"
 NAVIGATION_TEST_SHARED_DESTINATION_API_KEY = "sb_publishable_1Lh9fwsQOJppOm82Rk7uyA_nm2qWGdh"
+
+
+# How long to wait before retrying a failed shared-destination fetch.
 NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS = 15.0
+
+# Minimum generic command distance, used for non-turn command timing.
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
+
+# Generic time-based command window; distance is max(min distance, speed * seconds).
 NAVIGATION_TEST_COMMAND_SECONDS = 8
+
+# Base time window for preparing exit lane changes.
 NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
+
+# Minimum distance to start exit preparation.
 NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN = 250
+
+# Maximum number of lane changes navd may request during prep.
 NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES = 3
+
+# Estimated time budget for each lane change during exit prep.
 NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS = 10
+
+# Cooldown time between requested lane changes.
 NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN = 3
+
+# Speed threshold where highway-specific exit prep logic starts being used.
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED = 22.0
+
+# Deprecated/unused in this file; highway prep now uses lane-sweep and decel distance logic instead.
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SECONDS = 180
+
+# Minimum highway exit/fork/merge preparation distance.
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MIN = 1500
+
+# Maximum highway exit/fork/merge preparation distance.
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_DISTANCE_MAX = 5000
+
+# If the next maneuver conflicts within this distance, hold instead of changing lanes too early.
 NAVIGATION_TEST_CONSECUTIVE_CONFLICT_DISTANCE = 400
+
+# Maximum route cross-track error allowed before commands are suppressed as routeMismatch.
 NAVIGATION_TEST_MAX_COMMAND_CROSS_TRACK_ERROR = 35
+
+# Number of consecutive route-mismatch checks before forcing reroute in NavigationTestControl.
 NAVIGATION_TEST_REROUTE_COUNTER_MIN = 2
+
+# Minimum recompute countdown delay while NavigationTestControl is enabled.
 NAVIGATION_TEST_REROUTE_COUNTDOWN_MIN = 5
+
+# Distance where navd starts tracking whether the destination was approached.
 NAVIGATION_TEST_DESTINATION_APPROACH_DISTANCE = 50
+
+# Distance from destination that counts as missed if the car is moving away.
 NAVIGATION_TEST_DESTINATION_MISSED_DISTANCE = 80
+
+# Extra distance drift away from closest approach before counting destination as missed.
 NAVIGATION_TEST_DESTINATION_MISSED_DRIFT = 30
+
+# Number of repeated missed-destination detections before rerouting.
 NAVIGATION_TEST_DESTINATION_MISSED_COUNTER_MIN = 2
+
+# Minimum speed required before post-exit lane recovery is allowed.
 NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_SPEED = 13.0
+
+# Minimum distance after an exit before post-exit recovery can begin.
 NAVIGATION_TEST_POST_EXIT_RECOVERY_MIN_DISTANCE = 100.0
+
+# Maximum distance after an exit where post-exit recovery is still allowed.
 NAVIGATION_TEST_POST_EXIT_RECOVERY_MAX_DISTANCE = 600.0
+
+# If another same-side maneuver is coming soon, skip post-exit recovery.
 NAVIGATION_TEST_POST_EXIT_RECOVERY_NEXT_SAME_DIRECTION_HOLD_DISTANCE = 500.0
+
+# Maximum duration to keep sending a post-exit recovery lane-change command.
 NAVIGATION_TEST_POST_EXIT_RECOVERY_COMMAND_SECONDS = 10.0
+
+# Minimum distance before a normal turn where navd sends the final "turn" action.
 NAVIGATION_TEST_TURN_COMMAND_DISTANCE_MIN = 20 #35.0
+
+# Time-based turn command window; 0 disables the speed-based extension.
 NAVIGATION_TEST_TURN_COMMAND_SECONDS = 0 #8.0
+
+# Time-based surface-turn prep window; 0 disables speed-based prep distance.
 NAVIGATION_TEST_SURFACE_TURN_PREP_SECONDS = 0 # 18.0
+
+# Minimum distance before a surface turn where lane positioning can start.
 NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN = 20.0 #120
+
+# Maximum distance before a surface turn where lane positioning can start.
 NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
+
+# Time-based lockout window before a turn where late lane changes are blocked.
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
+
+# Minimum distance before a turn where late lane changes are blocked.
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 35.0
+
+# Directory where navigation test CSV logs are written.
 NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
+
+# Minimum time between debug log rows.
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
+
+# Default target slowdown speed for normal turns and U-turns.
 TURN_SLOWDOWN_MIN_SPEED_MS = 25.0 / 3.6
 
+
+# Speed threshold used to classify maneuvers as highway behavior.
 NAV_HIGHWAY_SPEED_MIN_MS = 18.0
+
+# Maximum angle still considered straight/continue.
 NAV_ANGLE_CONTINUE_MAX_DEG = 5.0
+
+# Minimum angle considered a fork/slight direction change.
 NAV_ANGLE_FORK_MIN_DEG = 5.0
+
+# Minimum highway-speed angle considered a highway exit.
 NAV_ANGLE_HIGHWAY_EXIT_MIN_DEG = 15.0
+
+# Above this highway-speed angle, classify as normal turn instead of highway exit.
 NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG = 45.0
+
+# Minimum angle considered a normal turn.
 NAV_ANGLE_NORMAL_TURN_MIN_DEG = 15.0
+
+# Minimum angle considered a U-turn.
 NAV_ANGLE_UTURN_MIN_DEG = 135.0
+
+# Distance before/after maneuver point used to calculate maneuver angle.
 NAV_ANGLE_ANCHOR_M = 8.0
+
+
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "time",
   "gps_ok",
