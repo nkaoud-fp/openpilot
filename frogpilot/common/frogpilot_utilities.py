@@ -138,6 +138,12 @@ def _lane_position_probs(modelV2, max_lanes):
     confidence = "low"
   return current_lane, total_lanes, confidence
 
+def _mean_abs_y(line):
+  ys = np.asarray(line.y)
+  if ys.size == 0:
+    return None
+  return float(np.mean(np.abs(ys)))
+
 def _lane_position_edges(modelV2, max_lanes):
   """Road-edge geometry: divide the gap between left/right road edges by a
   standard lane width to estimate total lanes; place the car within them by
@@ -146,15 +152,18 @@ def _lane_position_edges(modelV2, max_lanes):
   road_edge_stds = list(modelV2.roadEdgeStds)
   if len(road_edges) < 2 or len(road_edge_stds) < 2:
     return 0, 0, "unknown"
-  left_edge_y = _interp_y_at_x(road_edges[0], LANE_POSITION_REF_X)
-  right_edge_y = _interp_y_at_x(road_edges[1], LANE_POSITION_REF_X)
-  if left_edge_y is None or right_edge_y is None:
+
+  # Mean of the absolute y over the whole prediction span. Single-point interp
+  # (at x=5 m) was too sensitive to short or sparse y-arrays — some forks/models
+  # publish road edges that are nearly zero near the car. abs() also tolerates
+  # any sign-convention surprises across model variants.
+  dist_left = _mean_abs_y(road_edges[0])
+  dist_right = _mean_abs_y(road_edges[1])
+  if dist_left is None or dist_right is None:
     return 0, 0, "unknown"
 
-  dist_left = max(left_edge_y, 0.0)        # left edge has positive y
-  dist_right = max(-right_edge_y, 0.0)     # right edge has negative y
   total_width = dist_left + dist_right
-  if total_width < STANDARD_LANE_WIDTH * 0.5:
+  if total_width < 1.5:
     return 0, 0, "low"
 
   total_lanes = min(max(int(round(total_width / STANDARD_LANE_WIDTH)), 1), max_lanes)
@@ -168,8 +177,6 @@ def _lane_position_edges(modelV2, max_lanes):
 
   if edges_strong and fits_lane_width:
     confidence = "high"
-  elif edges_ok and fits_lane_width:
-    confidence = "medium"
   elif edges_ok or fits_lane_width:
     confidence = "medium"
   else:
