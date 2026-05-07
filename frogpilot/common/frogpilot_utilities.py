@@ -151,9 +151,6 @@ def _lane_position_edges(modelV2, max_lanes):
   if left_edge_y is None or right_edge_y is None:
     return 0, 0, "unknown"
 
-  if road_edge_stds[0] >= ROAD_EDGE_STD_LOW or road_edge_stds[1] >= ROAD_EDGE_STD_LOW:
-    return 0, 0, "low"
-
   dist_left = max(left_edge_y, 0.0)        # left edge has positive y
   dist_right = max(-right_edge_y, 0.0)     # right edge has negative y
   total_width = dist_left + dist_right
@@ -164,10 +161,16 @@ def _lane_position_edges(modelV2, max_lanes):
   current_lane = max(min(int(round(dist_left / STANDARD_LANE_WIDTH + 0.5)), total_lanes), 1)
 
   residual = abs(total_width - total_lanes * STANDARD_LANE_WIDTH)
-  edges_strong = road_edge_stds[0] < ROAD_EDGE_STD_HIGH and road_edge_stds[1] < ROAD_EDGE_STD_HIGH
-  if edges_strong and residual < EDGE_RESIDUAL_TIGHT:
+  worst_std = max(road_edge_stds[0], road_edge_stds[1])
+  edges_strong = worst_std < ROAD_EDGE_STD_HIGH
+  edges_ok = worst_std < ROAD_EDGE_STD_LOW
+  fits_lane_width = residual < EDGE_RESIDUAL_TIGHT
+
+  if edges_strong and fits_lane_width:
     confidence = "high"
-  elif edges_strong or residual < EDGE_RESIDUAL_TIGHT:
+  elif edges_ok and fits_lane_width:
+    confidence = "medium"
+  elif edges_ok or fits_lane_width:
     confidence = "medium"
   else:
     confidence = "low"
