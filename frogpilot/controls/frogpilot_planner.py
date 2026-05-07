@@ -55,7 +55,7 @@ class FrogPilotPlanner:
     self.lane_width_right = 0
     self.lateral_acceleration = 0
 
-    self.lane_positions = [(label, 0, 0, "unknown") for label, _ in LANE_POSITION_METHODS]
+    self.lane_positions = [(label, 0, 0, "unknown", 0.0, 0.0) for label, _ in LANE_POSITION_METHODS]
     self.lane_history = {label: deque(maxlen=10) for label, _ in LANE_POSITION_METHODS}  # 0.5 s mode window per method
     self.model_length = 0
     self.road_curvature = 0
@@ -311,13 +311,13 @@ class FrogPilotPlanner:
     self.lateral_check |= sm["carState"].standstill
 
     smoothed = []
-    for label, raw_current, raw_total, raw_conf in compute_lane_positions(sm["modelV2"]):
+    for label, raw_current, raw_total, raw_conf, dbg_l, dbg_r in compute_lane_positions(sm["modelV2"]):
       hist = self.lane_history[label]
       hist.append((raw_current, raw_total, raw_conf))
       (cur, tot), lane_count = Counter((c, t) for c, t, _ in hist).most_common(1)[0]
       conf_mode, _ = Counter(c for _, _, c in hist).most_common(1)[0]
       conf = conf_mode if lane_count >= 0.8 * len(hist) else "low"
-      smoothed.append((label, cur, tot, conf))
+      smoothed.append((label, cur, tot, conf, dbg_l, dbg_r))
     self.lane_positions = smoothed
 
     self.model_length = sm["modelV2"].position.x[-1]
@@ -398,16 +398,18 @@ class FrogPilotPlanner:
 
     frogpilotPlan.vCruise = self.v_cruise
 
-    primary = self.lane_positions[0] if self.lane_positions else (None, 0, 0, "unknown")
+    primary = self.lane_positions[0] if self.lane_positions else (None, 0, 0, "unknown", 0.0, 0.0)
     frogpilotPlan.currentLane = primary[1]
     frogpilotPlan.totalLanes = primary[2]
     frogpilotPlan.laneConfidence = primary[3]
 
     lane_positions_msg = frogpilotPlan.init("lanePositions", len(self.lane_positions))
-    for i, (label, cur, tot, conf) in enumerate(self.lane_positions):
+    for i, (label, cur, tot, conf, dbg_l, dbg_r) in enumerate(self.lane_positions):
       lane_positions_msg[i].method = label
       lane_positions_msg[i].currentLane = cur
       lane_positions_msg[i].totalLanes = tot
       lane_positions_msg[i].confidence = conf
+      lane_positions_msg[i].debugLeft = dbg_l
+      lane_positions_msg[i].debugRight = dbg_r
 
     pm.send("frogpilotPlan", frogpilot_plan_send)

@@ -238,6 +238,8 @@ struct FrogPilotPlan @0xa1680744031fdb2d {
     currentLane @1 :UInt8;
     totalLanes @2 :UInt8;
     confidence @3 :LaneConfidence;
+    debugLeft @4 :Float32;
+    debugRight @5 :Float32;
   }
 }
 

@@ -791,11 +791,14 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
         x += box_size + box_gap;
       }
     } else {
-      p.setFont(InterFont(28, QFont::DemiBold));
+      const float dbg_l = pos.getDebugLeft();
+      const float dbg_r = pos.getDebugRight();
+      const QString debugText = QString("L=%1 R=%2").arg(dbg_l, 0, 'f', 2).arg(dbg_r, 0, 'f', 2);
+      p.setFont(InterFont(20, QFont::DemiBold));
       p.setPen(QPen(whiteColor(200), 2));
-      QRect qmarkRect(pillRect.left() + side_pad + label_w + label_gap, pillRect.top(),
-                      lanes_w, pill_h);
-      p.drawText(qmarkRect, Qt::AlignCenter, "?");
+      QRect dbgRect(pillRect.left() + side_pad + label_w + label_gap, pillRect.top(),
+                    lanes_w, pill_h);
+      p.drawText(dbgRect, Qt::AlignCenter, debugText);
     }
 
     p.setFont(InterFont(28, QFont::Bold));

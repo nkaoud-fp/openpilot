@@ -119,10 +119,10 @@ def _lane_position_probs(modelV2, max_lanes):
   """Probability-based: read laneLineProbs[0..3] as has-line indicators."""
   lane_probs = list(modelV2.laneLineProbs)
   if len(lane_probs) < 4:
-    return 0, 0, "unknown"
+    return 0, 0, "unknown", 0.0, 0.0
   outer_left, inner_left, inner_right, outer_right = lane_probs[:4]
   if inner_left < LANE_PROB_LOW or inner_right < LANE_PROB_LOW:
-    return 0, 0, "low"
+    return 0, 0, "low", float(inner_left), float(inner_right)
   has_left_adj = outer_left > LANE_PROB_LOW
   has_right_adj = outer_right > LANE_PROB_LOW
   total_lanes = min(1 + int(has_left_adj) + int(has_right_adj), max_lanes)
@@ -136,7 +136,7 @@ def _lane_position_probs(modelV2, max_lanes):
     confidence = "medium"
   else:
     confidence = "low"
-  return current_lane, total_lanes, confidence
+  return current_lane, total_lanes, confidence, float(outer_left), float(outer_right)
 
 def _mean_abs_y(line):
   ys = np.asarray(line.y)
@@ -151,20 +151,16 @@ def _lane_position_edges(modelV2, max_lanes):
   road_edges = list(modelV2.roadEdges)
   road_edge_stds = list(modelV2.roadEdgeStds)
   if len(road_edges) < 2 or len(road_edge_stds) < 2:
-    return 0, 0, "unknown"
+    return 0, 0, "unknown", 0.0, 0.0
 
-  # Mean of the absolute y over the whole prediction span. Single-point interp
-  # (at x=5 m) was too sensitive to short or sparse y-arrays — some forks/models
-  # publish road edges that are nearly zero near the car. abs() also tolerates
-  # any sign-convention surprises across model variants.
   dist_left = _mean_abs_y(road_edges[0])
   dist_right = _mean_abs_y(road_edges[1])
   if dist_left is None or dist_right is None:
-    return 0, 0, "unknown"
+    return 0, 0, "unknown", 0.0, 0.0
 
   total_width = dist_left + dist_right
   if total_width < 1.5:
-    return 0, 0, "low"
+    return 0, 0, "low", float(dist_left), float(dist_right)
 
   total_lanes = min(max(int(round(total_width / STANDARD_LANE_WIDTH)), 1), max_lanes)
   current_lane = max(min(int(round(dist_left / STANDARD_LANE_WIDTH + 0.5)), total_lanes), 1)
@@ -181,7 +177,7 @@ def _lane_position_edges(modelV2, max_lanes):
     confidence = "medium"
   else:
     confidence = "low"
-  return current_lane, total_lanes, confidence
+  return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
 
 # Registry of (short_label, function). Order = stack order (top -> bottom).
 LANE_POSITION_METHODS = (
