@@ -723,7 +723,7 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
   const int box_size = 22;
   const int box_gap = 8;
   const int side_pad = 22;
-  const int label_w = 30;
+  const int label_w = 42;
   const int label_gap = 12;
   const int conf_gap = 14;
   const int conf_text_w = 24;
