@@ -18,7 +18,7 @@ NAVIGATION_TEST_LANE_CHANGE_CONDITION_TIME = 2.0
 NAVIGATION_TEST_LANE_CHANGE_COMPLETE_PROB = 0.02
 NAVIGATION_TEST_LANE_CHANGE_COMPLETE_TIME = 4.0
 NAVIGATION_TEST_LANE_CHANGE_COOLDOWN = 3.0
-NAVIGATION_TEST_MAX_LANE_CHANGES = 3
+NAVIGATION_TEST_MAX_LANE_CHANGES = 4
 
 DESIRES = {
   LaneChangeDirection.none: {
@@ -53,8 +53,8 @@ NAVIGATION_TEST_DIRECTIONS = {
 }
 
 NAVIGATION_TEST_LANE_CHANGE_DESIRES = {
-  "left": log.Desire.laneChangeLeft,
-  "right": log.Desire.laneChangeRight,
+  "left": log.Desire.keepLeft,
+  "right": log.Desire.keepRight,
 }
 
 class DesireHelper:

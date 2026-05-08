@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+from collections import Counter, deque
 import hashlib
 import json
 import math
@@ -39,7 +40,7 @@ NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
 NAVIGATION_TEST_EXIT_PREP_SECONDS = 30
 NAVIGATION_TEST_EXIT_PREP_DISTANCE_MIN = 250
-NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES = 3
+NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES = 4
 NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_SECONDS = 10
 NAVIGATION_TEST_EXIT_PREP_LANE_CHANGE_COOLDOWN = 3
 NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED = 22.0
@@ -66,6 +67,8 @@ NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MIN = 120.0
 NAVIGATION_TEST_SURFACE_TURN_PREP_DISTANCE_MAX = 650.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_SECONDS = 3.0
 NAVIGATION_TEST_LATE_LANE_CHANGE_LOCKOUT_DISTANCE_MIN = 35.0
+NAVIGATION_TEST_LANE_SAMPLE_SECONDS = 0.5
+NAVIGATION_TEST_LANE_SAMPLE_RETENTION_SECONDS = 2.0
 NAVIGATION_TEST_DEBUG_LOG_DIR = "/data/media/0/navigation_test_logs"
 NAVIGATION_TEST_DEBUG_LOG_INTERVAL = 0.5
 TURN_SLOWDOWN_MIN_SPEED_MS = 25.0 / 3.6
@@ -104,6 +107,8 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "strategy_constraint",
   "lane_width_left",
   "lane_width_right",
+  "current_lane",
+  "total_lanes",
   "left_lane_available",
   "right_lane_available",
   "lane_belief",
@@ -198,6 +203,7 @@ class RouteEngine:
     self.navigation_test_post_exit_recovery_started_at = 0.0
     self.navigation_test_post_exit_recovery_command_started_at = 0.0
     self.navigation_test_post_exit_recovery_done = True
+    self.navigation_test_lane_samples = deque()
 
     # Threading variables
     self.route_thread = None
@@ -251,6 +257,7 @@ class RouteEngine:
 
   def update(self):
     self.sm.update(0)
+    self.update_navigation_test_lane_samples()
 
     if self.sm.updated["managerState"]:
       ui_pid = [p.pid for p in self.sm["managerState"].processes if p.name == "ui" and p.running]
@@ -713,9 +720,8 @@ class RouteEngine:
     if v_ego < NAVIGATION_TEST_HIGHWAY_EXIT_PREP_SPEED:
       return self.navigation_test_exit_prep_distance()
 
-    estimated_lanes_to_cross = 2.5
     seconds_per_lane = 12.0
-    lane_sweep_distance = v_ego * (estimated_lanes_to_cross * seconds_per_lane)
+    lane_sweep_distance = v_ego * seconds_per_lane
 
     target_exit_speed = 15.0
     comfortable_decel = 1.2
@@ -758,6 +764,31 @@ class RouteEngine:
       return self.navigation_test_highway_exit_prep_distance()
     return self.navigation_test_exit_prep_distance()
 
+  def navigation_test_lanes_to_target_edge(self, direction):
+    current_lane, total_lanes = self.navigation_test_common_lane_position()
+    if current_lane is None or total_lanes is None:
+      return None
+    if current_lane <= 0 or total_lanes <= 0 or current_lane > total_lanes:
+      return None
+    if direction == "left":
+      return current_lane - 1
+    if direction == "right":
+      return total_lanes - current_lane
+    return None
+
+  def navigation_test_lane_positioning_prep_distance(self, maneuver_class, direction):
+    per_lane_distance = self.navigation_test_prep_distance_for_maneuver(maneuver_class)
+    lanes_to_target = self.navigation_test_lanes_to_target_edge(direction)
+    if lanes_to_target is None:
+      return per_lane_distance
+    return per_lane_distance * max(1, min(NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES, lanes_to_target))
+
+  def navigation_test_max_lane_changes_for_direction(self, direction):
+    lanes_to_target = self.navigation_test_lanes_to_target_edge(direction)
+    if lanes_to_target is None:
+      return NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES
+    return max(1, min(NAVIGATION_TEST_EXIT_PREP_MAX_LANE_CHANGES, lanes_to_target))
+
   def navigation_test_late_lane_change_lockout_distance(self):
     v_ego = self.sm['carState'].vEgo
     configured_min_distance = max(
@@ -771,21 +802,49 @@ class RouteEngine:
       return self.navigation_test_late_lane_change_lockout_distance()
     return self.navigation_test_command_distance()
 
-  def navigation_test_lane_availability(self):
-    lane_detection_enabled = getattr(self.frogpilot_toggles, "lane_detection", False)
-    required_width = float(getattr(self.frogpilot_toggles, "lane_detection_width", 0.0))
-
+  def update_navigation_test_lane_samples(self):
     try:
-      lane_width_left = float(self.sm['frogpilotPlan'].laneWidthLeft)
-      lane_width_right = float(self.sm['frogpilotPlan'].laneWidthRight)
+      current_lane = int(self.sm['frogpilotPlan'].currentLane)
+      total_lanes = int(self.sm['frogpilotPlan'].totalLanes)
     except Exception:
+      current_lane = 0
+      total_lanes = 0
+
+    now = time.monotonic()
+    if current_lane > 0 and total_lanes > 0 and current_lane <= total_lanes:
+      self.navigation_test_lane_samples.append((now, current_lane, total_lanes))
+
+    while self.navigation_test_lane_samples and now - self.navigation_test_lane_samples[0][0] > NAVIGATION_TEST_LANE_SAMPLE_RETENTION_SECONDS:
+      self.navigation_test_lane_samples.popleft()
+
+  def navigation_test_common_lane_position(self):
+    now = time.monotonic()
+    samples = [
+      (sample_time, current_lane, total_lanes)
+      for sample_time, current_lane, total_lanes in self.navigation_test_lane_samples
+      if now - sample_time <= NAVIGATION_TEST_LANE_SAMPLE_RETENTION_SECONDS
+    ]
+    if len(samples) < 2 or samples[-1][0] - samples[0][0] < NAVIGATION_TEST_LANE_SAMPLE_SECONDS:
       return None, None
 
-    if not lane_detection_enabled:
+    counts = Counter((current_lane, total_lanes) for _, current_lane, total_lanes in samples)
+    max_count = max(counts.values())
+    for _, current_lane, total_lanes in reversed(samples):
+      if counts[(current_lane, total_lanes)] == max_count:
+        return current_lane, total_lanes
+
+    return None, None
+
+  def navigation_test_lane_availability(self):
+    current_lane, total_lanes = self.navigation_test_common_lane_position()
+    if current_lane is None or total_lanes is None:
       return None, None
 
-    left_available = lane_width_left >= required_width
-    right_available = lane_width_right >= required_width
+    if current_lane <= 0 or total_lanes <= 0 or current_lane > total_lanes:
+      return None, None
+
+    left_available = current_lane > 1
+    right_available = current_lane < total_lanes
     return left_available, right_available
 
   def navigation_test_lane_belief(self, left_available=None, right_available=None):
@@ -796,7 +855,7 @@ class RouteEngine:
     if left_available is False and right_available is True:
       return "left_edge"
     if left_available is False and right_available is False:
-      return "single_or_unknown"
+      return "both_edges"
     return "unknown"
 
   def navigation_test_target_zone_for_direction(self, direction):
@@ -807,7 +866,7 @@ class RouteEngine:
     return "none"
 
   def navigation_test_target_edge_reached(self, target_lane_zone, lane_belief):
-    return target_lane_zone != "none" and lane_belief == target_lane_zone
+    return target_lane_zone != "none" and lane_belief in (target_lane_zone, "both_edges")
 
   def navigation_test_next_maneuver(self, distance_to_maneuver_along_geometry):
     if self.route is None or self.step_idx is None:
@@ -848,17 +907,19 @@ class RouteEngine:
 
     turn_command_distance = self.navigation_test_turn_command_distance() if maneuver_class in ("normal_turn", "uturn") else command_distance
 
-    if distance_to_maneuver_along_geometry <= turn_command_distance:
+    if distance_to_maneuver_along_geometry <= turn_command_distance and self.navigation_test_is_control_turn(instruction, geometry, next_geometry):
       self.reset_navigation_test_exit_migration()
-      if self.navigation_test_is_control_turn(instruction, geometry, next_geometry):
-        return "turn", direction, display_direction, "turn", turn_command_distance, strategy_constraint
+      return "turn", direction, display_direction, "turn", turn_command_distance, strategy_constraint
+
+    if distance_to_maneuver_along_geometry <= turn_command_distance and not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
+      self.reset_navigation_test_exit_migration()
       return "upcoming", "none", display_direction, "upcoming", turn_command_distance, "displayOnly"
 
     if not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
       self.reset_navigation_test_exit_migration()
       return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
 
-    active_prep_distance = self.navigation_test_prep_distance_for_maneuver(maneuver_class)
+    active_prep_distance = self.navigation_test_lane_positioning_prep_distance(maneuver_class, direction)
     standard_exit_prep_distance = self.navigation_test_exit_prep_distance()
     late_lockout_distance = self.navigation_test_late_lockout_distance_for_maneuver(maneuver_class)
     conflict_soon = (
@@ -1049,9 +1110,11 @@ class RouteEngine:
 
     lane_width_left = ""
     lane_width_right = ""
+    current_lane, total_lanes = self.navigation_test_common_lane_position()
     try:
-      lane_width_left = f"{float(self.sm['frogpilotPlan'].laneWidthLeft):.2f}"
-      lane_width_right = f"{float(self.sm['frogpilotPlan'].laneWidthRight):.2f}"
+      frogpilot_plan = self.sm['frogpilotPlan']
+      lane_width_left = f"{float(frogpilot_plan.laneWidthLeft):.2f}"
+      lane_width_right = f"{float(frogpilot_plan.laneWidthRight):.2f}"
     except Exception:
       pass
 
@@ -1091,6 +1154,8 @@ class RouteEngine:
       "strategy_constraint": strategy_constraint,
       "lane_width_left": lane_width_left,
       "lane_width_right": lane_width_right,
+      "current_lane": current_lane if current_lane is not None else "",
+      "total_lanes": total_lanes if total_lanes is not None else "",
       "left_lane_available": left_available if left_available is not None else "",
       "right_lane_available": right_available if right_available is not None else "",
       "lane_belief": lane_belief,
@@ -1464,6 +1529,8 @@ class RouteEngine:
           if post_exit_recovery is not None:
             navigation_test_action, navigation_test_direction, navigation_test_display_direction, navigation_test_strategy_phase, navigation_test_strategy_threshold, navigation_test_strategy_constraint = post_exit_recovery
             navigation_test_command_max_lane_changes = 1
+        elif navigation_test_action == "laneChange":
+          navigation_test_command_max_lane_changes = self.navigation_test_max_lane_changes_for_direction(navigation_test_direction)
 
         next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry, maneuver_class)
