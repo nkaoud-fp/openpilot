@@ -104,6 +104,9 @@ ROAD_EDGE_STD_HIGH = 1.0
 ROAD_EDGE_STD_LOW = 2.5
 STANDARD_LANE_WIDTH = 3.7  # metres
 EDGE_RESIDUAL_TIGHT = 0.6  # leftover metres after dividing total width by lane width
+INNER_LANE_PROB_OK = 0.5
+LANE_WIDTH_MIN = 2.5
+LANE_WIDTH_MAX = 4.5
 
 def _mean_abs_y(line):
   ys = np.asarray(line.y)
@@ -177,10 +180,82 @@ class _LanePositionEdges:
       confidence = "low"
     return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
 
+class _LanePositionLaneAware:
+  """Like _LanePositionEdges, but counts adjacent lanes on each side
+  independently using the lane width measured from the inner lane lines as the
+  divisor. This avoids over-counting when a yellow/shoulder line sits just
+  past the lane line and gets detected as a road edge."""
+
+  def __init__(self):
+    self._last_left = 0
+    self._last_right = 0
+
+  def __call__(self, modelV2, max_lanes):
+    road_edges = list(modelV2.roadEdges)
+    road_edge_stds = list(modelV2.roadEdgeStds)
+    lane_lines = list(modelV2.laneLines)
+    lane_probs = list(modelV2.laneLineProbs)
+    if len(road_edges) < 2 or len(road_edge_stds) < 2 or len(lane_lines) < 4 or len(lane_probs) < 4:
+      return 0, 0, "unknown", 0.0, 0.0
+
+    dist_left = _mean_abs_y(road_edges[0])
+    dist_right = _mean_abs_y(road_edges[1])
+    if dist_left is None or dist_right is None:
+      return 0, 0, "unknown", 0.0, 0.0
+
+    if dist_left + dist_right < 1.5:
+      self._last_left = 0
+      self._last_right = 0
+      return 0, 0, "low", float(dist_left), float(dist_right)
+
+    # Lane width from the inner lane line pair if visible enough; otherwise fall
+    # back to the standard width.
+    inner_left_y = np.asarray(lane_lines[1].y)
+    inner_right_y = np.asarray(lane_lines[2].y)
+    measured_width = None
+    if (lane_probs[1] > INNER_LANE_PROB_OK and lane_probs[2] > INNER_LANE_PROB_OK
+        and inner_left_y.size > 0 and inner_right_y.size > 0):
+      mw = float(np.mean(np.abs(inner_left_y - inner_right_y)))
+      if LANE_WIDTH_MIN <= mw <= LANE_WIDTH_MAX:
+        measured_width = mw
+    lane_width = measured_width if measured_width is not None else STANDARD_LANE_WIDTH
+    half = lane_width * 0.5
+
+    raw_left = max(0.0, (dist_left - half) / lane_width)
+    raw_right = max(0.0, (dist_right - half) / lane_width)
+    lanes_left = _hysteresis_round(raw_left, self._last_left)
+    lanes_right = _hysteresis_round(raw_right, self._last_right)
+    lanes_left = max(0, lanes_left)
+    lanes_right = max(0, lanes_right)
+
+    total_lanes = min(1 + lanes_left + lanes_right, max_lanes)
+    current_lane = 1 + lanes_left
+    if current_lane > total_lanes:
+      current_lane = total_lanes
+
+    self._last_left = lanes_left
+    self._last_right = lanes_right
+
+    worst_std = max(road_edge_stds[0], road_edge_stds[1])
+    edges_strong = worst_std < ROAD_EDGE_STD_HIGH
+    edges_ok = worst_std < ROAD_EDGE_STD_LOW
+    width_from_model = measured_width is not None
+
+    if edges_strong and width_from_model:
+      confidence = "high"
+    elif edges_ok and width_from_model:
+      confidence = "medium"
+    elif edges_ok or width_from_model:
+      confidence = "medium"
+    else:
+      confidence = "low"
+    return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
+
 # Registry of (short_label, callable). Order = stack order (top -> bottom).
 # Callables can be plain functions or stateful instances.
 LANE_POSITION_METHODS = (
   ("E", _LanePositionEdges()),
+  ("L", _LanePositionLaneAware()),
 )
 
 def compute_lane_positions(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
