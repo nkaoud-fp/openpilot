@@ -118,12 +118,6 @@ def _median_abs_y_near(line, x_lo=NEAR_FIELD_X_LO, x_hi=NEAR_FIELD_X_HI):
     ys_window = ys
   return float(np.median(np.abs(ys_window)))
 
-def _mean_abs_y(line):
-  ys = np.asarray(line.y)
-  if ys.size == 0:
-    return None
-  return float(np.mean(np.abs(ys)))
-
 EDGE_HYSTERESIS = 0.25  # lane-widths past the half-integer boundary before we switch (~0.9 m)
 
 def _hysteresis_round(value, last):
@@ -140,62 +134,14 @@ class _LanePositionEdges:
   standard lane width to estimate total lanes; place the car within them by
   measuring the distance from y=0 to the left road edge.
 
+  Uses the median |y| over a near-field window (5-30 m ahead) for each road
+  edge. Median is robust to single-frame outliers (e.g. a guardrail briefly
+  fooling the edge head); the near-field window avoids the curve bias that
+  averaging over the whole 0-192 m prediction picks up on bends.
+
   Stateful: applies hysteresis on the float-to-int rounding step so the
   reported lane count and current lane only flip after the underlying
   measurement has crossed the half-integer boundary by a margin."""
-
-  def __init__(self):
-    self._last_total = 0
-    self._last_current = 0
-
-  def __call__(self, modelV2, max_lanes):
-    road_edges = list(modelV2.roadEdges)
-    road_edge_stds = list(modelV2.roadEdgeStds)
-    if len(road_edges) < 2 or len(road_edge_stds) < 2:
-      return 0, 0, "unknown", 0.0, 0.0
-
-    dist_left = _mean_abs_y(road_edges[0])
-    dist_right = _mean_abs_y(road_edges[1])
-    if dist_left is None or dist_right is None:
-      return 0, 0, "unknown", 0.0, 0.0
-
-    total_width = dist_left + dist_right
-    if total_width < 1.5:
-      self._last_total = 0
-      self._last_current = 0
-      return 0, 0, "low", float(dist_left), float(dist_right)
-
-    raw_total = total_width / STANDARD_LANE_WIDTH
-    total_lanes = _hysteresis_round(raw_total, self._last_total)
-    total_lanes = min(max(total_lanes, 1), max_lanes)
-
-    raw_current = dist_left / STANDARD_LANE_WIDTH + 0.5
-    current_lane = _hysteresis_round(raw_current, self._last_current)
-    current_lane = max(min(current_lane, total_lanes), 1)
-
-    self._last_total = total_lanes
-    self._last_current = current_lane
-
-    residual = abs(total_width - total_lanes * STANDARD_LANE_WIDTH)
-    worst_std = max(road_edge_stds[0], road_edge_stds[1])
-    edges_strong = worst_std < ROAD_EDGE_STD_HIGH
-    edges_ok = worst_std < ROAD_EDGE_STD_LOW
-    fits_lane_width = residual < EDGE_RESIDUAL_TIGHT
-
-    if edges_strong and fits_lane_width:
-      confidence = "high"
-    elif edges_ok or fits_lane_width:
-      confidence = "medium"
-    else:
-      confidence = "low"
-    return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
-
-class _LanePositionEdgesNear:
-  """Same as _LanePositionEdges, but uses the median |y| over a near-field
-  window (5–30 m ahead) instead of the mean over the whole prediction span.
-  Median is robust to single-frame outliers (e.g. a guardrail briefly fooling
-  the edge head) and the near-field window avoids the bias the full-span mean
-  picks up on curved roads, where far-field y values bend with the road."""
 
   def __init__(self):
     self._last_total = 0
@@ -247,7 +193,6 @@ class _LanePositionEdgesNear:
 # Callables can be plain functions or stateful instances.
 LANE_POSITION_METHODS = (
   ("E", _LanePositionEdges()),
-  ("E2", _LanePositionEdgesNear()),
 )
 
 def compute_lane_positions(modelV2, max_lanes=LANE_POSITION_MAX_LANES):

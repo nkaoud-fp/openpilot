@@ -723,8 +723,6 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
   const int box_size = 22;
   const int box_gap = 8;
   const int side_pad = 22;
-  const int label_w = 42;
-  const int label_gap = 12;
   const int conf_gap = 14;
   const int conf_text_w = 24;
   const int pill_h = 50;
@@ -736,9 +734,8 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
     max_lanes = std::max<int>(max_lanes, std::min<int>(pos.getTotalLanes(), 6));
   }
   const int lanes_w = max_lanes * box_size + (max_lanes - 1) * box_gap;
-  const int pill_w = side_pad + label_w + label_gap + lanes_w + conf_gap + conf_text_w + side_pad;
+  const int pill_w = side_pad + lanes_w + conf_gap + conf_text_w + side_pad;
 
-  // Stack upward from the same base Y the single pill used to sit at.
   const int base_bottom = rect().bottom() - 230;
 
   for (int i = 0; i < n_methods; i++) {
@@ -746,7 +743,6 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
     const int total = pos.getTotalLanes();
     const int current = pos.getCurrentLane();
     const auto confEnum = pos.getConfidence();
-    const QString label = QString::fromUtf8(pos.getMethod().cStr());
 
     QString confLetter;
     QColor confColor;
@@ -768,13 +764,8 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
     p.setPen(QPen(whiteColor(180), 3));
     p.drawRoundedRect(pillRect, 18, 18);
 
-    p.setFont(InterFont(26, QFont::DemiBold));
-    p.setPen(QPen(whiteColor(220), 2));
-    QRect labelRect(pillRect.left() + side_pad, pillRect.top(), label_w, pill_h);
-    p.drawText(labelRect, Qt::AlignCenter, label);
-
     const int lanes_to_draw = (total > 0) ? std::min<int>(total, 6) : 0;
-    int x = pillRect.left() + side_pad + label_w + label_gap
+    int x = pillRect.left() + side_pad
             + (lanes_w - (lanes_to_draw > 0 ? lanes_to_draw * box_size + (lanes_to_draw - 1) * box_gap : 0)) / 2;
     const int y = pillRect.top() + (pill_h - box_size) / 2;
     if (lanes_to_draw > 0) {
@@ -793,8 +784,7 @@ void FrogPilotAnnotatedCameraWidget::paintLaneIndicator(QPainter &p, const cerea
     } else {
       p.setFont(InterFont(28, QFont::DemiBold));
       p.setPen(QPen(whiteColor(200), 2));
-      QRect qmarkRect(pillRect.left() + side_pad + label_w + label_gap, pillRect.top(),
-                      lanes_w, pill_h);
+      QRect qmarkRect(pillRect.left() + side_pad, pillRect.top(), lanes_w, pill_h);
       p.drawText(qmarkRect, Qt::AlignCenter, "?");
     }
 
