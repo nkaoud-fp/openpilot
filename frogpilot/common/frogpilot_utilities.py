@@ -144,45 +144,77 @@ def _mean_abs_y(line):
     return None
   return float(np.mean(np.abs(ys)))
 
-def _lane_position_edges(modelV2, max_lanes):
+EDGE_HYSTERESIS = 0.25  # lane-widths past the half-integer boundary before we switch (~0.9 m)
+
+def _hysteresis_round(value, last):
+  """Round to nearest int, but only flip away from `last` when value has crossed
+  past the half-integer boundary by EDGE_HYSTERESIS lane-widths."""
+  if last <= 0:
+    return int(round(value))
+  if value >= last + 0.5 + EDGE_HYSTERESIS or value <= last - 0.5 - EDGE_HYSTERESIS:
+    return int(round(value))
+  return last
+
+class _LanePositionEdges:
   """Road-edge geometry: divide the gap between left/right road edges by a
   standard lane width to estimate total lanes; place the car within them by
-  measuring the distance from y=0 to the left road edge."""
-  road_edges = list(modelV2.roadEdges)
-  road_edge_stds = list(modelV2.roadEdgeStds)
-  if len(road_edges) < 2 or len(road_edge_stds) < 2:
-    return 0, 0, "unknown", 0.0, 0.0
+  measuring the distance from y=0 to the left road edge.
 
-  dist_left = _mean_abs_y(road_edges[0])
-  dist_right = _mean_abs_y(road_edges[1])
-  if dist_left is None or dist_right is None:
-    return 0, 0, "unknown", 0.0, 0.0
+  Stateful: applies hysteresis on the float-to-int rounding step so the
+  reported lane count and current lane only flip after the underlying
+  measurement has crossed the half-integer boundary by a margin."""
 
-  total_width = dist_left + dist_right
-  if total_width < 1.5:
-    return 0, 0, "low", float(dist_left), float(dist_right)
+  def __init__(self):
+    self._last_total = 0
+    self._last_current = 0
 
-  total_lanes = min(max(int(round(total_width / STANDARD_LANE_WIDTH)), 1), max_lanes)
-  current_lane = max(min(int(round(dist_left / STANDARD_LANE_WIDTH + 0.5)), total_lanes), 1)
+  def __call__(self, modelV2, max_lanes):
+    road_edges = list(modelV2.roadEdges)
+    road_edge_stds = list(modelV2.roadEdgeStds)
+    if len(road_edges) < 2 or len(road_edge_stds) < 2:
+      return 0, 0, "unknown", 0.0, 0.0
 
-  residual = abs(total_width - total_lanes * STANDARD_LANE_WIDTH)
-  worst_std = max(road_edge_stds[0], road_edge_stds[1])
-  edges_strong = worst_std < ROAD_EDGE_STD_HIGH
-  edges_ok = worst_std < ROAD_EDGE_STD_LOW
-  fits_lane_width = residual < EDGE_RESIDUAL_TIGHT
+    dist_left = _mean_abs_y(road_edges[0])
+    dist_right = _mean_abs_y(road_edges[1])
+    if dist_left is None or dist_right is None:
+      return 0, 0, "unknown", 0.0, 0.0
 
-  if edges_strong and fits_lane_width:
-    confidence = "high"
-  elif edges_ok or fits_lane_width:
-    confidence = "medium"
-  else:
-    confidence = "low"
-  return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
+    total_width = dist_left + dist_right
+    if total_width < 1.5:
+      self._last_total = 0
+      self._last_current = 0
+      return 0, 0, "low", float(dist_left), float(dist_right)
 
-# Registry of (short_label, function). Order = stack order (top -> bottom).
+    raw_total = total_width / STANDARD_LANE_WIDTH
+    total_lanes = _hysteresis_round(raw_total, self._last_total)
+    total_lanes = min(max(total_lanes, 1), max_lanes)
+
+    raw_current = dist_left / STANDARD_LANE_WIDTH + 0.5
+    current_lane = _hysteresis_round(raw_current, self._last_current)
+    current_lane = max(min(current_lane, total_lanes), 1)
+
+    self._last_total = total_lanes
+    self._last_current = current_lane
+
+    residual = abs(total_width - total_lanes * STANDARD_LANE_WIDTH)
+    worst_std = max(road_edge_stds[0], road_edge_stds[1])
+    edges_strong = worst_std < ROAD_EDGE_STD_HIGH
+    edges_ok = worst_std < ROAD_EDGE_STD_LOW
+    fits_lane_width = residual < EDGE_RESIDUAL_TIGHT
+
+    if edges_strong and fits_lane_width:
+      confidence = "high"
+    elif edges_ok or fits_lane_width:
+      confidence = "medium"
+    else:
+      confidence = "low"
+    return current_lane, total_lanes, confidence, float(dist_left), float(dist_right)
+
+# Registry of (short_label, callable). Order = stack order (top -> bottom).
+# Callables can be plain functions or stateful instances.
 LANE_POSITION_METHODS = (
   ("P", _lane_position_probs),
-  ("E", _lane_position_edges),
+  ("E", _LanePositionEdges()),
 )
 
 def compute_lane_positions(modelV2, max_lanes=LANE_POSITION_MAX_LANES):
