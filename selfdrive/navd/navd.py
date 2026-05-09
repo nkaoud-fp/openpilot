@@ -7,6 +7,7 @@ import math
 import os
 import time
 import threading
+from urllib.parse import urlparse
 
 import numpy as np
 import requests
@@ -350,11 +351,6 @@ class RouteEngine:
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedFetchFailed")
       return None
-    except ImportError as err:
-      cloudlog.warning(f"Navigation test shared destination database driver missing: {err}")
-      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
-      self.update_navigation_test_command("routeError", error="sharedDatabaseDriverMissing")
-      return None
     except ValueError as err:
       cloudlog.warning(f"Navigation test shared destination JSON parse failed: {err}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
@@ -411,31 +407,35 @@ class RouteEngine:
     return payload[0] if isinstance(payload, list) and payload else payload
 
   def get_navigation_test_shared_destination_from_neon(self):
-    connection = None
-    try:
-      try:
-        import psycopg
-        connection = psycopg.connect(NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL, connect_timeout=5)
-      except ImportError:
-        import psycopg2
-        connection = psycopg2.connect(NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL, connect_timeout=5)
+    parsed_url = urlparse(NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL)
+    if not parsed_url.hostname:
+      raise ValueError("Neon database host is missing")
 
-      with connection.cursor() as cursor:
-        cursor.execute("""
+    response = requests.post(
+      f"https://{parsed_url.hostname}/sql",
+      timeout=5,
+      headers={
+        "Neon-Connection-String": NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL,
+        "Neon-Raw-Text-Output": "true",
+        "Neon-Array-Mode": "true",
+      },
+      json={
+        "query": """
           SELECT latitude, longitude
           FROM destinations
           ORDER BY id DESC
           LIMIT 1
-        """)
-        row = cursor.fetchone()
-    finally:
-      if connection is not None:
-        connection.close()
-
-    if row is None:
+        """,
+        "params": [],
+      },
+    )
+    response.raise_for_status()
+    payload = response.json()
+    rows = payload.get("rows", [])
+    if not rows:
       return {}
 
-    return {"latitude": row[0], "longitude": row[1]}
+    return {"latitude": rows[0][0], "longitude": rows[0][1]}
 
   def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_speed=0.0, target_speed_source="none", max_lane_changes=None, lane_change_cooldown=None):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
