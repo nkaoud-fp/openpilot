@@ -33,8 +33,8 @@ NAVIGATION_TEST_DESTINATIONS = {
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
   "school": ("Navigation test - School", Coordinate(24.781423, 46.622246)),
 }
-NAVIGATION_TEST_SHARED_DESTINATION_URL = "https://frihtcjnhcayqvcphczr.supabase.co/rest/v1/shared_destination?id=eq.1&select=lat,lng"
-NAVIGATION_TEST_SHARED_DESTINATION_API_KEY = "sb_publishable_1Lh9fwsQOJppOm82Rk7uyA_nm2qWGdh"
+NAVIGATION_TEST_SHARED_DESTINATION_URL = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_URL", "https://frogpilot-navigation.vercel.app/latest")
+NAVIGATION_TEST_SHARED_DESTINATION_API_KEY = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_API_KEY", "")
 NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS = 15.0
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
 NAVIGATION_TEST_COMMAND_SECONDS = 8
@@ -335,16 +335,16 @@ class RouteEngine:
       return self.navigation_test_shared_destination
 
     try:
-      response = requests.get(
-        NAVIGATION_TEST_SHARED_DESTINATION_URL,
-        timeout=5,
-        headers={
-          "apikey": NAVIGATION_TEST_SHARED_DESTINATION_API_KEY,
-          "Authorization": f"Bearer {NAVIGATION_TEST_SHARED_DESTINATION_API_KEY}",
-        },
-      )
+      headers = {}
+      if NAVIGATION_TEST_SHARED_DESTINATION_API_KEY:
+        headers["X-FrogPilot-Key"] = NAVIGATION_TEST_SHARED_DESTINATION_API_KEY
+      response = requests.get(NAVIGATION_TEST_SHARED_DESTINATION_URL, timeout=5, headers=headers)
       response.raise_for_status()
-      payload = response.json()
+      content_type = response.headers.get("content-type", "")
+      if "application/json" in content_type:
+        payload = response.json()
+      else:
+        payload = response.text.strip()
     except requests.RequestException as err:
       cloudlog.warning(f"Navigation test shared destination fetch failed: {err}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
@@ -357,6 +357,15 @@ class RouteEngine:
       return None
 
     record = payload[0] if isinstance(payload, list) and payload else payload
+    if isinstance(record, str):
+      coordinates = [value.strip() for value in record.split(",", 1)]
+      if len(coordinates) != 2:
+        cloudlog.warning(f"Navigation test shared destination has invalid plain payload: {payload}")
+        self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
+        self.update_navigation_test_command("routeError", error="sharedInvalidPayload")
+        return None
+      record = {"latitude": coordinates[0], "longitude": coordinates[1]}
+
     if not isinstance(record, dict):
       cloudlog.warning(f"Navigation test shared destination has invalid payload: {payload}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
@@ -364,8 +373,8 @@ class RouteEngine:
       return None
 
     try:
-      latitude = float(record["lat"])
-      longitude = float(record["lng"])
+      latitude = float(record.get("latitude", record.get("lat")))
+      longitude = float(record.get("longitude", record.get("lng", record.get("lon"))))
     except (KeyError, TypeError, ValueError) as err:
       cloudlog.warning(f"Navigation test shared destination missing coordinates: {err}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
