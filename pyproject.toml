@@ -94,6 +94,7 @@ python = "~3.11"
 sounddevice = "*"  # micd + soundd
 pyserial = "*"     # pigeond + qcomgpsd
 requests = "*"     # many one-off uses
+psycopg = { version = "*", extras = ["binary"] }  # Neon shared navigation destination
 sympy = "*"        # rednose + friends
 crcmod = "*"       # cars + qcomgpsd
 

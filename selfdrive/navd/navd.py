@@ -33,7 +33,8 @@ NAVIGATION_TEST_DESTINATIONS = {
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
   "school": ("Navigation test - School", Coordinate(24.781423, 46.622246)),
 }
-NAVIGATION_TEST_SHARED_DESTINATION_URL = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_URL", "https://frogpilot-navigation.vercel.app/latest")
+NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL", "")
+NAVIGATION_TEST_SHARED_DESTINATION_URL = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_URL", "")
 NAVIGATION_TEST_SHARED_DESTINATION_API_KEY = os.environ.get("NAVIGATION_TEST_SHARED_DESTINATION_API_KEY", "")
 NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS = 15.0
 NAVIGATION_TEST_COMMAND_DISTANCE = 35
@@ -335,39 +336,47 @@ class RouteEngine:
       return self.navigation_test_shared_destination
 
     try:
-      headers = {}
-      if NAVIGATION_TEST_SHARED_DESTINATION_API_KEY:
-        headers["X-FrogPilot-Key"] = NAVIGATION_TEST_SHARED_DESTINATION_API_KEY
-      response = requests.get(NAVIGATION_TEST_SHARED_DESTINATION_URL, timeout=5, headers=headers)
-      response.raise_for_status()
-      content_type = response.headers.get("content-type", "")
-      if "application/json" in content_type:
-        payload = response.json()
+      if NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL:
+        record = self.get_navigation_test_shared_destination_from_neon()
+      elif NAVIGATION_TEST_SHARED_DESTINATION_URL:
+        record = self.get_navigation_test_shared_destination_from_api()
       else:
-        payload = response.text.strip()
+        cloudlog.warning("Navigation test shared destination source is not configured")
+        self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
+        self.update_navigation_test_command("routeError", error="sharedNotConfigured")
+        return None
     except requests.RequestException as err:
       cloudlog.warning(f"Navigation test shared destination fetch failed: {err}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedFetchFailed")
+      return None
+    except ImportError as err:
+      cloudlog.warning(f"Navigation test shared destination database driver missing: {err}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
+      self.update_navigation_test_command("routeError", error="sharedDatabaseDriverMissing")
       return None
     except ValueError as err:
       cloudlog.warning(f"Navigation test shared destination JSON parse failed: {err}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedInvalidJson")
       return None
+    except Exception as err:
+      cloudlog.warning(f"Navigation test shared destination database fetch failed: {err}")
+      self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
+      self.update_navigation_test_command("routeError", error="sharedFetchFailed")
+      return None
 
-    record = payload[0] if isinstance(payload, list) and payload else payload
     if isinstance(record, str):
       coordinates = [value.strip() for value in record.split(",", 1)]
       if len(coordinates) != 2:
-        cloudlog.warning(f"Navigation test shared destination has invalid plain payload: {payload}")
+        cloudlog.warning(f"Navigation test shared destination has invalid plain payload: {record}")
         self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
         self.update_navigation_test_command("routeError", error="sharedInvalidPayload")
         return None
       record = {"latitude": coordinates[0], "longitude": coordinates[1]}
 
     if not isinstance(record, dict):
-      cloudlog.warning(f"Navigation test shared destination has invalid payload: {payload}")
+      cloudlog.warning(f"Navigation test shared destination has invalid payload: {record}")
       self.navigation_test_shared_destination_retry_at = now + NAVIGATION_TEST_SHARED_DESTINATION_RETRY_SECONDS
       self.update_navigation_test_command("routeError", error="sharedInvalidPayload")
       return None
@@ -390,6 +399,43 @@ class RouteEngine:
     self.navigation_test_shared_destination = ("Navigation test - Share", Coordinate(latitude, longitude))
     self.navigation_test_shared_destination_retry_at = 0.0
     return self.navigation_test_shared_destination
+
+  def get_navigation_test_shared_destination_from_api(self):
+    headers = {}
+    if NAVIGATION_TEST_SHARED_DESTINATION_API_KEY:
+      headers["X-FrogPilot-Key"] = NAVIGATION_TEST_SHARED_DESTINATION_API_KEY
+    response = requests.get(NAVIGATION_TEST_SHARED_DESTINATION_URL, timeout=5, headers=headers)
+    response.raise_for_status()
+    content_type = response.headers.get("content-type", "")
+    payload = response.json() if "application/json" in content_type else response.text.strip()
+    return payload[0] if isinstance(payload, list) and payload else payload
+
+  def get_navigation_test_shared_destination_from_neon(self):
+    connection = None
+    try:
+      try:
+        import psycopg
+        connection = psycopg.connect(NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL, connect_timeout=5)
+      except ImportError:
+        import psycopg2
+        connection = psycopg2.connect(NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL, connect_timeout=5)
+
+      with connection.cursor() as cursor:
+        cursor.execute("""
+          SELECT latitude, longitude
+          FROM destinations
+          ORDER BY id DESC
+          LIMIT 1
+        """)
+        row = cursor.fetchone()
+    finally:
+      if connection is not None:
+        connection.close()
+
+    if row is None:
+      return {}
+
+    return {"latitude": row[0], "longitude": row[1]}
 
   def update_navigation_test_command(self, action, direction="none", distance=0.0, eta_seconds=0.0, display_direction=None, error="", strategy_phase="none", strategy_constraint="none", target_speed=0.0, target_speed_source="none", max_lane_changes=None, lane_change_cooldown=None):
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
