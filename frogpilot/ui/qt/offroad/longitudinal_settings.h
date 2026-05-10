@@ -55,7 +55,8 @@ private:
     };
 
   QSet<QString> creepToGapKeys = {"CreepGapTarget", "CreepAccel", "CreepMaxSpeed"};
-  QSet<QString> longitudinalTuneKeys = {"AccelerationProfile", "CreepToGap", "DecelerationProfile", "HumanAcceleration", "HumanFollowing", "LeadDetectionThreshold", "MaxDesiredAcceleration", "TacoTune"};
+  QSet<QString> longitudinalTuneKeys = {"AccelerationProfile", "CreepToGap", "DecelerationProfile", "HumanAcceleration", "HumanFollowing", "LeadDetectionThreshold", "MaxDesiredAcceleration", "SoftExperimentalModeBraking", "TacoTune"};
+  QSet<QString> softExperimentalBrakingKeys = {"SoftExperimentalBaselineCap", "SoftExperimentalBaseStepSlow", "SoftExperimentalBaseStepFast", "SoftExperimentalDistanceBuffer"};
   QSet<QString> qolKeys = {"CustomCruise", "CustomCruiseLong", "ForceStops", "IncreasedStoppedDistance", "MapGears", "ReverseCruise", "SetSpeedOffset"};
   QSet<QString> relaxedPersonalityKeys = {"RelaxedFollow", "RelaxedJerkAcceleration", "RelaxedJerkDeceleration", "RelaxedJerkDanger", "RelaxedJerkSpeed", "RelaxedJerkSpeedDecrease", "ResetRelaxedPersonality"};
   QSet<QString> speedLimitControllerKeys = {"SLCOffsets", "SLCFallback", "SLCOverride", "SLCPriority", "SLCQOL", "SLCVisuals"};

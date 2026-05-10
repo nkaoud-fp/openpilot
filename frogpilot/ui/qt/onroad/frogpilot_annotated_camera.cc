@@ -215,6 +215,10 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
     paintLongitudinalPaused(p, frogpilot_scene);
   }
 
+  if (!frogpilot_scene.map_open && !hideBottomIcons) {
+    paintCreepStatus(p);
+  }
+
   if (!bigMapOpen && frogpilot_toggles.value("pedals_on_ui").toBool()) {
     paintPedalIcons(p, carState, frogpilotCarState, frogpilot_scene, frogpilot_toggles);
   }
@@ -607,6 +611,39 @@ void FrogPilotAnnotatedCameraWidget::paintLongitudinalPaused(QPainter &p, FrogPi
   p.drawPixmap(longitudinalWidget, speedIcon);
   p.setOpacity(0.75);
   p.drawPixmap(longitudinalWidget, pausedIcon);
+
+  p.restore();
+}
+
+void FrogPilotAnnotatedCameraWidget::paintCreepStatus(QPainter &p) {
+  std::string raw = params_memory.get("CreepUIData");
+  if (raw.empty()) {
+    return;
+  }
+
+  int active = 0;
+  float remaining_gap = 0.0f;
+  if (sscanf(raw.c_str(), "%d,%f", &active, &remaining_gap) != 2 || active == 0) {
+    return;
+  }
+
+  QString remainingGapText = QString::number(remaining_gap * distanceConversion, 'f', remaining_gap * distanceConversion >= 10.0 ? 0 : 1) + leadDistanceUnit;
+  QString creepText = tr("CREEP  %1").arg(remainingGapText);
+
+  p.save();
+
+  QFont font = InterFont(36, QFont::DemiBold);
+  QFontMetrics metrics(font);
+  int textWidth = std::min(metrics.horizontalAdvance(creepText), width() - 260);
+  QRect creepRect((width() - textWidth - 90) / 2, rect().bottom() - 135, textWidth + 90, 62);
+
+  p.setBrush(blackColor(190));
+  p.setPen(QPen(blueColor(), 6));
+  p.drawRoundedRect(creepRect, 24, 24);
+
+  p.setFont(font);
+  p.setPen(QPen(whiteColor(), 6));
+  p.drawText(creepRect.adjusted(35, 0, -35, 0), Qt::AlignCenter, metrics.elidedText(creepText, Qt::ElideRight, creepRect.width() - 70));
 
   p.restore();
 }

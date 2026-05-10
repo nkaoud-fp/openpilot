@@ -29,6 +29,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotListWidget *longitudinalTuneList = new FrogPilotListWidget(this);
   FrogPilotListWidget *qolList = new FrogPilotListWidget(this);
   FrogPilotListWidget *relaxedPersonalityList = new FrogPilotListWidget(this);
+  FrogPilotListWidget *softExperimentalBrakingList = new FrogPilotListWidget(this);
   FrogPilotListWidget *speedLimitControllerList = new FrogPilotListWidget(this);
   FrogPilotListWidget *speedLimitControllerOffsetsList = new FrogPilotListWidget(this);
   FrogPilotListWidget *speedLimitControllerQOLList = new FrogPilotListWidget(this);
@@ -46,6 +47,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   ScrollView *longitudinalTunePanel = new ScrollView(longitudinalTuneList, this);
   ScrollView *qolPanel = new ScrollView(qolList, this);
   ScrollView *relaxedPersonalityPanel = new ScrollView(relaxedPersonalityList, this);
+  ScrollView *softExperimentalBrakingPanel = new ScrollView(softExperimentalBrakingList, this);
   ScrollView *speedLimitControllerPanel = new ScrollView(speedLimitControllerList, this);
   ScrollView *speedLimitControllerOffsetsPanel = new ScrollView(speedLimitControllerOffsetsList, this);
   ScrollView *speedLimitControllerQOLPanel = new ScrollView(speedLimitControllerQOLList, this);
@@ -63,6 +65,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   longitudinalLayout->addWidget(longitudinalTunePanel);
   longitudinalLayout->addWidget(qolPanel);
   longitudinalLayout->addWidget(relaxedPersonalityPanel);
+  longitudinalLayout->addWidget(softExperimentalBrakingPanel);
   longitudinalLayout->addWidget(speedLimitControllerPanel);
   longitudinalLayout->addWidget(speedLimitControllerOffsetsPanel);
   longitudinalLayout->addWidget(speedLimitControllerQOLPanel);
@@ -167,6 +170,11 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"HumanFollowing", tr("Human-Like Following"), tr("<b>Following behavior that mimics human drivers</b> by closing gaps behind faster vehicles for quicker takeoffs and dynamically adjusting the desired following distance for gentler, more efficient braking."), ""},
     {"LeadDetectionThreshold", tr("Lead Detection Sensitivity"), tr("<b>How sensitive openpilot is to detecting vehicles.</b> Higher sensitivity allows quicker detection at longer distances but may react to non-vehicle objects; lower sensitivity is more conservative and reduces false detections."), ""},
     {"MaxDesiredAcceleration", tr("Maximum Acceleration"), tr("<b>Limit the strongest acceleration</b> openpilot can command."), ""},
+    {"SoftExperimentalModeBraking", tr("Soft Experimental Mode Braking"), tr("<b>Make Experimental Mode braking tunable</b> with a custom decel cap, ramp steps, and distance buffer. When off, FrogPilot keeps using the built-in defaults."), "../../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
+    {"SoftExperimentalBaselineCap", tr("Baseline Cap"), tr("<b>The starting deceleration cap in Experimental Mode.</b> Less negative feels softer at brake onset; more negative feels firmer sooner."), ""},
+    {"SoftExperimentalBaseStepSlow", tr("Base Step (Slow)"), tr("<b>How quickly the decel cap ramps down</b> in gentle or no-lead braking situations. Lower values stay soft longer."), ""},
+    {"SoftExperimentalBaseStepFast", tr("Base Step (Fast)"), tr("<b>How quickly the decel cap ramps down</b> when closing on a lead more quickly. Lower values feel softer; higher values react faster."), ""},
+    {"SoftExperimentalDistanceBuffer", tr("Distance Buffer"), tr("<b>The bumper-to-bumper buffer used in the lead-based braking check.</b> Higher values make the planner ask for stronger braking sooner."), ""},
     {"TacoTune", tr("\"Taco Bell Run\" Turn Speed Hack"), tr("<b>The turn-speed hack from comma's 2022 \"Taco Bell Run\".</b> Designed to slow down for left and right turns."), ""},
 
     {"CreepToGap", tr("Creep to Gap at Stops"), tr("<b>Gently creep forward when stopped if the lead vehicle is farther away than the target gap.</b> Helps maintain a consistent bumper-to-bumper distance at traffic lights and in stop-and-go traffic."), ""},
@@ -450,6 +458,22 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       std::vector<QString> decelerationProfiles{tr("Standard"), tr("Eco"), tr("Sport")};
       ButtonParamControl *decelerationProfileToggle = new ButtonParamControl(param, title, desc, icon, decelerationProfiles);
       longitudinalToggle = decelerationProfileToggle;
+    } else if (param == "SoftExperimentalModeBraking") {
+      FrogPilotManageControl *softExperimentalBrakingToggle = new FrogPilotManageControl(param, title, desc, icon);
+      QObject::connect(softExperimentalBrakingToggle, &FrogPilotManageControl::manageButtonClicked, [longitudinalLayout, softExperimentalBrakingPanel, this]() {
+        emit openSubSubPanel();
+        longitudinalLayout->setCurrentWidget(softExperimentalBrakingPanel);
+        longitudinalTuneOpen = true;
+      });
+      longitudinalToggle = softExperimentalBrakingToggle;
+    } else if (param == "SoftExperimentalBaselineCap") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, -2.8, -0.4, tr(" m/s²"), std::map<float, QString>(), 0.01, true);
+    } else if (param == "SoftExperimentalBaseStepSlow") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.005, 0.065, tr(" m/s²"), std::map<float, QString>(), 0.001, true);
+    } else if (param == "SoftExperimentalBaseStepFast") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.05, 0.25, tr(" m/s²"), std::map<float, QString>(), 0.001, true);
+    } else if (param == "SoftExperimentalDistanceBuffer") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 10.5, tr(" m"), std::map<float, QString>(), 0.1, true);
     } else if (param == "LeadDetectionThreshold") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 25, 50, "%");
     } else if (param == "MaxDesiredAcceleration") {
@@ -620,6 +644,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       creepToGapList->addItem(longitudinalToggle);
     } else if (longitudinalTuneKeys.contains(param)) {
       longitudinalTuneList->addItem(longitudinalToggle);
+    } else if (softExperimentalBrakingKeys.contains(param)) {
+      softExperimentalBrakingList->addItem(longitudinalToggle);
     } else if (qolKeys.contains(param)) {
       qolList->addItem(longitudinalToggle);
     } else if (relaxedPersonalityKeys.contains(param)) {
@@ -657,7 +683,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     });
   }
 
-  QSet<QString> forceUpdateKeys = {"HumanAcceleration", "LongitudinalTune"};
+  QSet<QString> forceUpdateKeys = {"HumanAcceleration", "LongitudinalTune", "SoftExperimentalModeBraking"};
   for (const QString &key : forceUpdateKeys) {
     QObject::connect(static_cast<ToggleControl*>(toggles[key]), &ToggleControl::toggleFlipped, this, &FrogPilotLongitudinalPanel::updateToggles);
   }
@@ -985,6 +1011,11 @@ void FrogPilotLongitudinalPanel::updateToggles() {
       setVisible &= !(params.getBool("LongitudinalTune") && params.getBool("HumanAcceleration"));
     }
 
+    else if (softExperimentalBrakingKeys.contains(key)) {
+      setVisible &= params.getBool("LongitudinalTune");
+      setVisible &= params.getBool("SoftExperimentalModeBraking");
+    }
+
     else if (key == "StoppingDecelRate" || key == "VEgoStarting" || key == "VEgoStopping") {
       setVisible &= !isGM || !params.getBool("ExperimentalGMTune");
       setVisible &= !isToyota || !params.getBool("FrogsGoMoosTweak");
@@ -1006,6 +1037,9 @@ void FrogPilotLongitudinalPanel::updateToggles() {
       } else if (dynamicPersonalityKeys.contains(key)) { // ADDED
         toggles["DynamicPersonality"]->setVisible(true); // ADDED
       } else if (longitudinalTuneKeys.contains(key)) {
+        toggles["LongitudinalTune"]->setVisible(true);
+      } else if (softExperimentalBrakingKeys.contains(key)) {
+        toggles["SoftExperimentalModeBraking"]->setVisible(true);
         toggles["LongitudinalTune"]->setVisible(true);
       } else if (qolKeys.contains(key)) {
         toggles["QOLLongitudinal"]->setVisible(true);

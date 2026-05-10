@@ -1,4 +1,5 @@
 from cereal import car
+from openpilot.common.params import Params
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, apply_deadzone
@@ -101,9 +102,17 @@ class LongControl:
                              k_f=CP.longitudinalTuning.kf, rate=1 / DT_CTRL)
     self.v_pid = 0.0
     self.last_output_accel = 0.0
+    self.params_memory = Params("/dev/shm/params")
+    self.creep_ui_data = ""
 
   def reset(self):
     self.pid.reset()
+
+  def update_creep_ui(self, active, remaining_gap=0.0):
+    payload = f"1,{max(remaining_gap, 0.0):.3f}" if active else "0,0.000"
+    if payload != self.creep_ui_data:
+      self.params_memory.put("CreepUIData", payload)
+      self.creep_ui_data = payload
 
   def update(self, active, CS, a_target, should_stop, accel_limits, frogpilot_toggles, lead_one=None):
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
@@ -114,6 +123,7 @@ class LongControl:
                                                        should_stop, CS.brakePressed,
                                                        CS.cruiseState.standstill, frogpilot_toggles)
     if self.long_control_state == LongCtrlState.off:
+      self.update_creep_ui(False)
       self.reset()
       output_accel = 0.
 
@@ -130,6 +140,7 @@ class LongControl:
           not CS.brakePressed and
           already_stopped and
           distance_error > CREEP_GAP_DEADBAND):
+        self.update_creep_ui(True, distance_error)
         # Proportional acceleration: farther = more gas, capped at creep_accel
         target_accel = clip(distance_error * 0.15, 0.0, frogpilot_toggles.creep_accel)
         # Taper off as we approach creep_max_speed
@@ -145,6 +156,7 @@ class LongControl:
         else:
           output_accel -= min(output_accel - target_accel, jerk_limit)
       else:
+        self.update_creep_ui(False)
         # Standard stopping: bleed to stopAccel — creep never interferes with deceleration
         if output_accel > frogpilot_toggles.stopAccel:
           output_accel = min(output_accel, 0.0)
@@ -154,10 +166,12 @@ class LongControl:
 
     
     elif self.long_control_state == LongCtrlState.starting:
+      self.update_creep_ui(False)
       output_accel = (a_target if frogpilot_toggles.human_acceleration else frogpilot_toggles.startAccel)
       self.reset()
 
     else:  # LongCtrlState.pid
+      self.update_creep_ui(False)
       error = a_target - CS.aEgo
       output_accel = self.pid.update(error, speed=CS.vEgo,
                                      feedforward=a_target)

@@ -513,6 +513,11 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("StartAccel", "", 3, ""),
   ("StartAccelStock", "", 3, ""),
   ("StaticPedalsOnUI", "0", 1, "0"),
+  ("SoftExperimentalModeBraking", "0", 3, "0"),
+  ("SoftExperimentalBaselineCap", "-1.7", 3, "-1.7"),
+  ("SoftExperimentalBaseStepSlow", "0.038", 3, "0.038"),
+  ("SoftExperimentalBaseStepFast", "0.10", 3, "0.10"),
+  ("SoftExperimentalDistanceBuffer", "2.5", 3, "2.5"),
   ("SteerDelay", "", 3, ""),
   ("SteerDelayStock", "", 3, ""),
   ("SteerFriction", "", 3, ""),
@@ -999,6 +1004,11 @@ class FrogPilotVariables:
     toggle.human_following = longitudinal_tuning and (params.get_bool("HumanFollowing") if tuning_level >= level["HumanFollowing"] else default.get_bool("HumanFollowing"))
     toggle.lead_detection_probability = np.clip(params.get_int("LeadDetectionThreshold") / 100, 0.25, 0.50) if longitudinal_tuning and tuning_level >= level["LeadDetectionThreshold"] else default.get_int("LeadDetectionThreshold") / 100
     toggle.max_desired_acceleration = np.clip(params.get_float("MaxDesiredAcceleration"), 0.1, 4.0) if longitudinal_tuning and tuning_level >= level["MaxDesiredAcceleration"] else default.get_float("MaxDesiredAcceleration")
+    toggle.soft_experimental_mode_braking = longitudinal_tuning and toggle.openpilot_longitudinal and (params.get_bool("SoftExperimentalModeBraking") if tuning_level >= level["SoftExperimentalModeBraking"] else default.get_bool("SoftExperimentalModeBraking"))
+    toggle.soft_experimental_baseline_cap = np.clip(params.get_float("SoftExperimentalBaselineCap"), -2.8, -0.4) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalBaselineCap"] else default.get_float("SoftExperimentalBaselineCap")
+    toggle.soft_experimental_base_step_slow = np.clip(params.get_float("SoftExperimentalBaseStepSlow"), 0.005, 0.065) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalBaseStepSlow"] else default.get_float("SoftExperimentalBaseStepSlow")
+    toggle.soft_experimental_base_step_fast = np.clip(params.get_float("SoftExperimentalBaseStepFast"), 0.05, 0.25) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalBaseStepFast"] else default.get_float("SoftExperimentalBaseStepFast")
+    toggle.soft_experimental_distance_buffer = np.clip(params.get_float("SoftExperimentalDistanceBuffer"), 0.0, 10.5) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalDistanceBuffer"] else default.get_float("SoftExperimentalDistanceBuffer")
     toggle.taco_tune = longitudinal_tuning and (params.get_bool("TacoTune") if tuning_level >= level["TacoTune"] else default.get_bool("TacoTune"))
 
     toggle.available_models = (params.get("AvailableModels", encoding="utf-8") or "") + f",{DEFAULT_MODEL}"

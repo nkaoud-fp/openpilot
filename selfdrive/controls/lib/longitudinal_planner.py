@@ -32,6 +32,21 @@ USER_TUNING = {
 }
 # ==========================================================
 
+
+def get_soft_braking_tuning(frogpilot_toggles):
+  if getattr(frogpilot_toggles, "soft_experimental_mode_braking", False):
+    return {
+      "distance_buffer": getattr(frogpilot_toggles, "soft_experimental_distance_buffer", USER_TUNING["distance_buffer"]),
+      "base_step_slow": getattr(frogpilot_toggles, "soft_experimental_base_step_slow", USER_TUNING["base_step_slow"]),
+      "base_step_fast": getattr(frogpilot_toggles, "soft_experimental_base_step_fast", USER_TUNING["base_step_fast"]),
+      "boost_multiplier": USER_TUNING["boost_multiplier"],
+      "boost_ceiling": USER_TUNING["boost_ceiling"],
+      "baseline_cap": getattr(frogpilot_toggles, "soft_experimental_baseline_cap", USER_TUNING["baseline_cap"]),
+      "hard_limit_cap": USER_TUNING["hard_limit_cap"],
+      "recovery_step": USER_TUNING["recovery_step"],
+    }
+  return USER_TUNING
+
 LON_MPC_STEP = 0.2  # first step is 0.2s
 A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
@@ -117,6 +132,7 @@ class LongitudinalPlanner:
     return x, v, a, j, throttle_prob
 
   def update(self, sm, classic_longitudinal, frogpilot_toggles):
+    soft_braking_tuning = get_soft_braking_tuning(frogpilot_toggles)
     mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
     if classic_longitudinal:
       self.mpc.mode = mode
@@ -149,7 +165,7 @@ class LongitudinalPlanner:
     if reset_state:
       self.v_desired_filter.x = v_ego
       self.a_desired = np.clip(sm['carState'].aEgo, accel_clip[0], accel_clip[1])
-      self.dynamic_model_decel_cap = USER_TUNING["baseline_cap"] ############# added to reset CAP
+      self.dynamic_model_decel_cap = soft_braking_tuning["baseline_cap"] ############# added to reset CAP
 
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
     x, v, a, j, throttle_prob = self.parse_model(sm['modelV2'], v_ego, frogpilot_toggles.taco_tune)
@@ -202,12 +218,12 @@ class LongitudinalPlanner:
         d_rel = 100.0
 
       # 1. Base dynamic ramp step based on closing speed
-      dynamic_ramp_step = float(np.interp(v_rel, [-10.0, 0.0], [USER_TUNING["base_step_fast"], USER_TUNING["base_step_slow"]]))
+      dynamic_ramp_step = float(np.interp(v_rel, [-10.0, 0.0], [soft_braking_tuning["base_step_fast"], soft_braking_tuning["base_step_slow"]]))
 
       # 2. Kinematic Safety Check
       required_decel = 0.0
-      if v_rel < -0.5 and d_rel > USER_TUNING["distance_buffer"]:
-        required_decel = -((v_rel ** 2) / (2 * max(d_rel - USER_TUNING["distance_buffer"], 1.0)))
+      if v_rel < -0.5 and d_rel > soft_braking_tuning["distance_buffer"]:
+        required_decel = -((v_rel ** 2) / (2 * max(d_rel - soft_braking_tuning["distance_buffer"], 1.0)))
 
       # 3. Ramp-up logic with dt-scaled accelerated stepping
       if output_a_target_e2e < self.dynamic_model_decel_cap:
@@ -215,17 +231,17 @@ class LongitudinalPlanner:
         # SMART BOOST: If physics requires harder braking, accelerate the ramp step safely
         if required_decel < self.dynamic_model_decel_cap:
           decel_deficit = self.dynamic_model_decel_cap - required_decel
-          boost = np.clip(decel_deficit * self.dt * USER_TUNING["boost_multiplier"], 0.0, USER_TUNING["boost_ceiling"])
+          boost = np.clip(decel_deficit * self.dt * soft_braking_tuning["boost_multiplier"], 0.0, soft_braking_tuning["boost_ceiling"])
           dynamic_ramp_step += boost
 
         # Step down using the dynamic step
         self.dynamic_model_decel_cap -= dynamic_ramp_step 
-        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, USER_TUNING["hard_limit_cap"])
+        self.dynamic_model_decel_cap = max(self.dynamic_model_decel_cap, soft_braking_tuning["hard_limit_cap"])
         
       else:
         # If the model eases up, reset the cap back to the baseline
-        self.dynamic_model_decel_cap += USER_TUNING["recovery_step"]
-        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap, USER_TUNING["baseline_cap"]) 
+        self.dynamic_model_decel_cap += soft_braking_tuning["recovery_step"]
+        self.dynamic_model_decel_cap = min(self.dynamic_model_decel_cap, soft_braking_tuning["baseline_cap"]) 
 
       # 4. Cap the model using the new dynamic cap
       model_a = max(output_a_target_e2e, self.dynamic_model_decel_cap)      
