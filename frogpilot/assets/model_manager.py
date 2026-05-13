@@ -730,6 +730,17 @@ class ModelManager:
     update_json_file(self.tinygrad_sizes_path, self.tinygrad_sizes)
     print(f"Updated size for {TAR_FILE_NAME} in {self.tinygrad_sizes_path.name}")
 
+  def _bundled_tinygrad_available(self):
+    return TINYGRAD_MODELD_PATH.is_dir() and TINYGRAD_REPO_PATH.is_dir()
+
+  def _finalize_bundled_tinygrad_update(self, repo_url):
+    print("Falling back to bundled Model Manager files from the current openpilot branch...")
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, "Using bundled Model Manager...")
+    params.put_bool("TinygradUpdateAvailable", False)
+    params_memory.remove(UPDATE_TINYGRAD_PARAM)
+    self.update_tinygrad_models(repo_url)
+    params_memory.put(DOWNLOAD_PROGRESS_PARAM, "Updated!")
+
   def update_tinygrad(self):
     repo_url = get_repository_url(self.session)
     if not repo_url:
@@ -751,7 +762,8 @@ class ModelManager:
         params_memory.remove("CancelModelDownload")
         return
 
-      if not verify_download(tinygrad_tar_path, primary_url, self.session):
+      verified = verify_download(tinygrad_tar_path, primary_url, self.session)
+      if not verified:
         print(f"Verification failed for {primary_url}. Retrying from GitLab...")
         download_file(CANCEL_DOWNLOAD_PARAM, tinygrad_tar_path, DOWNLOAD_PROGRESS_PARAM, fallback_url, UPDATE_TINYGRAD_PARAM, self.session)
 
@@ -762,7 +774,11 @@ class ModelManager:
         params_memory.remove("CancelModelDownload")
         return
 
-      if not verify_download(tinygrad_tar_path, fallback_url, self.session):
+      if not verified and not verify_download(tinygrad_tar_path, fallback_url, self.session):
+        delete_file(tinygrad_tar_path)
+        if self._bundled_tinygrad_available():
+          self._finalize_bundled_tinygrad_update(repo_url)
+          return
         handle_error(tinygrad_tar_path, "Verification Failed", "Tinygrad verification failed", UPDATE_TINYGRAD_PARAM, DOWNLOAD_PROGRESS_PARAM)
         return
 
