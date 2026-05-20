@@ -175,6 +175,9 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"SoftExperimentalBaseStepSlow", tr("Base Step (Slow)"), tr("<b>How quickly the decel cap ramps down</b> in gentle or no-lead braking situations. Lower values stay soft longer."), ""},
     {"SoftExperimentalBaseStepFast", tr("Base Step (Fast)"), tr("<b>How quickly the decel cap ramps down</b> when closing on a lead more quickly. Lower values feel softer; higher values react faster."), ""},
     {"SoftExperimentalDistanceBuffer", tr("Distance Buffer"), tr("<b>The bumper-to-bumper buffer used in the lead-based braking check.</b> Higher values make the planner ask for stronger braking sooner."), ""},
+    {"ExperimentalSpeedAssertiveness", tr("Experimental Speed Assertiveness"), tr("<b>Stop Experimental Mode from coasting indefinitely when it could safely go faster.</b><br><br>- <b>Off</b>: Pure end-to-end, no nudge<br>- <b>Forecast</b>: Floor accel when the model's own velocity forecast says faster ahead<br>- <b>No Lead</b>: Floor accel when there's no lead (or it's far and not closing)<br>- <b>Both</b>: Floor accel only when both conditions hold (most conservative nudge)"), "../../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
+    {"ExperimentalAccelFloor", tr("Assertiveness Floor"), tr("<b>The minimum acceleration applied when the assertiveness condition is met.</b> Decays linearly to zero as you approach the set speed."), ""},
+    {"ExperimentalAssertHeadroom", tr("Headroom to Set Speed"), tr("<b>How many m/s below the set speed the floor is fully active.</b> Inside this band the floor decays to zero so you don't overshoot vCruise."), ""},
     {"TacoTune", tr("\"Taco Bell Run\" Turn Speed Hack"), tr("<b>The turn-speed hack from comma's 2022 \"Taco Bell Run\".</b> Designed to slow down for left and right turns."), ""},
 
     {"CreepToGap", tr("Creep to Gap at Stops"), tr("<b>Gently creep forward when stopped if the lead vehicle is farther away than the target gap.</b> Helps maintain a consistent bumper-to-bumper distance at traffic lights and in stop-and-go traffic."), ""},
@@ -474,6 +477,14 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.05, 0.25, tr(" m/s²"), std::map<float, QString>(), 0.001, true);
     } else if (param == "SoftExperimentalDistanceBuffer") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.0, 10.5, tr(" m"), std::map<float, QString>(), 0.1, true);
+    } else if (param == "ExperimentalSpeedAssertiveness") {
+      std::vector<QString> assertivenessModes{tr("Off"), tr("Forecast"), tr("No Lead"), tr("Both")};
+      ButtonParamControl *assertivenessToggle = new ButtonParamControl(param, title, desc, icon, assertivenessModes);
+      longitudinalToggle = assertivenessToggle;
+    } else if (param == "ExperimentalAccelFloor") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.05, 1.50, tr(" m/s²"), std::map<float, QString>(), 0.05);
+    } else if (param == "ExperimentalAssertHeadroom") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0.5, 15.0, tr(" m/s"), std::map<float, QString>(), 0.5);
     } else if (param == "LeadDetectionThreshold") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 25, 50, "%");
     } else if (param == "MaxDesiredAcceleration") {

@@ -254,6 +254,39 @@ class LongitudinalPlanner:
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
       ### ----------- Dynamic Experimental-mode decel softening  ---------------####
 
+      ### ----------- Experimental-mode speed assertiveness ---------------####
+      # When the user sets vCruise high and lets e2e manage speed, the model can
+      # coast indefinitely. Optionally apply a small positive accel floor when
+      # conditions are clearly safe. vCruise is only used as a ceiling guard.
+      assertiveness_mode = getattr(frogpilot_toggles, "experimental_speed_assertiveness", 0)
+      if (assertiveness_mode > 0 and self.allow_throttle and not self.output_should_stop
+          and not force_slow_decel and v_cruise_initialized and v_ego < v_cruise):
+        forecast_ok = False
+        if assertiveness_mode in (1, 3) and len(v) > 0:
+          v_far = float(v[-1])
+          forecast_ok = (v_far - v_ego) > 1.0
+
+        no_lead_ok = False
+        if assertiveness_mode in (2, 3):
+          if has_lead:
+            no_lead_ok = d_rel > 60.0 and v_rel >= -0.5
+          else:
+            no_lead_ok = True
+
+        if assertiveness_mode == 1:
+          apply_floor = forecast_ok
+        elif assertiveness_mode == 2:
+          apply_floor = no_lead_ok
+        else:
+          apply_floor = forecast_ok and no_lead_ok
+
+        if apply_floor:
+          headroom = max(v_cruise - v_ego, 0.0)
+          decay = float(np.clip(headroom / max(frogpilot_toggles.experimental_assert_headroom, 0.1), 0.0, 1.0))
+          effective_floor = frogpilot_toggles.experimental_accel_floor * decay
+          output_a_target = max(output_a_target, min(effective_floor, ACCEL_MAX))
+      ### ----------- End speed assertiveness ---------------####
+
     # Publish debug telemetry for the onroad graph overlay
     _pub_cap = self.dynamic_model_decel_cap if mode != 'acc' else 0.0
     self.params_memory.put("LongDebugData",

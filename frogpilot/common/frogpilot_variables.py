@@ -518,6 +518,9 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("SoftExperimentalBaseStepSlow", "0.038", 3, "0.038"),
   ("SoftExperimentalBaseStepFast", "0.10", 3, "0.10"),
   ("SoftExperimentalDistanceBuffer", "2.5", 3, "2.5"),
+  ("ExperimentalSpeedAssertiveness", "0", 3, "0"),
+  ("ExperimentalAccelFloor", "0.40", 3, "0.40"),
+  ("ExperimentalAssertHeadroom", "5.0", 3, "5.0"),
   ("SteerDelay", "", 3, ""),
   ("SteerDelayStock", "", 3, ""),
   ("SteerFriction", "", 3, ""),
@@ -1009,6 +1012,9 @@ class FrogPilotVariables:
     toggle.soft_experimental_base_step_slow = np.clip(params.get_float("SoftExperimentalBaseStepSlow"), 0.005, 0.065) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalBaseStepSlow"] else default.get_float("SoftExperimentalBaseStepSlow")
     toggle.soft_experimental_base_step_fast = np.clip(params.get_float("SoftExperimentalBaseStepFast"), 0.05, 0.25) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalBaseStepFast"] else default.get_float("SoftExperimentalBaseStepFast")
     toggle.soft_experimental_distance_buffer = np.clip(params.get_float("SoftExperimentalDistanceBuffer"), 0.0, 10.5) if toggle.soft_experimental_mode_braking and tuning_level >= level["SoftExperimentalDistanceBuffer"] else default.get_float("SoftExperimentalDistanceBuffer")
+    toggle.experimental_speed_assertiveness = params.get_int("ExperimentalSpeedAssertiveness") if longitudinal_tuning and tuning_level >= level["ExperimentalSpeedAssertiveness"] else default.get_int("ExperimentalSpeedAssertiveness")
+    toggle.experimental_accel_floor = np.clip(params.get_float("ExperimentalAccelFloor"), 0.05, 1.50) if toggle.experimental_speed_assertiveness > 0 and tuning_level >= level["ExperimentalAccelFloor"] else default.get_float("ExperimentalAccelFloor")
+    toggle.experimental_assert_headroom = np.clip(params.get_float("ExperimentalAssertHeadroom"), 0.5, 15.0) if toggle.experimental_speed_assertiveness > 0 and tuning_level >= level["ExperimentalAssertHeadroom"] else default.get_float("ExperimentalAssertHeadroom")
     toggle.taco_tune = longitudinal_tuning and (params.get_bool("TacoTune") if tuning_level >= level["TacoTune"] else default.get_bool("TacoTune"))
 
     toggle.available_models = (params.get("AvailableModels", encoding="utf-8") or "") + f",{DEFAULT_MODEL}"
