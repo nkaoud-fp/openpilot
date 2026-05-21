@@ -192,6 +192,10 @@ class FrogPilotPlanner:
       '''
 
       # 5. Final Decision
+      
+      safe_lead_gap = False # to disable Chill on lead
+      better_flow_right = False # to disable Chill on adjacent
+      
       if force_green_light_chill:
           # Force Chill Mode to automatically resume at the green light
           self.cem.experimental_mode = False
