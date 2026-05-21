@@ -261,6 +261,12 @@ class LongitudinalPlanner:
       assertiveness_mode = getattr(frogpilot_toggles, "experimental_speed_assertiveness", 0)
       if (assertiveness_mode > 0 and self.allow_throttle and not self.output_should_stop
           and not force_slow_decel and v_cruise_initialized and v_ego < v_cruise):
+        # Lane-context gate: require multi-lane road and usable confidence.
+        total_lanes = int(getattr(sm['frogpilotPlan'], "totalLanes", 0))
+        current_lane = int(getattr(sm['frogpilotPlan'], "currentLane", 0))
+        lane_confidence = str(getattr(sm['frogpilotPlan'], "laneConfidence", "unknown"))
+        lane_gate_ok = total_lanes >= 2 and current_lane >= 1 and lane_confidence in ("medium", "high")
+
         forecast_ok = False
         if assertiveness_mode in (1, 3) and len(v) > 0:
           v_far = float(v[-1])
@@ -280,10 +286,22 @@ class LongitudinalPlanner:
         else:
           apply_floor = forecast_ok and no_lead_ok
 
-        if apply_floor:
+        if apply_floor and lane_gate_ok:
+          # Lane-count multiplier: more lanes -> higher confidence we're on a highway.
+          lane_count_mult = float(np.interp(total_lanes, [2, 3, 4], [0.5, 0.8, 1.0]))
+          # Lane-position multiplier: leftmost = full, rightmost = half.
+          if total_lanes > 1:
+            pos_frac = (current_lane - 1) / (total_lanes - 1)
+          else:
+            pos_frac = 0.0
+          lane_pos_mult = 1.0 - 0.5 * float(np.clip(pos_frac, 0.0, 1.0))
+          # Confidence multiplier.
+          conf_mult = 1.0 if lane_confidence == "high" else 0.7
+
           headroom = max(v_cruise - v_ego, 0.0)
           decay = float(np.clip(headroom / max(frogpilot_toggles.experimental_assert_headroom, 0.1), 0.0, 1.0))
-          effective_floor = frogpilot_toggles.experimental_accel_floor * decay
+          effective_floor = (frogpilot_toggles.experimental_accel_floor
+                             * decay * lane_count_mult * lane_pos_mult * conf_mult)
           output_a_target = max(output_a_target, min(effective_floor, ACCEL_MAX))
       ### ----------- End speed assertiveness ---------------####
 
