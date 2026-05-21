@@ -98,8 +98,8 @@ class LongitudinalPlanner:
     ### Initialize Dynamic Experimental-mode decel softening V2
     self.dynamic_model_decel_cap = USER_TUNING["baseline_cap"]
 
-    # Lane-context smoothing for speed assertiveness (5 samples @ 20 Hz = 0.25 s)
-    self.lane_sample_history = deque(maxlen=5)
+    # Lane-context smoothing for speed assertiveness (20 samples @ 20 Hz = 1.0 s)
+    self.lane_sample_history = deque(maxlen=20)
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -272,9 +272,9 @@ class LongitudinalPlanner:
 
       if (assertiveness_mode > 0 and self.allow_throttle and not self.output_should_stop
           and not force_slow_decel and v_cruise_initialized and v_ego < v_cruise):
-        # Lane-context gate: use the most-common sample over the last 5 ticks
-        # (~0.25 s) to suppress single-frame flicker from the lane estimator.
-        if len(self.lane_sample_history) >= 3:
+        # Lane-context gate: use the most-common sample over the last 1 s
+        # (20 ticks @ 20 Hz) to suppress single-frame flicker from the lane estimator.
+        if len(self.lane_sample_history) >= 10:
           total_lanes, _ = Counter(s[0] for s in self.lane_sample_history).most_common(1)[0]
           current_lane, _ = Counter(s[1] for s in self.lane_sample_history).most_common(1)[0]
           lane_confidence, _ = Counter(s[2] for s in self.lane_sample_history).most_common(1)[0]
