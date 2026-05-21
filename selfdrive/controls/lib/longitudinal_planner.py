@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+from collections import Counter, deque
 import numpy as np
 
 import cereal.messaging as messaging
@@ -94,8 +95,11 @@ class LongitudinalPlanner:
     self.output_a_target = 0.0
     self.output_should_stop = False
     
-    ### Initialize Dynamic Experimental-mode decel softening V2 
-    self.dynamic_model_decel_cap = USER_TUNING["baseline_cap"] 
+    ### Initialize Dynamic Experimental-mode decel softening V2
+    self.dynamic_model_decel_cap = USER_TUNING["baseline_cap"]
+
+    # Lane-context smoothing for speed assertiveness (5 samples @ 20 Hz = 0.25 s)
+    self.lane_sample_history = deque(maxlen=5)
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -259,12 +263,23 @@ class LongitudinalPlanner:
       # coast indefinitely. Optionally apply a small positive accel floor when
       # conditions are clearly safe. vCruise is only used as a ceiling guard.
       assertiveness_mode = getattr(frogpilot_toggles, "experimental_speed_assertiveness", 0)
+      # Always sample lane state so the smoothing window stays current.
+      self.lane_sample_history.append((
+        int(getattr(sm['frogpilotPlan'], "totalLanes", 0)),
+        int(getattr(sm['frogpilotPlan'], "currentLane", 0)),
+        str(getattr(sm['frogpilotPlan'], "laneConfidence", "unknown")),
+      ))
+
       if (assertiveness_mode > 0 and self.allow_throttle and not self.output_should_stop
           and not force_slow_decel and v_cruise_initialized and v_ego < v_cruise):
-        # Lane-context gate: require multi-lane road and usable confidence.
-        total_lanes = int(getattr(sm['frogpilotPlan'], "totalLanes", 0))
-        current_lane = int(getattr(sm['frogpilotPlan'], "currentLane", 0))
-        lane_confidence = str(getattr(sm['frogpilotPlan'], "laneConfidence", "unknown"))
+        # Lane-context gate: use the most-common sample over the last 5 ticks
+        # (~0.25 s) to suppress single-frame flicker from the lane estimator.
+        if len(self.lane_sample_history) >= 3:
+          total_lanes, _ = Counter(s[0] for s in self.lane_sample_history).most_common(1)[0]
+          current_lane, _ = Counter(s[1] for s in self.lane_sample_history).most_common(1)[0]
+          lane_confidence, _ = Counter(s[2] for s in self.lane_sample_history).most_common(1)[0]
+        else:
+          total_lanes, current_lane, lane_confidence = 0, 0, "unknown"
         lane_gate_ok = total_lanes >= 2 and current_lane >= 1 and lane_confidence in ("medium", "high")
 
         forecast_ok = False
