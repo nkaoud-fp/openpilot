@@ -129,11 +129,24 @@ class LongitudinalPlanner:
       max_v = np.sqrt(max_lat_accel / (np.abs(curvatures) + 1e-3)) - 2.0
       v = np.minimum(max_v, v)
 
-    if len(model_msg.meta.disengagePredictions.gasPressProbs) > 1:
-      throttle_prob = model_msg.meta.disengagePredictions.gasPressProbs[1]
+    disengage_predictions = model_msg.meta.disengagePredictions
+    if len(disengage_predictions.gasPressProbs) > 1:
+      throttle_prob = disengage_predictions.gasPressProbs[1]
     else:
       throttle_prob = 1.0
-    return x, v, a, j, throttle_prob
+
+    if len(disengage_predictions.brakePressProbs) > 1:
+      brake_prob = disengage_predictions.brakePressProbs[1]
+    else:
+      brake_prob = 0.0
+
+    hard_brake_probs = [
+      disengage_predictions.brake3MetersPerSecondSquaredProbs,
+      disengage_predictions.brake4MetersPerSecondSquaredProbs,
+      disengage_predictions.brake5MetersPerSecondSquaredProbs,
+    ]
+    hard_brake_prob = max((probs[1] for probs in hard_brake_probs if len(probs) > 1), default=0.0)
+    return x, v, a, j, throttle_prob, brake_prob, hard_brake_prob
 
   def update(self, sm, classic_longitudinal, frogpilot_toggles):
     soft_braking_tuning = get_soft_braking_tuning(frogpilot_toggles)
@@ -172,7 +185,7 @@ class LongitudinalPlanner:
       self.dynamic_model_decel_cap = soft_braking_tuning["baseline_cap"] ############# added to reset CAP
 
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
-    x, v, a, j, throttle_prob = self.parse_model(sm['modelV2'], v_ego, frogpilot_toggles.taco_tune)
+    x, v, a, j, throttle_prob, brake_prob, hard_brake_prob = self.parse_model(sm['modelV2'], v_ego, frogpilot_toggles.taco_tune)
     self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
 
     if not self.allow_throttle:
@@ -275,17 +288,18 @@ class LongitudinalPlanner:
         # Lane-context gate: use the most-common sample over the last 1 s
         # (20 ticks @ 20 Hz) to suppress single-frame flicker from the lane estimator.
         if len(self.lane_sample_history) >= 10:
-          total_lanes, _ = Counter(s[0] for s in self.lane_sample_history).most_common(1)[0]
-          current_lane, _ = Counter(s[1] for s in self.lane_sample_history).most_common(1)[0]
-          lane_confidence, _ = Counter(s[2] for s in self.lane_sample_history).most_common(1)[0]
+          (total_lanes, current_lane, lane_confidence), lane_count = Counter(self.lane_sample_history).most_common(1)[0]
+          lane_stability = lane_count / len(self.lane_sample_history)
         else:
           total_lanes, current_lane, lane_confidence = 0, 0, "unknown"
-        lane_gate_ok = total_lanes >= 2 and current_lane >= 1 and lane_confidence in ("medium", "high")
+          lane_stability = 0.0
+        lane_gate_ok = total_lanes >= 2 and current_lane >= 1 and lane_confidence in ("medium", "high") and lane_stability >= 0.6
 
         forecast_ok = False
         if assertiveness_mode in (1, 3) and len(v) > 0:
           v_far = float(v[-1])
-          forecast_ok = (v_far - v_ego) > 1.0
+          v_near = float(np.interp(2.0, T_IDXS_MPC, v))
+          forecast_ok = (v_far - v_ego) > 1.0 and v_near >= v_ego - 0.2
 
         no_lead_ok = False
         if assertiveness_mode in (2, 3):
@@ -301,7 +315,29 @@ class LongitudinalPlanner:
         else:
           apply_floor = forecast_ok and no_lead_ok
 
-        if apply_floor and lane_gate_ok:
+        closing_speed = max(-v_rel, 0.0) if has_lead else 0.0
+        ttc = d_rel / max(closing_speed, 0.1) if has_lead else 99.0
+        desired_follow_distance = max(float(getattr(sm['frogpilotPlan'], "desiredFollowDistance", 0)), 0.0)
+        lead_safe = not has_lead or d_rel > 60.0 or ttc > 8.0 or (v_rel >= -0.2 and d_rel > desired_follow_distance + 8.0)
+
+        model_accel_ok = output_a_target_e2e > -0.15
+        mpc_accel_ok = output_a_target_mpc > -0.15
+        brake_prob_ok = brake_prob < 0.25 and hard_brake_prob < 0.15
+        road_lat_accel = v_ego ** 2 * abs(float(getattr(sm['frogpilotPlan'], "roadCurvature", 0.0)))
+        road_context_ok = not sm['frogpilotPlan'].cscControllingSpeed and road_lat_accel < 0.8
+        stop_context_ok = not sm['frogpilotPlan'].redLight and not sm['frogpilotPlan'].forcingStop
+        driver_context_ok = not (sm['carState'].leftBlinker or sm['carState'].rightBlinker)
+
+        confidence = 0.0
+        confidence += 0.30 if lane_gate_ok else 0.0
+        confidence += 0.20 if forecast_ok else 0.0
+        confidence += 0.15 if model_accel_ok else 0.0
+        confidence += 0.15 if mpc_accel_ok else 0.0
+        confidence += 0.10 if brake_prob_ok else 0.0
+        confidence += 0.10 if lead_safe else 0.0
+        confidence *= float(np.interp(v_ego, [5.0, 15.0], [0.8, 1.0]))
+
+        if apply_floor and confidence >= 0.70 and road_context_ok and stop_context_ok and driver_context_ok:
           # Lane-count multiplier: more lanes -> higher confidence we're on a highway.
           lane_count_mult = float(np.interp(total_lanes, [2, 3, 4], [0.5, 0.8, 1.0]))
           # Lane-position multiplier: leftmost = full, rightmost = half.
@@ -316,7 +352,7 @@ class LongitudinalPlanner:
           headroom = max(v_cruise - v_ego, 0.0)
           decay = float(np.clip(headroom / max(frogpilot_toggles.experimental_assert_headroom, 0.1), 0.0, 1.0))
           effective_floor = (frogpilot_toggles.experimental_accel_floor
-                             * decay * lane_count_mult * lane_pos_mult * conf_mult)
+                             * decay * lane_count_mult * lane_pos_mult * conf_mult * confidence)
           output_a_target = max(output_a_target, min(effective_floor, ACCEL_MAX))
       ### ----------- End speed assertiveness ---------------####
 
