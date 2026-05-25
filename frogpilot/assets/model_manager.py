@@ -18,7 +18,7 @@ from openpilot.frogpilot.common.frogpilot_utilities import delete_file, extract_
 from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles
 
 #VERSION = "v16" #v17
-VERSION = "v47"
+VERSION = "v17"
 
 VERSION_PATH = MODELS_PATH / "model_version"
 
