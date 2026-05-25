@@ -417,7 +417,8 @@ class ModelManager:
       file_sources = []
 
       for filename in tinygrad_filenames:
-        primary_url = f"{repo_url}/Models/compiled/{filename}"
+        #primary_url = f"{repo_url}/Models/compiled/{filename}"
+        primary_url = f"{repo_url}/Models/{filename}"
         file_size = int(all_model_sizes.get(filename, 0))
         file_sizes.append(file_size)
         file_sources.append((primary_url, None))
@@ -446,7 +447,8 @@ class ModelManager:
           continue
 
         print(f"Verification failed for {filename}. Retrying from GitLab...")
-        fallback_url = f"{GITLAB_URL}/Models/compiled/{filename}"
+        #fallback_url = f"{GITLAB_URL}/Models/compiled/{filename}"
+        fallback_url = f"{GITLAB_URL}/Models/{filename}"        
         download_file(CANCEL_DOWNLOAD_PARAM, model_path, DOWNLOAD_PROGRESS_PARAM, fallback_url, MODEL_DOWNLOAD_PARAM, self.session, offset_bytes=downloaded_offset_bytes, total_bytes=total_model_bytes)
 
         if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
