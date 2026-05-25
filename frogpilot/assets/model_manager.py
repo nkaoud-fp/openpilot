@@ -667,16 +667,16 @@ class ModelManager:
 
       if is_github:
         top_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents?ref=Models"
-        version_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents/compiled?ref=Models"
+        #version_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents/compiled?ref=Models"
       elif is_gitlab:
         top_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?ref=Models"
-        version_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?path=compiled&ref=Models"
+        #version_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?path=compiled&ref=Models"
       else:
         print(f"Unsupported repository URL: {repo_url}")
         return model_sizes
 
       model_sizes.update(fetch_dir_sizes(top_api_url))
-      model_sizes.update(fetch_dir_sizes(version_api_url))
+      #model_sizes.update(fetch_dir_sizes(version_api_url))
 
       return model_sizes
 
