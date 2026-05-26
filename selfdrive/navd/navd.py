@@ -83,6 +83,9 @@ NAV_ANGLE_HIGHWAY_EXIT_MAX_DEG = 45.0
 NAV_ANGLE_NORMAL_TURN_MIN_DEG = 15.0
 NAV_ANGLE_UTURN_MIN_DEG = 135.0
 NAV_ANGLE_ANCHOR_M = 8.0
+NAV_BEARING_MISALIGN_THRESHOLD_DEG = 95.0  # heading vs route bearing mismatch that triggers reroute
+NAV_BEARING_MISALIGN_MIN_SPEED_MS = 5.0    # ignore check below this speed (e.g. stopped at light)
+NAV_BEARING_MISALIGN_COUNTER_MIN = 3       # consecutive frames required before rerouting
 NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "time",
   "gps_ok",
@@ -152,6 +155,7 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "current_step_error",
   "global_route_error",
   "cross_track_error",
+  "bearing_misalign",
   "recompute_reason",
   "route_generation",
 ]
@@ -183,6 +187,7 @@ class RouteEngine:
 
     self.reroute_counter = 0
     self.navigation_test_reroute_counter = 0
+    self.bearing_misalign_counter = 0
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
     self.navigation_test_command = None
@@ -1252,6 +1257,7 @@ class RouteEngine:
       "current_step_error": f"{current_step_error:.2f}" if current_step_error is not None else "",
       "global_route_error": f"{global_route_error:.2f}" if global_route_error is not None else "",
       "cross_track_error": f"{cross_track_error:.2f}" if cross_track_error is not None else "",
+      "bearing_misalign": self.bearing_misalign_counter,
       "recompute_reason": self.navigation_test_recompute_reason,
       "route_generation": self.navigation_test_route_generation,
     }
@@ -1762,12 +1768,14 @@ class RouteEngine:
     self.navigation_test_reroute_counter = 0
     self.navigation_test_destination_missed_counter = 0
     self.navigation_test_closest_destination_distance = None
+    self.bearing_misalign_counter = 0
     self.reset_navigation_test_exit_migration()
     self.reset_navigation_test_post_exit_recovery()
 
   def reset_recompute_limits(self):
     self.recompute_backoff = 0
     self.recompute_countdown = 0
+    self.bearing_misalign_counter = 0
 
   def reset_navigation_test_destination_tracking(self, destination=None):
     self.navigation_test_destination_missed_counter = 0
@@ -1806,6 +1814,33 @@ class RouteEngine:
       return True
     return False
 
+  def route_bearing_at_position(self, geometry) -> float | None:
+    """Return the bearing (degrees, 0=N, clockwise) of the route segment closest to the car's
+    current position.  Returns None if the geometry is too short to compute a bearing."""
+    if self.last_position is None or geometry is None or len(geometry) < 2:
+      return None
+
+    # Find index of the closest point on this step's geometry using the fast vectorised helper.
+    # path_minimum_distance doesn't expose the index, so we recompute with a lightweight loop.
+    min_dist = float('inf')
+    closest_idx = 0
+    for idx, coord in enumerate(geometry):
+      d = self.last_position.distance_to(coord)
+      if d < min_dist:
+        min_dist = d
+        closest_idx = idx
+
+    # Pick the segment that starts at closest_idx, clamped so we always have a valid pair.
+    seg_start_idx = max(0, min(closest_idx, len(geometry) - 2))
+    a = geometry[seg_start_idx]
+    b = geometry[seg_start_idx + 1]
+
+    # Skip degenerate (zero-length) segments.
+    if a.distance_to(b) < 0.1:
+      return None
+
+    return self.navigation_test_bearing_between(a, b)
+
   def should_recompute(self):
     if self.step_idx is None or self.route is None:
       self.navigation_test_recompute_reason = "routeMissing"
@@ -1830,6 +1865,29 @@ class RouteEngine:
         self.navigation_test_recompute_reason = "missedDestination"
         return True
       return False
+
+    # Route bearing misalignment check — if the car is heading in roughly the opposite
+    # direction to the route for several frames in a row, we're probably on the wrong road.
+    v_ego = self.sm['carState'].vEgo
+    if self.last_bearing is not None and v_ego >= NAV_BEARING_MISALIGN_MIN_SPEED_MS:
+      route_bearing = self.route_bearing_at_position(self.route_geometry[self.step_idx])
+      if route_bearing is not None:
+        current_bearing = (self.last_bearing + 360) % 360
+        bearing_diff = abs(current_bearing - route_bearing)
+        bearing_diff = min(bearing_diff, 360 - bearing_diff)  # shortest arc
+        if bearing_diff > NAV_BEARING_MISALIGN_THRESHOLD_DEG:
+          self.bearing_misalign_counter += 1
+        else:
+          self.bearing_misalign_counter = 0
+      else:
+        self.bearing_misalign_counter = 0
+    else:
+      self.bearing_misalign_counter = 0
+
+    if self.bearing_misalign_counter > NAV_BEARING_MISALIGN_COUNTER_MIN:
+      self.navigation_test_recompute_reason = "bearingMisalign"
+      cloudlog.warning(f"Route bearing misalign: counter={self.bearing_misalign_counter}, bearing={self.last_bearing:.1f}")
+      return True
 
     min_d = self.path_minimum_distance(self.route_geometry[self.step_idx])
 
