@@ -18,7 +18,9 @@ from openpilot.frogpilot.common.frogpilot_utilities import delete_file, extract_
 from openpilot.frogpilot.common.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, RESOURCES_REPO, TINYGRAD_FILES, params, params_default, params_memory, update_frogpilot_toggles
 
 #VERSION = "v16" #v17
-VERSION = "v21"
+#VERSION = "v21"
+VERSION = "v17"
+
 
 VERSION_PATH = MODELS_PATH / "model_version"
 
@@ -417,8 +419,8 @@ class ModelManager:
       file_sources = []
 
       for filename in tinygrad_filenames:
-        #primary_url = f"{repo_url}/Models/compiled/{filename}"
-        primary_url = f"{repo_url}/Models/{filename}"
+        primary_url = f"{repo_url}/Models/compiled/{filename}"
+        #primary_url = f"{repo_url}/Models/{filename}"
         file_size = int(all_model_sizes.get(filename, 0))
         file_sizes.append(file_size)
         file_sources.append((primary_url, None))
@@ -447,8 +449,8 @@ class ModelManager:
           continue
 
         print(f"Verification failed for {filename}. Retrying from GitLab...")
-        #fallback_url = f"{GITLAB_URL}/Models/compiled/{filename}"
-        fallback_url = f"{GITLAB_URL}/Models/{filename}"        
+        fallback_url = f"{GITLAB_URL}/Models/compiled/{filename}"
+        #fallback_url = f"{GITLAB_URL}/Models/{filename}"        
         download_file(CANCEL_DOWNLOAD_PARAM, model_path, DOWNLOAD_PROGRESS_PARAM, fallback_url, MODEL_DOWNLOAD_PARAM, self.session, offset_bytes=downloaded_offset_bytes, total_bytes=total_model_bytes)
 
         if params_memory.get_bool(CANCEL_DOWNLOAD_PARAM):
@@ -667,16 +669,16 @@ class ModelManager:
 
       if is_github:
         top_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents?ref=Models"
-        #version_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents/compiled?ref=Models"
+        version_api_url = f"https://api.github.com/repos/{RESOURCES_REPO}/contents/compiled?ref=Models"
       elif is_gitlab:
         top_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?ref=Models"
-        #version_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?path=compiled&ref=Models"
+        version_api_url = f"https://gitlab.com/api/v4/projects/{repo_encoded}/repository/tree?path=compiled&ref=Models"
       else:
         print(f"Unsupported repository URL: {repo_url}")
         return model_sizes
 
       model_sizes.update(fetch_dir_sizes(top_api_url))
-      #model_sizes.update(fetch_dir_sizes(version_api_url))
+      model_sizes.update(fetch_dir_sizes(version_api_url))
 
       return model_sizes
 
