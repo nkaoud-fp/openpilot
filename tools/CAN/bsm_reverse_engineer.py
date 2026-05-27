@@ -371,6 +371,8 @@ def monitor_live(analyzer, duration=None):
 
     start = time.monotonic()
     last_print = 0
+    prev_known_state = None
+    first_raw = None
 
     try:
         while True:
@@ -378,14 +380,51 @@ def monitor_live(analyzer, duration=None):
             for msg in can_msgs:
                 for can_msg in msg.can:
                     if can_msg.address == BSM_CAN_ID and len(can_msg.dat) == BSM_MSG_LEN:
-                        analyzer.add_sample(bytes(can_msg.dat), time.monotonic() - start)
+                        data = bytes(can_msg.dat)
+                        elapsed = time.monotonic() - start
+                        analyzer.add_sample(data, elapsed)
+
+                        if first_raw is None:
+                            first_raw = data
+                            print(f"  First raw message: {data.hex()}")
+                            print(f"  Byte breakdown:")
+                            for bi in range(8):
+                                known_mask = KNOWN_BYTE_MASKS[bi]
+                                unknown_mask = (~known_mask) & 0xFF
+                                known_val = data[bi] & known_mask
+                                unknown_val = data[bi] & unknown_mask
+                                print(f"    byte {bi}: 0x{data[bi]:02X} "
+                                      f"(known=0x{known_val:02X} unknown=0x{unknown_val:02X} "
+                                      f"bits={data[bi]:08b})")
+                            print()
+
+                        known = {}
+                        for name, (byte_idx, bit_idx, _) in KNOWN_SIGNALS.items():
+                            known[name] = (data[byte_idx] >> bit_idx) & 1
+                        known_key = tuple(sorted(known.items()))
+
+                        if prev_known_state is not None and known_key != prev_known_state:
+                            active = [n for n, v in known.items() if v == 1]
+                            label = ", ".join(active) if active else "(all clear)"
+                            print(f"\n  [{elapsed:.1f}s] BSM STATE CHANGED -> {label}")
+                            print(f"    raw: {data.hex()}")
+                            for bi in range(8):
+                                known_mask = KNOWN_BYTE_MASKS[bi]
+                                unknown_mask = (~known_mask) & 0xFF
+                                unknown_val = data[bi] & unknown_mask
+                                if unknown_val != (first_raw[bi] & unknown_mask):
+                                    print(f"    ** byte {bi} unknown changed: "
+                                          f"0x{first_raw[bi] & unknown_mask:02X} -> 0x{unknown_val:02X}")
+                            print()
+
+                        prev_known_state = known_key
 
             now = time.monotonic()
             if now - last_print > 2.0:
                 last_print = now
                 elapsed = now - start
                 print(f"\r  [{elapsed:.0f}s] Samples: {analyzer.total_count}, "
-                      f"Unknown transitions: {len(analyzer.transition_log)}", end="", flush=True)
+                      f"Transitions: {len(analyzer.transition_log)}", end="", flush=True)
 
             if duration and (time.monotonic() - start) > duration:
                 break
