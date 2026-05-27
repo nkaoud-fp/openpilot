@@ -11,6 +11,65 @@ TurnDirection = log.Desire
 
 LANE_CHANGE_SPEED_MIN = 20 * CV.MPH_TO_MS
 LANE_CHANGE_TIME_MAX = 10.
+
+# Phantom lead tracking: simulate dropped adjacent radar leads
+PHANTOM_LEAD_MIN_TRACK_TIME = 1.5    # seconds: lead must be tracked this long before simulating
+PHANTOM_LEAD_MAX_SIM_TIME = 10.0     # seconds: max time to simulate after drop
+PHANTOM_LEAD_ALONGSIDE_FRONT = 4.0   # meters: front boundary of "alongside" zone
+PHANTOM_LEAD_ALONGSIDE_REAR = -5.0   # meters: rear boundary of "alongside" zone
+
+
+class PhantomLeadTracker:
+  """Tracks adjacent radar leads after they drop off radar.
+
+  When a lead that was tracked for >= 1.5s drops, we simulate its position
+  using its last known relative speed. If the simulated position falls in the
+  alongside zone (+4m to -5m), we report a blindspot detection.
+  """
+  def __init__(self):
+    self.tracking_time = 0.0       # how long the current radar lead has been active
+    self.prev_status = False
+
+    self.simulating = False
+    self.sim_time = 0.0
+    self.sim_dRel = 0.0
+    self.sim_vRel = 0.0
+
+  def update(self, lead_status, lead_dRel, lead_vRel, dt):
+    if lead_status:
+      # Lead is actively tracked by radar
+      self.tracking_time += dt
+      self.simulating = False
+      self.sim_time = 0.0
+
+    elif self.prev_status and not lead_status:
+      # Lead just dropped off radar
+      if self.tracking_time >= PHANTOM_LEAD_MIN_TRACK_TIME:
+        self.simulating = True
+        self.sim_time = 0.0
+        self.sim_dRel = lead_dRel
+        self.sim_vRel = lead_vRel
+      self.tracking_time = 0.0
+
+    elif self.simulating:
+      # Advance simulation
+      self.sim_time += dt
+      self.sim_dRel += self.sim_vRel * dt
+
+      if self.sim_time >= PHANTOM_LEAD_MAX_SIM_TIME or self.sim_dRel < PHANTOM_LEAD_ALONGSIDE_REAR:
+        self.simulating = False
+
+    else:
+      self.tracking_time = 0.0
+
+    self.prev_status = lead_status
+
+  @property
+  def alongside(self):
+    """True if the simulated lead is in the alongside zone."""
+    return (self.simulating and
+            self.sim_dRel <= PHANTOM_LEAD_ALONGSIDE_FRONT and
+            self.sim_dRel >= PHANTOM_LEAD_ALONGSIDE_REAR)
 NAVIGATION_TEST_ADJACENT_LEAD_MIN_DISTANCE = 30.0
 NAVIGATION_TEST_LANE_CHANGE_TIME_GAP_SECONDS = 1.8
 NAVIGATION_TEST_LANE_CHANGE_CLOSING_EXTRA_SECONDS = 2.2
@@ -68,6 +127,10 @@ class DesireHelper:
     self.keep_pulse_timer = 0.0
     self.prev_one_blinker = False
     self.desire = log.Desire.none
+
+    # Phantom lead trackers for adjacent lanes
+    self.phantom_lead_left = PhantomLeadTracker()
+    self.phantom_lead_right = PhantomLeadTracker()
 
     # FrogPilot variables
     self.lane_change_completed = False
@@ -141,7 +204,10 @@ class DesireHelper:
 
   def navigation_test_lane_change_diagnostics(self, direction, carstate, frogpilotPlan, frogpilotRadarState, frogpilot_toggles, below_lane_change_speed):
     lane_available = self.navigation_test_lane_available(direction, frogpilotPlan, frogpilot_toggles)
-    blindspot_detected = (carstate.leftBlindspot and direction == "left") or (carstate.rightBlindspot and direction == "right")
+    phantom_left = self.phantom_lead_left.alongside
+    phantom_right = self.phantom_lead_right.alongside
+    blindspot_detected = ((carstate.leftBlindspot or phantom_left) and direction == "left") or \
+                         ((carstate.rightBlindspot or phantom_right) and direction == "right")
     adjacent_lead = frogpilotRadarState.leadLeft if direction == "left" else frogpilotRadarState.leadRight
 
     lead_distance = float(adjacent_lead.dRel) if adjacent_lead.status else None
@@ -270,6 +336,12 @@ class DesireHelper:
     one_blinker = carstate.leftBlinker != carstate.rightBlinker
     below_lane_change_speed = v_ego < frogpilot_toggles.minimum_lane_change_speed
 
+    # Update phantom lead trackers with current adjacent radar lead data
+    lead_left = frogpilotRadarState.leadLeft
+    lead_right = frogpilotRadarState.leadRight
+    self.phantom_lead_left.update(bool(lead_left.status), float(lead_left.dRel), float(lead_left.vRel), DT_MDL)
+    self.phantom_lead_right.update(bool(lead_right.status), float(lead_right.dRel), float(lead_right.vRel), DT_MDL)
+
     if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX or not frogpilot_toggles.lane_changes:
       self.lane_change_state = LaneChangeState.off
       self.lane_change_direction = LaneChangeDirection.none
@@ -299,8 +371,11 @@ class DesireHelper:
           lane_available = desired_lane_width >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.lane_detection
           torque_applied = lane_available and self.lane_change_wait_timer >= frogpilot_toggles.lane_change_delay and frogpilot_toggles.nudgeless
 
-        blindspot_detected = ((carstate.leftBlindspot and self.lane_change_direction == LaneChangeDirection.left) or
-                              (carstate.rightBlindspot and self.lane_change_direction == LaneChangeDirection.right))
+        # Combine BSM radar + phantom lead simulation for blindspot detection
+        phantom_left = self.phantom_lead_left.alongside
+        phantom_right = self.phantom_lead_right.alongside
+        blindspot_detected = (((carstate.leftBlindspot or phantom_left) and self.lane_change_direction == LaneChangeDirection.left) or
+                              ((carstate.rightBlindspot or phantom_right) and self.lane_change_direction == LaneChangeDirection.right))
 
         if not one_blinker or below_lane_change_speed or self.lane_change_completed:
           self.lane_change_state = LaneChangeState.off
