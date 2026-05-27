@@ -68,6 +68,19 @@ class CarState(CarStateBase):
     self.gvc = 0.0
     self.secoc_synchronization = None
 
+    # BSM directional hysteresis state
+    # Hold times: car passed you (front-bound) = short, car falling behind you (rear-bound) = long
+    self.bsm_hold_front_bound = 1.0   # seconds: car overtook you, now ahead - lower risk
+    self.bsm_hold_rear_bound = 3.0    # seconds: car dropping back into blind spot - higher risk
+    self.left_bsm_hold_timer = 0.0
+    self.right_bsm_hold_timer = 0.0
+    self.left_bsm_approaching_seen = False   # tracks if APPROACHING fired before ADJACENT
+    self.right_bsm_approaching_seen = False
+    self.prev_left_adjacent = False
+    self.prev_left_approaching = False
+    self.prev_right_adjacent = False
+    self.prev_right_approaching = False
+
     # FrogPilot variables
     self.latActive_previous = False
     self.needs_angle_offset_zss = True
@@ -195,8 +208,52 @@ class CarState(CarStateBase):
     ret.espDisabled = cp.vl["ESP_CONTROL"]["TC_DISABLED"] != 0
 
     if self.CP.enableBsm:
-      ret.leftBlindspot = (cp.vl["BSM"]["L_ADJACENT"] == 1) or (cp.vl["BSM"]["L_APPROACHING"] == 1)
-      ret.rightBlindspot = (cp.vl["BSM"]["R_ADJACENT"] == 1) or (cp.vl["BSM"]["R_APPROACHING"] == 1)
+      l_adj = cp.vl["BSM"]["L_ADJACENT"] == 1
+      l_app = cp.vl["BSM"]["L_APPROACHING"] == 1
+      r_adj = cp.vl["BSM"]["R_ADJACENT"] == 1
+      r_app = cp.vl["BSM"]["R_APPROACHING"] == 1
+      l_active = l_adj or l_app
+      r_active = r_adj or r_app
+
+      # Track direction: if APPROACHING fires, car is coming from behind
+      if l_app:
+        self.left_bsm_approaching_seen = True
+      if r_app:
+        self.right_bsm_approaching_seen = True
+
+      # Left side hysteresis
+      if l_active:
+        self.left_bsm_hold_timer = 0.0
+      else:
+        if self.prev_left_adjacent or self.prev_left_approaching:
+          # Signal just went clear - pick hold time based on direction
+          if self.left_bsm_approaching_seen:
+            # APPROACHING seen before: car came from behind and passed ahead (front-bound)
+            self.left_bsm_hold_timer = self.bsm_hold_front_bound
+          else:
+            # No APPROACHING: car came from ahead and dropped back (rear-bound)
+            self.left_bsm_hold_timer = self.bsm_hold_rear_bound
+          self.left_bsm_approaching_seen = False
+        elif self.left_bsm_hold_timer > 0:
+          self.left_bsm_hold_timer = max(self.left_bsm_hold_timer - DT_CTRL, 0.0)
+
+      # Right side hysteresis
+      if r_active:
+        self.right_bsm_hold_timer = 0.0
+      else:
+        if self.prev_right_adjacent or self.prev_right_approaching:
+          self.right_bsm_hold_timer = self.bsm_hold_front_bound if self.right_bsm_approaching_seen else self.bsm_hold_rear_bound
+          self.right_bsm_approaching_seen = False
+        elif self.right_bsm_hold_timer > 0:
+          self.right_bsm_hold_timer = max(self.right_bsm_hold_timer - DT_CTRL, 0.0)
+
+      self.prev_left_adjacent = l_adj
+      self.prev_left_approaching = l_app
+      self.prev_right_adjacent = r_adj
+      self.prev_right_approaching = r_app
+
+      ret.leftBlindspot = l_active or self.left_bsm_hold_timer > 0
+      ret.rightBlindspot = r_active or self.right_bsm_hold_timer > 0
 
     if self.CP.carFingerprint != CAR.TOYOTA_PRIUS_V:
       self.lkas_hud = copy.copy(cp_cam.vl["LKAS_HUD"])
