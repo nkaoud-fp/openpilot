@@ -55,7 +55,10 @@ class PhantomLeadTracker:
       current_vRel = self.sim_lead_speed - v_ego
       self.sim_dRel += current_vRel * dt
 
-      if self.sim_time >= PHANTOM_LEAD_MAX_SIM_TIME or self.sim_dRel < PHANTOM_LEAD_ALONGSIDE_REAR:
+      behind_us = self.sim_dRel < PHANTOM_LEAD_ALONGSIDE_REAR
+      far_away = abs(self.sim_dRel) > 5.0
+      timed_out = self.sim_time >= PHANTOM_LEAD_MAX_SIM_TIME and far_away
+      if behind_us or timed_out:
         self.simulating = False
 
     else:
