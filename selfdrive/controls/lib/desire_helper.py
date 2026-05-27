@@ -58,7 +58,8 @@ class PhantomLeadTracker:
       behind_us = self.sim_dRel < PHANTOM_LEAD_ALONGSIDE_REAR
       far_away = abs(self.sim_dRel) > 5.0
       timed_out = self.sim_time >= PHANTOM_LEAD_MAX_SIM_TIME and far_away
-      if behind_us or timed_out:
+      hard_limit = self.sim_time >= 25.0
+      if behind_us or timed_out or hard_limit:
         self.simulating = False
 
     else:
