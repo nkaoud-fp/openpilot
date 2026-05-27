@@ -256,7 +256,7 @@ class BSMAnalyzer:
         # --- Transition log ---
         if self.transition_log:
             print("\n" + "-" * 70)
-            print(f"  TRANSITION LOG (unknown bits changed) — {len(self.transition_log)} events")
+            print(f"  TRANSITION LOG (unknown bits changed) -- {len(self.transition_log)} events")
             print("-" * 70)
             for i, entry in enumerate(self.transition_log[:50]):
                 active = [n for n, v in entry['known_state'].items() if v == 1]
@@ -326,7 +326,7 @@ class BSMAnalyzer:
                             else:
                                 val_diffs = [field_vals[i+1] - field_vals[i] for i in range(len(field_vals)-1)]
                                 if len(set(val_diffs)) <= 3:
-                                    print(f"    *** Regular spacing — possible DISTANCE or LEVEL ***")
+                                    print(f"    *** Regular spacing -- possible DISTANCE or LEVEL ***")
 
         print("\n" + "=" * 70)
         print("  END OF REPORT")
