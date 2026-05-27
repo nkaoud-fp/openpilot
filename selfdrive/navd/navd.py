@@ -948,32 +948,6 @@ class RouteEngine:
 
     return "none", None, None
 
-  def navigation_test_has_intermediate_exit_or_fork(self, current_direction, distance_to_maneuver_along_geometry):
-    if self.route is None or self.step_idx is None or current_direction not in ("left", "right"):
-      return False
-
-    cumulative_distance = distance_to_maneuver_along_geometry
-    for i in range(self.step_idx + 1, len(self.route)):
-      cumulative_distance += self.route[i]['distance']
-      instruction = parse_banner_instructions(self.route[i]['bannerInstructions'], cumulative_distance)
-      if instruction is None:
-        continue
-
-      step_geometry = self.route_geometry[i] if (self.route_geometry is not None and i < len(self.route_geometry)) else None
-      step_next_geometry = self.route_geometry[i + 1] if (self.route_geometry is not None and i + 1 < len(self.route_geometry)) else None
-      maneuver_class = self.navigation_test_maneuver_class(instruction, step_geometry, step_next_geometry)
-
-      if not self.navigation_test_is_lane_positioning_maneuver(maneuver_class):
-        continue
-
-      direction = self.navigation_test_maneuver_direction(instruction, step_geometry, step_next_geometry)
-      if direction == current_direction:
-        return True
-      if direction != "none":
-        return False
-
-    return False
-
   def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
     next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry)) else None
     direction = self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
@@ -1021,12 +995,7 @@ class RouteEngine:
 
     self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
 
-    has_intermediate = self.navigation_test_has_intermediate_exit_or_fork(direction, distance_to_maneuver_along_geometry)
-    if has_intermediate:
-      lanes_to_edge = self.navigation_test_lanes_to_target_edge(direction)
-      if lanes_to_edge is not None and lanes_to_edge <= 1:
-        return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, "intermediateEdgeReached"
-    elif self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
+    if self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
       return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, "targetEdgeReached"
 
     if conflict_soon and maneuver_class in ("highway_exit", "highway_fork", "highway_merge") and distance_to_maneuver_along_geometry > standard_exit_prep_distance:
@@ -1624,8 +1593,6 @@ class RouteEngine:
             navigation_test_command_max_lane_changes = 1
         elif navigation_test_action == "laneChange":
           navigation_test_command_max_lane_changes = self.navigation_test_max_lane_changes_for_direction(navigation_test_direction)
-          if self.navigation_test_has_intermediate_exit_or_fork(navigation_test_direction, distance_to_maneuver_along_geometry):
-            navigation_test_command_max_lane_changes = max(1, navigation_test_command_max_lane_changes - 1)
 
         next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry, maneuver_class)
