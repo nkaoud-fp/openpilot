@@ -22,39 +22,38 @@ PHANTOM_LEAD_ALONGSIDE_REAR = -5.0   # meters: rear boundary of "alongside" zone
 class PhantomLeadTracker:
   """Tracks adjacent radar leads after they drop off radar.
 
-  When a lead that was tracked for >= 1.5s drops, we simulate its position
-  using its last known relative speed. If the simulated position falls in the
-  alongside zone (+4m to -5m), we report a blindspot detection.
+  When a lead that was tracked for >= 1.5s drops, we snapshot its absolute
+  speed and simulate its position relative to us. Each frame we recompute
+  vRel from (lead_abs_speed - current vEgo), so our own speed changes
+  (braking, accelerating) are reflected in the simulation.
   """
   def __init__(self):
-    self.tracking_time = 0.0       # how long the current radar lead has been active
+    self.tracking_time = 0.0
     self.prev_status = False
 
     self.simulating = False
     self.sim_time = 0.0
     self.sim_dRel = 0.0
-    self.sim_vRel = 0.0
+    self.sim_lead_speed = 0.0  # absolute speed of lead at drop time
 
-  def update(self, lead_status, lead_dRel, lead_vRel, dt):
+  def update(self, lead_status, lead_dRel, lead_vRel, v_ego, dt):
     if lead_status:
-      # Lead is actively tracked by radar
       self.tracking_time += dt
       self.simulating = False
       self.sim_time = 0.0
 
     elif self.prev_status and not lead_status:
-      # Lead just dropped off radar
       if self.tracking_time >= PHANTOM_LEAD_MIN_TRACK_TIME:
         self.simulating = True
         self.sim_time = 0.0
         self.sim_dRel = lead_dRel
-        self.sim_vRel = lead_vRel
+        self.sim_lead_speed = v_ego + lead_vRel
       self.tracking_time = 0.0
 
     elif self.simulating:
-      # Advance simulation
       self.sim_time += dt
-      self.sim_dRel += self.sim_vRel * dt
+      current_vRel = self.sim_lead_speed - v_ego
+      self.sim_dRel += current_vRel * dt
 
       if self.sim_time >= PHANTOM_LEAD_MAX_SIM_TIME or self.sim_dRel < PHANTOM_LEAD_ALONGSIDE_REAR:
         self.simulating = False
@@ -339,8 +338,8 @@ class DesireHelper:
     # Update phantom lead trackers with current adjacent radar lead data
     lead_left = frogpilotRadarState.leadLeft
     lead_right = frogpilotRadarState.leadRight
-    self.phantom_lead_left.update(bool(lead_left.status), float(lead_left.dRel), float(lead_left.vRel), DT_MDL)
-    self.phantom_lead_right.update(bool(lead_right.status), float(lead_right.dRel), float(lead_right.vRel), DT_MDL)
+    self.phantom_lead_left.update(bool(lead_left.status), float(lead_left.dRel), float(lead_left.vRel), v_ego, DT_MDL)
+    self.phantom_lead_right.update(bool(lead_right.status), float(lead_right.dRel), float(lead_right.vRel), v_ego, DT_MDL)
 
     if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX or not frogpilot_toggles.lane_changes:
       self.lane_change_state = LaneChangeState.off
