@@ -211,6 +211,7 @@ class RouteEngine:
     self.navigation_test_post_exit_recovery_command_started_at = 0.0
     self.navigation_test_post_exit_recovery_done = True
     self.navigation_test_lane_samples = deque()
+    self.navigation_test_step_intermediate_exits = []
 
     # Threading variables
     self.route_thread = None
@@ -948,6 +949,16 @@ class RouteEngine:
 
     return "none", None, None
 
+  def navigation_test_has_intermediate_exit_ahead(self, direction, distance_to_maneuver_along_geometry):
+    if self.step_idx is None or direction not in ("left", "right"):
+      return False
+    if self.step_idx >= len(self.navigation_test_step_intermediate_exits):
+      return False
+    for exit_info in self.navigation_test_step_intermediate_exits[self.step_idx]:
+      if exit_info["side"] == direction and exit_info["dist_to_maneuver"] < distance_to_maneuver_along_geometry:
+        return True
+    return False
+
   def navigation_test_strategy(self, instruction, geometry, distance_to_maneuver_along_geometry, command_distance, next_maneuver_direction="none", next_maneuver_distance_after_current=None):
     next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx is not None and self.step_idx + 1 < len(self.route_geometry)) else None
     direction = self.navigation_test_maneuver_direction(instruction, geometry, next_geometry)
@@ -995,7 +1006,12 @@ class RouteEngine:
 
     self.update_navigation_test_exit_migration(instruction, geometry, direction, distance_to_maneuver_along_geometry)
 
-    if self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
+    has_intermediate = self.navigation_test_has_intermediate_exit_ahead(direction, distance_to_maneuver_along_geometry)
+    if has_intermediate:
+      lanes_to_edge = self.navigation_test_lanes_to_target_edge(direction)
+      if lanes_to_edge is not None and lanes_to_edge <= 1:
+        return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, "intermediateExitEdgeHold"
+    elif self.navigation_test_target_edge_reached(target_lane_zone, lane_belief):
       return "upcoming", direction, display_direction, "targetEdgeHold", active_prep_distance, "targetEdgeReached"
 
     if conflict_soon and maneuver_class in ("highway_exit", "highway_fork", "highway_merge") and distance_to_maneuver_along_geometry > standard_exit_prep_distance:
@@ -1495,6 +1511,39 @@ class RouteEngine:
         self.route_geometry.append(coords)
         maxspeed_idx -= 1 
 
+      self.navigation_test_step_intermediate_exits = []
+      for step_idx, step in enumerate(self.route):
+        step_exits = []
+        intersections = step.get("intersections", [])
+        step_geom = self.route_geometry[step_idx] if step_idx < len(self.route_geometry) else []
+        cumulative_dists = [0.0]
+        for gi in range(1, len(step_geom)):
+          cumulative_dists.append(cumulative_dists[-1] + step_geom[gi - 1].distance_to(step_geom[gi]))
+        step_total_dist = cumulative_dists[-1] if cumulative_dists else 0.0
+
+        for idx, intersection in enumerate(intersections):
+          if idx == len(intersections) - 1:
+            break
+          classes = intersection.get("classes", [])
+          if "motorway_link" not in classes:
+            continue
+          bearings = intersection.get("bearings", [])
+          entry = intersection.get("entry", [])
+          out_idx = intersection.get("out", None)
+          geom_idx = intersection.get("geometry_index", 0)
+          if out_idx is None or not bearings or len(bearings) != len(entry):
+            continue
+          route_bearing = bearings[out_idx]
+          for i, (b, e) in enumerate(zip(bearings, entry)):
+            if not e or i == out_idx:
+              continue
+            relative = (b - route_bearing + 360) % 360
+            side = "right" if 0 < relative < 180 else "left"
+            dist_from_start = cumulative_dists[geom_idx] if geom_idx < len(cumulative_dists) else 0.0
+            dist_to_maneuver = max(0.0, step_total_dist - dist_from_start)
+            step_exits.append({"side": side, "dist_to_maneuver": dist_to_maneuver})
+        self.navigation_test_step_intermediate_exits.append(step_exits)
+
       self.step_idx = 0
       self.navigation_test_route_generation += 1
       self.reset_navigation_test_post_exit_recovery()
@@ -1593,6 +1642,8 @@ class RouteEngine:
             navigation_test_command_max_lane_changes = 1
         elif navigation_test_action == "laneChange":
           navigation_test_command_max_lane_changes = self.navigation_test_max_lane_changes_for_direction(navigation_test_direction)
+          if self.navigation_test_has_intermediate_exit_ahead(navigation_test_direction, distance_to_maneuver_along_geometry):
+            navigation_test_command_max_lane_changes = max(1, navigation_test_command_max_lane_changes - 1)
 
         next_geometry = self.route_geometry[self.step_idx + 1] if (self.route_geometry is not None and self.step_idx + 1 < len(self.route_geometry)) else None
         navigation_test_target_speed, navigation_test_target_speed_source = self.navigation_test_maneuver_target_speed(instruction, geometry, maneuver_class)
