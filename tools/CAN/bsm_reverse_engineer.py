@@ -363,7 +363,7 @@ def monitor_live(analyzer, duration=None):
     """Monitor BSM on live CAN bus (run on comma device)."""
     import cereal.messaging as messaging
 
-    can_sock = messaging.sub_sock('can', timeout=100)
+    can_sock = messaging.sub_sock('can')
     print(f"\nMonitoring BSM (0x3F6) on live CAN bus...")
     if duration:
         print(f"Will run for {duration} seconds.")
@@ -374,13 +374,11 @@ def monitor_live(analyzer, duration=None):
 
     try:
         while True:
-            can_msgs = messaging.drain_sock_raw(can_sock)
-            for raw_msg in can_msgs:
-                import cereal
-                evt = cereal.log.Event.from_bytes(raw_msg)
-                for can_msg in evt.can:
+            can_msgs = messaging.drain_sock(can_sock, wait_for_one=True)
+            for msg in can_msgs:
+                for can_msg in msg.can:
                     if can_msg.address == BSM_CAN_ID and len(can_msg.dat) == BSM_MSG_LEN:
-                        analyzer.add_sample(can_msg.dat, time.monotonic() - start)
+                        analyzer.add_sample(bytes(can_msg.dat), time.monotonic() - start)
 
             now = time.monotonic()
             if now - last_print > 2.0:
