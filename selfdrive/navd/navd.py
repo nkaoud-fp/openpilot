@@ -1394,7 +1394,8 @@ class RouteEngine:
       resp.raise_for_status()
 
       r = resp.json()
-      r1 = resp.json()
+      #r1 = resp.json()
+      r1 = r
       
       if not r.get('routes'):
         if self.params.get_bool("NavigationTestControl"):
