@@ -566,6 +566,7 @@ class RouteEngine:
 
     text_type = "" if instruction is None else instruction.get("maneuverType", "").lower()
     text_primary = "" if instruction is None else instruction.get("maneuverPrimaryText", "").lower()
+    text_modifier = "" if instruction is None else instruction.get("maneuverModifier", "").lower()
     text = f"{text_type} {text_primary}"
 
     if "arrive" in text or "destination" in text:
@@ -574,6 +575,8 @@ class RouteEngine:
       return "roundabout"
     if "merge" in text_type or "on ramp" in text or "merge" in text_primary:
       return "highway_merge"
+    if "uturn" in text_modifier:
+      return "uturn"
 
     angle, valid = self.navigation_test_compute_maneuver_angle(geometry, next_geometry)
     if not valid:
@@ -1560,7 +1563,7 @@ class RouteEngine:
             break
           streets_v8 = intersection.get("mapbox_streets_v8") or {}
           road_class = streets_v8.get("class", "") if isinstance(streets_v8, dict) else ""
-          if road_class != "motorway_link":
+          if road_class not in ("motorway_link", "trunk_link", "primary_link", "secondary_link", "tertiary_link"):
             continue
           bearings = intersection.get("bearings", [])
           entry = intersection.get("entry", [])
