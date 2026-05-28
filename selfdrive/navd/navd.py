@@ -1512,6 +1512,7 @@ class RouteEngine:
         maxspeed_idx -= 1 
 
       self.navigation_test_step_intermediate_exits = []
+      step_geom_offset = 0
       for step_idx, step in enumerate(self.route):
         step_exits = []
         intersections = step.get("intersections", [])
@@ -1530,8 +1531,11 @@ class RouteEngine:
           bearings = intersection.get("bearings", [])
           entry = intersection.get("entry", [])
           out_idx = intersection.get("out", None)
-          geom_idx = intersection.get("geometry_index", 0)
+          leg_geom_idx = intersection.get("geometry_index", 0)
+          local_geom_idx = leg_geom_idx - step_geom_offset
           if out_idx is None or not bearings or len(bearings) != len(entry):
+            continue
+          if local_geom_idx < 0 or local_geom_idx >= len(cumulative_dists):
             continue
           route_bearing = bearings[out_idx]
           for i, (b, e) in enumerate(zip(bearings, entry)):
@@ -1539,10 +1543,11 @@ class RouteEngine:
               continue
             relative = (b - route_bearing + 360) % 360
             side = "right" if 0 < relative < 180 else "left"
-            dist_from_start = cumulative_dists[geom_idx] if geom_idx < len(cumulative_dists) else 0.0
+            dist_from_start = cumulative_dists[local_geom_idx]
             dist_to_maneuver = max(0.0, step_total_dist - dist_from_start)
             step_exits.append({"side": side, "dist_to_maneuver": dist_to_maneuver})
         self.navigation_test_step_intermediate_exits.append(step_exits)
+        step_geom_offset += max(0, len(step_geom) - 1)
 
       self.step_idx = 0
       self.navigation_test_route_generation += 1
