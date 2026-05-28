@@ -158,6 +158,9 @@ NAVIGATION_TEST_DEBUG_LOG_FIELDS = [
   "bearing_misalign",
   "recompute_reason",
   "route_generation",
+  "intermediate_exit_total",
+  "intermediate_exit_same_side_ahead",
+  "intermediate_exit_active",
 ]
 
 
@@ -1204,6 +1207,19 @@ class RouteEngine:
 
     destination_id = self.params.get("NavigationTestSelectedDestination", encoding="utf8") or "home"
     migration_age = time.monotonic() - self.navigation_test_exit_migration_started_at if self.navigation_test_exit_migration_key is not None else 0.0
+
+    intermediate_exit_total = 0
+    intermediate_exit_same_side_ahead = 0
+    intermediate_exit_active = False
+    if self.step_idx is not None and self.step_idx < len(self.navigation_test_step_intermediate_exits):
+      step_exits = self.navigation_test_step_intermediate_exits[self.step_idx]
+      intermediate_exit_total = len(step_exits)
+      if direction in ("left", "right"):
+        for exit_info in step_exits:
+          if exit_info["side"] == direction and exit_info["dist_to_maneuver"] < distance_to_maneuver_along_geometry:
+            intermediate_exit_same_side_ahead += 1
+        intermediate_exit_active = intermediate_exit_same_side_ahead > 0
+
     row = {
       "time": f"{time.time():.3f}",
       "gps_ok": self.gps_ok,
@@ -1276,6 +1292,9 @@ class RouteEngine:
       "bearing_misalign": self.bearing_misalign_counter,
       "recompute_reason": self.navigation_test_recompute_reason,
       "route_generation": self.navigation_test_route_generation,
+      "intermediate_exit_total": intermediate_exit_total,
+      "intermediate_exit_same_side_ahead": intermediate_exit_same_side_ahead,
+      "intermediate_exit_active": intermediate_exit_active,
     }
 
     try:
@@ -1291,6 +1310,20 @@ class RouteEngine:
         writer.writerow(row)
     except OSError:
       cloudlog.exception("navigation_test_debug.failed_to_write")
+
+  def save_navigation_test_route_response(self, response):
+    if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
+      return
+    try:
+      debug_log_path = self.navigation_test_debug_log_path()
+      if not debug_log_path:
+        return
+      base, _ = os.path.splitext(debug_log_path)
+      response_path = f"{base}.mapbox.{self.navigation_test_route_generation:03d}.json"
+      with open(response_path, "w") as response_file:
+        json.dump(response, response_file)
+    except (OSError, TypeError, ValueError):
+      cloudlog.exception("navigation_test_route_response.save_failed")
 
   def navigation_test_debug_log_path(self):
     if self.navigation_test_debug_log_override_path:
@@ -1553,6 +1586,7 @@ class RouteEngine:
       self.step_idx = 0
       self.navigation_test_route_generation += 1
       self.reset_navigation_test_post_exit_recovery()
+      self.save_navigation_test_route_response(r)
     else:
       cloudlog.warning("Got empty route response in applied data")
       self.clear_route()

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import glob
 import os
 import smtplib
 import ssl
@@ -135,6 +136,15 @@ def send_pending_navigation_test_log():
   with open(pending_log, "rb") as log_file:
     message.add_attachment(log_file.read(), maintype="text", subtype="csv", filename=os.path.basename(pending_log))
 
+  log_base, _ = os.path.splitext(pending_log)
+  mapbox_response_paths = sorted(glob.glob(f"{log_base}.mapbox.*.json"))
+  for response_path in mapbox_response_paths:
+    try:
+      with open(response_path, "rb") as response_file:
+        message.add_attachment(response_file.read(), maintype="application", subtype="json", filename=os.path.basename(response_path))
+    except OSError:
+      cloudlog.exception("navigation_test_email.mapbox_attach_failed")
+
   timeout = 20
   try:
     if smtp_port == 465:
@@ -156,14 +166,24 @@ def send_pending_navigation_test_log():
     _set_status(params, f"Send failed for {os.path.basename(pending_log)}")
     return False
 
+  cleanup_failed = False
   try:
     os.remove(pending_log)
   except OSError:
     cloudlog.exception("navigation_test_email.cleanup_failed")
-    _set_status(params, f"Sent {os.path.basename(pending_log)} but could not delete the log file")
-    params.remove("NavigationTestEmailPendingLog")
-    return False
+    cleanup_failed = True
+
+  for response_path in mapbox_response_paths:
+    try:
+      os.remove(response_path)
+    except OSError:
+      cloudlog.exception("navigation_test_email.mapbox_cleanup_failed")
+      cleanup_failed = True
 
   params.remove("NavigationTestEmailPendingLog")
-  _set_status(params, f"Sent and deleted {os.path.basename(pending_log)}")
+  if cleanup_failed:
+    _set_status(params, f"Sent {os.path.basename(pending_log)} but could not delete one or more files")
+    return False
+
+  _set_status(params, f"Sent and deleted {os.path.basename(pending_log)} (+{len(mapbox_response_paths)} mapbox)")
   return True
