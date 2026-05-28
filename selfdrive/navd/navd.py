@@ -1533,7 +1533,7 @@ class RouteEngine:
           out_idx = intersection.get("out", None)
           leg_geom_idx = intersection.get("geometry_index", 0)
           local_geom_idx = leg_geom_idx - step_geom_offset
-          if out_idx is None or not bearings or len(bearings) != len(entry) or out_idx >= len(bearings):
+          if out_idx is None or not bearings or len(bearings) != len(entry) or out_idx < 0 or out_idx >= len(bearings):
             continue
           if local_geom_idx < 0 or local_geom_idx >= len(cumulative_dists):
             continue
