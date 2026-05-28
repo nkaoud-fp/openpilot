@@ -151,17 +151,19 @@ class FrogPilotVCruise:
     is_sharp_turn = display_direction in ("sharp_left", "sharp_right", "uturn")
 
     strategy_phase = command_json.get("strategyPhase", "none")
+    target_speed_source = command_json.get("targetSpeedSource", "none")
     turn_related_phase = strategy_phase in ("turn", "turnLanePositioning", "targetEdgeHold", "maneuverLockout")
+    turn_slowdown_active = turn_related_phase or target_speed_source == "configTurnSlowdown"
     turn_slowdown_start_distance = max(
       0.0,
       float(getattr(frogpilot_toggles, "navigation_test_turn_slowdown_start_distance", 0.0)),
     )
-    if turn_related_phase and turn_slowdown_start_distance > 0.0 and distance > turn_slowdown_start_distance:
+    if turn_slowdown_active and turn_slowdown_start_distance > 0.0 and distance > turn_slowdown_start_distance:
       return 0
 
     if action == "laneChange" or "Exit" in strategy_phase:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_EXIT_TARGET_SPEED
-    elif action in ("turn", "upcoming") and target_speed_from_nav > 0.0 and turn_related_phase:
+    elif action in ("turn", "upcoming") and target_speed_from_nav > 0.0 and turn_slowdown_active:
       target_speed = target_speed_from_nav
     elif action == "turn" and is_sharp_turn:
       target_speed = target_speed_from_nav if target_speed_from_nav > 0.0 else NAVIGATION_TURN_TARGET_SPEED_SHARP
