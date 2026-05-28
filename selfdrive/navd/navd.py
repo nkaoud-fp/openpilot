@@ -1043,6 +1043,24 @@ class RouteEngine:
     self.reset_navigation_test_exit_migration()
     return "upcoming", direction, display_direction, "upcoming", command_distance, strategy_constraint
 
+  def navigation_test_next_step_turn_slowdown(self):
+    if self.route is None or self.route_geometry is None or self.step_idx is None:
+      return 0.0, "none"
+    next_idx = self.step_idx + 1
+    if next_idx >= len(self.route):
+      return 0.0, "none"
+    next_step = self.route[next_idx]
+    next_instruction = parse_banner_instructions(next_step.get("bannerInstructions", []), next_step.get("distance", 0))
+    if next_instruction is None:
+      return 0.0, "none"
+    next_geom = self.route_geometry[next_idx] if next_idx < len(self.route_geometry) else None
+    next_next_geom = self.route_geometry[next_idx + 1] if next_idx + 1 < len(self.route_geometry) else None
+    next_class = self.navigation_test_maneuver_class(next_instruction, next_geom, next_next_geom)
+    if next_class in ("normal_turn", "uturn"):
+      configured_turn_speed = max(0.0, float(getattr(self.frogpilot_toggles, "navigation_test_turn_slowdown_speed", TURN_SLOWDOWN_MIN_SPEED_MS)))
+      return configured_turn_speed, "configTurnSlowdown"
+    return 0.0, "none"
+
   def navigation_test_maneuver_target_speed(self, instruction, current_geometry, maneuver_class=None):
     if instruction is None:
       return 0.0, "none"
@@ -1073,11 +1091,16 @@ class RouteEngine:
         if speed and speed > 0.0:
           speed_candidates.append(float(speed))
 
-    if not speed_candidates:
-      return 0.0, "none"
+    annotation_target = min(speed_candidates) if speed_candidates else 0.0
 
-    # Bias conservative around maneuver transitions by taking the minimum nearby annotated speed.
-    return min(speed_candidates), "annotationNearbyMin"
+    # If the next step is a sharp turn, prefer slowing for it preemptively.
+    next_turn_target, next_turn_source = self.navigation_test_next_step_turn_slowdown()
+    if next_turn_target > 0.0 and (annotation_target <= 0.0 or next_turn_target < annotation_target):
+      return next_turn_target, next_turn_source
+
+    if annotation_target > 0.0:
+      return annotation_target, "annotationNearbyMin"
+    return 0.0, "none"
 
   def navigation_test_cross_track_error(self):
     if self.route_geometry is None or self.last_position is None:
