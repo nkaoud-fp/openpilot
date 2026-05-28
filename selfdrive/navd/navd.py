@@ -1525,8 +1525,9 @@ class RouteEngine:
         for idx, intersection in enumerate(intersections):
           if idx == len(intersections) - 1:
             break
-          classes = intersection.get("classes", [])
-          if "motorway_link" not in classes:
+          streets_v8 = intersection.get("mapbox_streets_v8") or {}
+          road_class = streets_v8.get("class", "") if isinstance(streets_v8, dict) else ""
+          if road_class not in ("motorway", "motorway_link"):
             continue
           bearings = intersection.get("bearings", [])
           entry = intersection.get("entry", [])
