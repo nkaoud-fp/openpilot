@@ -1312,7 +1312,7 @@ class RouteEngine:
       cloudlog.exception("navigation_test_debug.failed_to_write")
 
   def save_navigation_test_route_response(self, response):
-    if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestDriveLogging"):
+    if not self.params.get_bool("NavigationTestControl") or not self.params.get_bool("NavigationTestAutoEmail"):
       return
     try:
       debug_log_path = self.navigation_test_debug_log_path()
