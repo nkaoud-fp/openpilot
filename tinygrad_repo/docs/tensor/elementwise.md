@@ -6,6 +6,7 @@ Elementwise ops operate on a per element basis. They don't change the shape of t
 ::: tinygrad.Tensor.neg
 ::: tinygrad.Tensor.log
 ::: tinygrad.Tensor.log2
+::: tinygrad.Tensor.log10
 ::: tinygrad.Tensor.exp
 ::: tinygrad.Tensor.exp2
 ::: tinygrad.Tensor.sqrt
@@ -65,8 +66,8 @@ Elementwise ops operate on a per element basis. They don't change the shape of t
 ::: tinygrad.Tensor.sub
 ::: tinygrad.Tensor.mul
 ::: tinygrad.Tensor.div
-::: tinygrad.Tensor.idiv
 ::: tinygrad.Tensor.mod
+::: tinygrad.Tensor.fmod
 ::: tinygrad.Tensor.bitwise_xor
 ::: tinygrad.Tensor.bitwise_and
 ::: tinygrad.Tensor.bitwise_or
@@ -88,3 +89,7 @@ Elementwise ops operate on a per element basis. They don't change the shape of t
 ::: tinygrad.Tensor.half
 ::: tinygrad.Tensor.int
 ::: tinygrad.Tensor.bool
+::: tinygrad.Tensor.bfloat16
+::: tinygrad.Tensor.double
+::: tinygrad.Tensor.long
+::: tinygrad.Tensor.short

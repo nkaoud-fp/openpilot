@@ -19,8 +19,8 @@ cifar_std = [0.24703225141799082, 0.24348516474564, 0.26158783926049628]
 BS, STEPS = getenv("BS", 512), getenv("STEPS", 1000)
 EVAL_BS = getenv("EVAL_BS", BS)
 GPUS = [f'{Device.DEFAULT}:{i}' for i in range(getenv("GPUS", 1))]
-assert BS % len(GPUS) == 0, f"{BS=} is not a multiple of {len(GPUS)=}, uneven multi GPU is slow"
-assert EVAL_BS % len(GPUS) == 0, f"{EVAL_BS=} is not a multiple of {len(GPUS)=}, uneven multi GPU is slow"
+assert BS % len(GPUS) == 0, f"{BS=} is not a multiple of {len(GPUS)=}"
+assert EVAL_BS % len(GPUS) == 0, f"{EVAL_BS=} is not a multiple of {len(GPUS)=}"
 
 class UnsyncedBatchNorm:
   def __init__(self, sz:int, eps=1e-5, affine=True, track_running_stats=True, momentum=0.1, num_devices=len(GPUS)):
@@ -30,9 +30,9 @@ class UnsyncedBatchNorm:
     if affine: self.weight, self.bias = Tensor.ones(sz, dtype=dtypes.float32), Tensor.zeros(sz, dtype=dtypes.float32)
     else: self.weight, self.bias = None, None
 
-    self.running_mean = Tensor.zeros(num_devices, sz, dtype=dtypes.float32, requires_grad=False)
-    self.running_var = Tensor.ones(num_devices, sz, dtype=dtypes.float32, requires_grad=False)
-    self.num_batches_tracked = Tensor.zeros(1, dtype=dtypes.int, requires_grad=False)
+    self.running_mean = Tensor.zeros(num_devices, sz, dtype=dtypes.float32).is_param_(False)
+    self.running_var = Tensor.ones(num_devices, sz, dtype=dtypes.float32).is_param_(False)
+    self.num_batches_tracked = Tensor.zeros(1, dtype=dtypes.int).is_param_(False)
 
   def __call__(self, x:Tensor):
     xr = x.reshape(self.num_devices, -1, *x.shape[1:]).cast(dtypes.float32)
@@ -68,8 +68,7 @@ class UnsyncedBatchNorm:
 class BatchNorm(nn.BatchNorm2d if getenv("SYNCBN") else UnsyncedBatchNorm):
   def __init__(self, num_features):
     super().__init__(num_features, track_running_stats=False, eps=1e-12, momentum=0.85, affine=True)
-    self.weight.requires_grad = False
-    self.bias.requires_grad = True
+    self.weight.is_param_(False)
 
 class ConvGroup:
   def __init__(self, channels_in, channels_out):
@@ -145,7 +144,6 @@ hyp = {
   },
 }
 
-@Context(FUSE_ARANGE=getenv("FUSE_ARANGE", 1))
 def train_cifar():
 
   def set_seed(seed):
@@ -173,7 +171,7 @@ def train_cifar():
     Λ, V = _eigens(_patches(X.float().numpy()))
     W = V/np.sqrt(Λ+1e-2)[:,None,None,None]
 
-    return Tensor(W.astype(np.float32), requires_grad=False).cast(dtypes.default_float)
+    return Tensor(W.astype(np.float32)).cast(dtypes.default_float).is_param_(False)
 
   # ========== Loss ==========
   def cross_entropy(x:Tensor, y:Tensor, reduction:str='mean', label_smoothing:float=0.0) -> Tensor:
@@ -229,7 +227,8 @@ def train_cifar():
     if getenv("RANDOM_CROP", 1):
       X = random_crop(X, crop_size=32)
     if getenv("RANDOM_FLIP", 1):
-      X = (Tensor.rand(X.shape[0],1,1,1) < 0.5).where(X.flip(-1), X) # flip LR
+      # NOTE: RANGEIFY=1 needs this contiguous or the X[perms] is very slow
+      X = (Tensor.rand(X.shape[0],1,1,1) < 0.5).where(X.flip(-1), X).contiguous() # flip LR
     X, Y = X[perms], Y[perms]
     return X, Y, *cutmix(X, Y, perms, mask_size=hyp['net']['cutmix_size'])
 
@@ -264,7 +263,6 @@ def train_cifar():
       # self.model_ema = copy.deepcopy(net) # won't work for opencl due to unpickeable pyopencl._cl.Buffer
       self.net_ema = SpeedyResNet(w)
       for net_ema_param, net_param in zip(get_state_dict(self.net_ema).values(), get_state_dict(net).values()):
-        net_ema_param.requires_grad = False
         net_ema_param.assign(net_param.numpy())
 
     @TinyJit
@@ -307,7 +305,7 @@ def train_cifar():
   params_bias = []
   params_non_bias = []
   for params in params_dict:
-    if params_dict[params].requires_grad is not False:
+    if params_dict[params].is_param:
       if 'bias' in params:
         params_bias.append(params_dict[params])
       else:
@@ -355,7 +353,7 @@ def train_cifar():
 
   # https://www.anandtech.com/show/16727/nvidia-announces-geforce-rtx-3080-ti-3070-ti-upgraded-cards-coming-in-june
   # 136 TFLOPS is the theoretical max w float16 on 3080 Ti
-
+  step_times = []
   model_ema: Optional[modelEMA] = None
   projected_ema_decay_val = hyp['ema']['decay_base'] ** hyp['ema']['every_n_steps']
   i = 0
@@ -413,11 +411,16 @@ def train_cifar():
           model_ema.update(model, Tensor([projected_ema_decay_val*(i/STEPS)**hyp['ema']['decay_pow']]))
 
       cl = time.monotonic()
+      step_times.append((cl-st)*1000.0)
       device_str = loss.device if isinstance(loss.device, str) else f"{loss.device[0]} * {len(loss.device)}"
       #  53  221.74 ms run,    2.22 ms python,  219.52 ms CL,  803.39 loss, 0.000807 LR, 4.66 GB used,   3042.49 GFLOPS,    674.65 GOPS
       print(f"{i:3d} {(cl-st)*1000.0:7.2f} ms run, {(et-st)*1000.0:7.2f} ms python, {(cl-et)*1000.0:7.2f} ms {device_str}, {loss_cpu:7.2f} loss, {opt_non_bias.lr.numpy()[0]:.6f} LR, {GlobalCounters.mem_used/1e9:.2f} GB used, {GlobalCounters.global_ops*1e-9/(cl-st):9.2f} GFLOPS, {GlobalCounters.global_ops*1e-9:9.2f} GOPS")
       st = cl
       i += 1
+
+  if (assert_time:=getenv("ASSERT_MIN_STEP_TIME")):
+    min_time = min(step_times)
+    assert min_time < assert_time, f"Speed regression, expected min step time of < {assert_time} ms but took: {min_time} ms"
 
   # verify eval acc
   if target := getenv("TARGET_EVAL_ACC_PCT", 0.0):

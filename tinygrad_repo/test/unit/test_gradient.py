@@ -1,67 +1,8 @@
-from typing import Callable
-import unittest, math
-import torch
+import unittest
 import numpy as np
 from tinygrad import Tensor
 from tinygrad.dtype import dtypes
-from tinygrad.uop.ops import UOp
-from tinygrad.gradient import compute_gradient
-
-class TestGradient(unittest.TestCase):
-  def _cmp_nan_okay(self, x, y):
-    if math.isnan(x) and math.isnan(y): return
-    self.assertAlmostEqual(x, y, places=5)
-
-  def _test_one_input_function(self, f:Callable, jf:Callable|None=None):
-    if jf is None: jf = f
-    x = UOp.variable('x', -math.inf, math.inf, dtype=dtypes.float)
-    gx = compute_gradient(f(x), UOp.const(dtypes.float, 1.0), set([x]))[x]
-
-    for val in [-5., -2.0, 0.0, 2.0, 5.]:
-      tg_out = gx.substitute({x: x.const_like(val)}).ssimplify()
-      tx = torch.tensor([val], dtype=torch.float, requires_grad=True)
-      torch_out = torch.autograd.grad(jf(tx), tx)[0].item()
-      self._cmp_nan_okay(tg_out, torch_out)
-
-  def _test_two_input_function(self, f:Callable, jf:Callable|None=None):
-    if jf is None: jf = f
-    x = UOp.variable('x', -math.inf, math.inf, dtype=dtypes.float)
-    y = UOp.variable('y', -math.inf, math.inf, dtype=dtypes.float)
-    grads = compute_gradient(f(x, y), UOp.const(dtypes.float, 1.0), set([x, y]))
-    gx, gy = grads[x], grads[y]
-
-    for valx in [-5., -2.0, 0.0, 2.0, 5.]:
-      for valy in [-5., -2.0, 0.0, 2.0, 5.]:
-        # Substitute the values into the gradient expressions
-        substitutions = {x: x.const_like(valx), y: y.const_like(valy)}
-        tg_out_x = gx.substitute(substitutions).ssimplify()
-        tg_out_y = gy.substitute(substitutions).ssimplify()
-
-        tx = torch.tensor([valx], dtype=torch.float, requires_grad=True)
-        ty = torch.tensor([valy], dtype=torch.float, requires_grad=True)
-        torch_grad = torch.autograd.grad(jf(tx, ty), [tx, ty])
-        torch_out_x, torch_out_y = [x.item() for x in torch_grad]
-
-        self._cmp_nan_okay(tg_out_x, torch_out_x)
-        self._cmp_nan_okay(tg_out_y, torch_out_y)
-
-  # unary ops unit
-  def test_recip(self): self._test_one_input_function(lambda x: 1.0/x)
-  def test_sin(self): self._test_one_input_function(lambda x: x.sin())
-  def test_sqrt(self): self._test_one_input_function(lambda x: x.sqrt())
-  def test_log2(self): self._test_one_input_function(lambda x: x.log2())
-  def test_exp2(self): self._test_one_input_function(lambda x: x.exp2())
-
-  # binary ops unit
-  def test_add(self): self._test_two_input_function(lambda x,y: x+y)
-  def test_mul(self): self._test_two_input_function(lambda x,y: x*y)
-
-  # chain rule
-  def test_chain(self): self._test_one_input_function(lambda x: x.sin().sqrt())
-  def test_chain_binop(self): self._test_two_input_function(lambda x,y: (x*y)+x*y)
-  def test_big_add_sin(self): self._test_two_input_function(lambda x,y: x.sin()+3.0/y)
-  def test_big_chain(self): self._test_two_input_function(lambda x,y: (1.0/x*y)+x*y)
-  def test_where(self): self._test_two_input_function(lambda x,y: (x<y).where(x,y), lambda x,y: torch.where(x<y,x,y))
+from tinygrad.uop.ops import UOp, KernelInfo
 
 class TestTensorGradient(unittest.TestCase):
   def test_example(self):
@@ -72,10 +13,10 @@ class TestTensorGradient(unittest.TestCase):
     self.assertListEqual(dx.tolist(), [[2.0, 2.0, 2.0], [0.0, 0.0, 0.0], [-2.0, -2.0, -2.0]])
     self.assertListEqual(dy.tolist(), [[1.0, 1.0, 1.0]])
 
-  def test_raises(self):
+  def test_zero_if_not_used(self):
     x = Tensor([1.0, 2.0, 3.0])
     w = Tensor.randn((3,))
-    with self.assertRaises(RuntimeError): x.sum().gradient(w)
+    self.assertListEqual(x.sum().gradient(w)[0].tolist(), [0.0, 0.0, 0.0])
 
   def test_with_custom_gradient(self):
     x = Tensor([1.0, 2.0, 3.0])
@@ -110,36 +51,131 @@ class TestTensorGradient(unittest.TestCase):
     with self.assertRaises(RuntimeError): x.sum().gradient(x)
     with self.assertRaises(RuntimeError): x.float().sum().gradient(x)
 
-class TestRealizeMeansRealize(unittest.TestCase):
-  def test_randn_realizes(self):
-    x = Tensor.randn(2, 3, 64, 64, requires_grad=True).realize()
-    assert x.uop is not x.uop.base
-    assert x.uop.is_realized
+  def test_copy_to_device_gradient(self):
+    t = Tensor([1.0, 2, 3]).realize()
+    t.to("CPU:1").square().sum().backward()
+    self.assertEqual(t.grad.device, t.device)
+    self.assertListEqual(t.grad.tolist(), [2.0, 4.0, 6.0])
 
-  #@unittest.expectedFailure
-  # update: passing after delete_forced_realize
-  def test_uniform_realizes(self):
-    x = Tensor.uniform(16, 3, 3, 3, requires_grad=True).realize()
-    print(x.uop)
-    assert x.uop is not x.uop.base
-    assert x.uop.is_realized
+  def test_multiple_backward(self):
+    x = Tensor([3.])
+    (x*2)[0].backward()
+    np.testing.assert_allclose(x.grad.numpy(), [2.0])
+    old_grad = x.grad
+    (x*3)[0].backward()
+    np.testing.assert_allclose(x.grad.numpy(), [2.0+3.0])
+    self.assertIs(x.grad, old_grad)
+    (x*x)[0].backward()
+    np.testing.assert_allclose(x.grad.numpy(), [2.0+3.0+2*3.0])
+    self.assertIs(x.grad, old_grad)
 
-  # NOTE: even though it doesn't realize, this seems fine
-  def test_uniform_gradient(self):
-    x = Tensor.uniform(16, 3, 3, 3, requires_grad=True).realize()
-    y = x * 2
-    y.sum().gradient(x)[0].realize()
+  def test_gradient_through_clone_from_grad_src(self):
+    # unlike torch, tinygrad accumulates grad on every tensor in the graph, including non-leaf x
+    src = Tensor([1.0, 2.0, 3.0, 4.0])
+    x = src.clone()
+    (x * 2.0).sum().backward()
+    np.testing.assert_allclose(src.grad.numpy(), [2.0, 2.0, 2.0, 2.0])
+    np.testing.assert_allclose(x.grad.numpy(), [2.0, 2.0, 2.0, 2.0])
+
+  def test_gradient_through_clone_from_detached_src(self):
+    base = Tensor([1.0, 2.0, 3.0, 4.0])
+    x = base.detach().clone()
+    (x * 2.0).sum().backward()
+    np.testing.assert_allclose(x.grad.numpy(), [2.0, 2.0, 2.0, 2.0])     # gradient flows through clone
+    np.testing.assert_allclose(base.grad.numpy(), [0.0, 0.0, 0.0, 0.0])  # ...but detach blocks it from base
+
+  def test_setitem_on_grad_used_tensor_raises(self):
+    x = Tensor([1.0, 2.0, 3.0, 4.0]).realize()
+    _ = (x * 2.0).sum()
+    with self.assertRaises(RuntimeError):
+      x[0] = 99.0
+
+  def test_gradient_through_chained_unrealized_setitem(self):
+    g1 = Tensor.zeros(4).contiguous()
+    g1[2] = Tensor(1.0)
+    g2 = Tensor.zeros(5, 4).contiguous()
+    g2[0] = g1
+    x = Tensor.randn(4, 4)
+    np.testing.assert_allclose(x.pad(((1,0),(0,0))).gradient(x, gradient=g2)[0].numpy(), np.zeros((4, 4)))
+
+  def test_bare_const_skipped_by_backward(self):
+    Tensor.manual_seed(0)
+    w = Tensor(1.0)
+    (Tensor.rand(()) + w).backward()
+    self.assertIsNone(w.grad)
+
+class TestMultiOutputGradient(unittest.TestCase):
+  @staticmethod
+  def addmul_kernel(C:UOp, D:UOp, A:UOp, B:UOp) -> UOp:
+    C, D, A, B = C.flatten(), D.flatten(), A.flatten(), B.flatten()
+    i = UOp.range(C.numel(), 0)
+    store_c = C[i].store(A[i] + B[i])
+    store_d = D[i].store(A[i] * B[i])
+    return UOp.group(store_c, store_d).end(i).sink(arg=KernelInfo(name="addmul")).simplify()
+  @staticmethod
+  def backward_addmul(grad_c, grad_d, call):
+    _c, _d, a, b = call.src[1:]
+    grad_a = (Tensor(grad_c) + Tensor(grad_d) * Tensor(b)).uop
+    grad_b = (Tensor(grad_c) + Tensor(grad_d) * Tensor(a)).uop
+    return (None, None, grad_a, grad_b)
+
+  def test_custom_kernel_multi_output_backward(self):
+    a_np, b_np = np.random.randn(4, 4).astype(np.float32), np.random.randn(4, 4).astype(np.float32)
+    a_ref, b_ref = Tensor(a_np), Tensor(b_np)
+    ((a_ref + b_ref).sum() + (a_ref * b_ref).sum()).backward()
+
+    a, b = Tensor(a_np), Tensor(b_np)
+    Tensor.realize(a, b)
+    c, d, _, _ = Tensor.custom_kernel(Tensor.empty(4, 4), Tensor.empty(4, 4), a, b, fxn=self.addmul_kernel, grad_fxn=self.backward_addmul)
+    (c.sum() + d.sum()).backward()
+    np.testing.assert_allclose(a.grad.numpy(), a_ref.grad.numpy(), rtol=1e-5)
+    np.testing.assert_allclose(b.grad.numpy(), b_ref.grad.numpy(), rtol=1e-5)
+
+  def test_custom_kernel_multi_output_backward_interacting(self):
+    a_np, b_np = np.random.randn(4, 4).astype(np.float32), np.random.randn(4, 4).astype(np.float32)
+    a_ref, b_ref = Tensor(a_np), Tensor(b_np)
+    ((a_ref + b_ref) * (a_ref * b_ref)).sum().backward()
+
+    a, b = Tensor(a_np), Tensor(b_np)
+    Tensor.realize(a, b)
+    c, d, _, _ = Tensor.custom_kernel(Tensor.empty(4, 4), Tensor.empty(4, 4), a, b, fxn=self.addmul_kernel, grad_fxn=self.backward_addmul)
+    (c * d).sum().backward()
+    np.testing.assert_allclose(a.grad.numpy(), a_ref.grad.numpy(), rtol=1e-5, atol=1e-7)
+    np.testing.assert_allclose(b.grad.numpy(), b_ref.grad.numpy(), rtol=1e-5, atol=1e-7)
+
+  def test_custom_kernel_three_output_backward(self):
+    def addmulsub_kernel(C:UOp, D:UOp, E:UOp, A:UOp, B:UOp) -> UOp:
+      C, D, E, A, B = C.flatten(), D.flatten(), E.flatten(), A.flatten(), B.flatten()
+      i = UOp.range(C.numel(), 0)
+      store_c = C[i].store(A[i] + B[i])
+      store_d = D[i].store(A[i] * B[i])
+      store_e = E[i].store(A[i] - B[i])
+      return UOp.group(store_c, store_d, store_e).end(i).sink(arg=KernelInfo(name="addmulsub")).simplify()
+    def backward_addmulsub(grad_c, grad_d, grad_e, call):
+      _c, _d, _e, a, b = call.src[1:]
+      grad_a = (Tensor(grad_c) + Tensor(grad_d) * Tensor(b) + Tensor(grad_e)).uop
+      grad_b = (Tensor(grad_c) + Tensor(grad_d) * Tensor(a) - Tensor(grad_e)).uop
+      return (None, None, None, grad_a, grad_b)
+
+    a_np, b_np = np.random.randn(4, 4).astype(np.float32), np.random.randn(4, 4).astype(np.float32)
+    a_ref, b_ref = Tensor(a_np), Tensor(b_np)
+    ((a_ref + b_ref).sum() + (a_ref * b_ref).sum() + (a_ref - b_ref).sum()).backward()
+
+    a, b = Tensor(a_np), Tensor(b_np)
+    Tensor.realize(a, b)
+    c, d, e, _, _ = Tensor.custom_kernel(Tensor.empty(4, 4), Tensor.empty(4, 4), Tensor.empty(4, 4), a, b,
+                                          fxn=addmulsub_kernel, grad_fxn=backward_addmulsub)
+    (c.sum() + d.sum() + e.sum()).backward()
+    np.testing.assert_allclose(a.grad.numpy(), a_ref.grad.numpy(), atol=1e-6, rtol=1e-5)
+    np.testing.assert_allclose(b.grad.numpy(), b_ref.grad.numpy(), atol=1e-6, rtol=1e-5)
 
 class TestViewGradient(unittest.TestCase):
   def test_expand(self):
-    # this test shows that if Tensors collapse to the views and create a disconnected graph
-    # there's no way to recover the proper gradient
     x = Tensor.randn(5,2)
-    a = Tensor([3.], requires_grad=True)
+    a = Tensor([3.])
     aex = a.expand(10)
     (aex.reshape(5,2) * x).sum().backward()
     np.testing.assert_allclose(aex.grad.numpy(), x.reshape(10).numpy())
-    # NOTE: aex.grad is *not* a.grad.expand(10)!
     with self.assertRaises(AssertionError):
       np.testing.assert_allclose(aex.grad.numpy(), a.grad.expand(10).numpy())
 

@@ -5,8 +5,7 @@ import onnx.backend.test
 import numpy as np
 from tinygrad import Tensor, Device, dtypes
 from tinygrad.helpers import getenv, OSX
-from tinygrad.device import is_dtype_supported
-from tinygrad.frontend.onnx import OnnxRunner
+from tinygrad.nn.onnx import OnnxRunner
 
 # pip3 install tabulate
 pytest_plugins = 'onnx.backend.test.report',
@@ -64,15 +63,13 @@ backend_test.exclude('test_qlinearmatmul_2D_int8_float32_cpu')
 backend_test.exclude('test_qlinearmatmul_3D_int8_float32_cpu')
 # tested in external_test_onnx_ops.py::TestMainOnnxOps.test_maxunpool_export_with_output_shape
 backend_test.exclude('test_maxunpool_export_with_output_shape_cpu')
-# tested in external_test_onnx_ops.py::TestMainOnnxOps.test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True
-backend_test.exclude('test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True_cpu')
 # tested in external_test_onnx_ops.py::TestMainOnnxOps.test_resize_downsample_scales_linear_align_corners
 backend_test.exclude('test_resize_downsample_scales_linear_align_corners_cpu')
 # tested in external_test_onnx_ops.py::TestMainOnnxOps.test_resize_downsample_scales_cubic_align_corners
 backend_test.exclude('test_resize_downsample_scales_cubic_align_corners_cpu')
 
 # about different dtypes
-if not is_dtype_supported(dtypes.float64):
+if dtypes.float64 not in Device[Device.DEFAULT].renderer.supported_dtypes():
   backend_test.exclude('float64')
   backend_test.exclude('DOUBLE')
   # these have float64 inputs
@@ -82,7 +79,7 @@ if not is_dtype_supported(dtypes.float64):
   backend_test.exclude('test_einsum_*')
   backend_test.exclude('test_cumsum_*')
 
-if not is_dtype_supported(dtypes.float16):
+if dtypes.float16 not in Device[Device.DEFAULT].renderer.supported_dtypes():
   backend_test.exclude('float16')
   backend_test.exclude('FLOAT16')
 
@@ -112,7 +109,6 @@ backend_test.exclude('test_dequantizelinear_e5m2_cpu')
 backend_test.exclude('test_dequantizelinear_float4e2m1_cpu')
 
 # we don't support indexes
-backend_test.exclude('test_nonzero_*')
 
 # no support for int pow
 backend_test.exclude('test_pow_types_int32_int32_cpu')
@@ -143,17 +139,11 @@ backend_test.exclude('test_affine_grid_3d_expanded_cpu')
 backend_test.exclude('test_range_int32_type_negative_delta_expanded_cpu')
 
 # unsupported (strange) ops
-backend_test.exclude('test_blackmanwindow_*')
 backend_test.exclude('test_bernoulli_*')
 backend_test.exclude('test_det_*')
 backend_test.exclude('test_col2im_*')
-backend_test.exclude('test_hammingwindow_*')
-backend_test.exclude('test_hannwindow_*')
-backend_test.exclude('test_hardmax_*')
 backend_test.exclude('test_gridsample_*')
 backend_test.exclude('test_dft_*')
-backend_test.exclude('test_einsum_batch_diagonal_cpu*') # TODO: equation = '...ii ->...i'
-backend_test.exclude('test_einsum_inner_prod_cpu*') # TODO: equation = 'i,i'
 backend_test.exclude('test_unique_*')
 backend_test.exclude('test_sequence_*')
 backend_test.exclude('test_nonmaxsuppression_*')
@@ -171,6 +161,13 @@ backend_test.exclude('test_scan_*')
 backend_test.exclude('test_split_to_sequence_*')
 backend_test.exclude('test_ai_onnx_ml_tree_ensemble_*') # https://github.com/onnx/onnx/blob/main/onnx/reference/ops/aionnxml/op_tree_ensemble.py#L121
 
+backend_test.exclude('test_attention_4d_diff_heads_mask4d_padded_kv_cpu')  # needs nonpad_kv_seqlen handling
+backend_test.exclude('test_attention_4d_fp16_cpu')  # fp16 numerical issues
+backend_test.exclude('test_attention_4d_fp16_expanded_cpu')  # fp16 numerical issues
+backend_test.exclude('test_attention_4d_gqa_with_past_and_present_fp16_cpu')  # fp16 numerical issues
+backend_test.exclude('test_attention_4d_gqa_with_past_and_present_fp16_expanded_cpu')  # fp16 numerical issues
+
+
 # rest of the failing tests
 backend_test.exclude('test_resize_tf_crop_and_resize_cpu') # tf_crop_and_resize not implemented
 backend_test.exclude('test_resize_tf_crop_and_resize_axes_2_3_cpu') # tf_crop_and_resize not implemented
@@ -185,20 +182,7 @@ backend_test.exclude('test_ai_onnx_ml_label_encoder_tensor_mapping_cpu') # bad d
 backend_test.exclude('test_if_opt_cpu') # ValueError: 13 is not a valid AttributeType
 backend_test.exclude('test_if_seq_cpu') # NotImplementedError: op='SequenceConstruct' is not supported
 
-backend_test.exclude('test_scatternd_min_cpu') # min not yet supported
-backend_test.exclude('test_scatternd_max_cpu') # max not yet supported
-
-# regression from removing StrEnum in Domain
-backend_test.exclude('test_adam_cpu')
-backend_test.exclude('test_gradient_of_add_and_mul_cpu')
-backend_test.exclude('test_gradient_of_add_cpu')
-
-if Device.DEFAULT in ['GPU', 'METAL']:
-  backend_test.exclude('test_resize_upsample_sizes_nearest_axes_2_3_cpu')
-  backend_test.exclude('test_resize_upsample_sizes_nearest_axes_3_2_cpu')
-  backend_test.exclude('test_resize_upsample_sizes_nearest_cpu')
-
-if Device.DEFAULT == "METAL" or (OSX and Device.DEFAULT == "GPU"):
+if Device.DEFAULT == "METAL" or (OSX and Device.DEFAULT == "CL"):
   # numerical inaccuracy
   backend_test.exclude('test_mish_cpu')
   backend_test.exclude('test_mish_expanded_cpu')
