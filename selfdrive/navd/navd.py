@@ -34,7 +34,7 @@ NAVIGATION_TEST_DESTINATIONS = {
   "work": ("Navigation test - Work", Coordinate(24.714778, 46.683775)),
   "school": ("Navigation test - School", Coordinate(24.781423, 46.622246)),
 }
-NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL_strn1 = "reX1GSu"
+NAVIGATION_DESTINATION_DATABASE_URL_strn1 = "reX1GSu"
 NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL_strn2 = "ler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL_strn3 = "postgresql://neondb_owner:npg_AVs6T"
 NAVIGATION_TEST_SHARED_DESTINATION_DATABASE_URL_strn4 = "@ep-gentle-bonus-aqrtri2b-poo"
