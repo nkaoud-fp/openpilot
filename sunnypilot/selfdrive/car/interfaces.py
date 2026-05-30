@@ -92,16 +92,6 @@ def _cleanup_unsupported_params(CP: structs.CarParams, CP_SP: structs.CarParamsS
   set_speed_limit_assist_availability(CP, CP_SP, params)
 
 
-def _initialize_toyota_exit_actions(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params: Params = None) -> None:
-  if CP.brand != "toyota":
-    return
-  if params is None:
-    params = Params()
-  CP_SP.toyotaAutoLockOnExit = params.get_bool("ToyotaAutoLockOnExit")
-  CP_SP.toyotaCloseWindowsOnExit = params.get_bool("ToyotaCloseWindowsOnExit")
-  CP_SP.toyotaFoldMirrorsOnExit = params.get_bool("ToyotaFoldMirrorsOnExit")
-
-
 def setup_interfaces(CI: CarInterfaceBase, params: Params = None) -> None:
   CP = CI.CP
   CP_SP = CI.CP_SP
@@ -110,7 +100,6 @@ def setup_interfaces(CI: CarInterfaceBase, params: Params = None) -> None:
   nnlc_enabled = _initialize_neural_network_lateral_control(CP, CP_SP, params)
   _initialize_intelligent_cruise_button_management(CP, CP_SP, params)
   _initialize_torque_lateral_control(CI, CP, enforce_torque, nnlc_enabled)
-  _initialize_toyota_exit_actions(CP, CP_SP, params)
   _cleanup_unsupported_params(CP, CP_SP)
 
   try:
@@ -141,9 +130,6 @@ def initialize_params(params) -> list[dict[str, Any]]:
 
   # toyota
   keys.extend([
-    "ToyotaAutoLockOnExit",
-    "ToyotaCloseWindowsOnExit",
-    "ToyotaFoldMirrorsOnExit",
     "ToyotaEnforceStockLongitudinal",
     "ToyotaStopAndGoHack",
   ])

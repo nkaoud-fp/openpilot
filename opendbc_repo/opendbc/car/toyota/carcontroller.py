@@ -13,7 +13,6 @@ from opendbc.car.toyota.values import CAR, NO_STOP_TIMER_CAR, TSS2_CAR, \
                                         UNSUPPORTED_DSU_CAR
 from opendbc.can import CANPacker
 
-from opendbc.sunnypilot.car.toyota.exit_actions import ExitActionsController
 from opendbc.sunnypilot.car.toyota.gas_interceptor import GasInterceptorCarController
 from opendbc.sunnypilot.car.toyota.values import ToyotaFlagsSP
 
@@ -82,8 +81,6 @@ class CarController(CarControllerBase, GasInterceptorCarController):
     self.secoc_lta_message_counter = 0
     self.secoc_acc_message_counter = 0
     self.secoc_prev_reset_counter = 0
-
-    self.exit_actions = ExitActionsController()
 
   def update(self, CC, CC_SP, CS, now_nanos):
     actuators = CC.actuators
@@ -329,11 +326,6 @@ class CarController(CarControllerBase, GasInterceptorCarController):
     new_actuators.steeringAngleDeg = self.last_angle
     new_actuators.accel = self.accel
     new_actuators.gas = self.gas
-
-    can_sends += self.exit_actions.update(
-      CS.out,
-      auto_lock=self.CP_SP.toyotaAutoLockOnExit,
-    )
 
     self.frame += 1
     return new_actuators, can_sends
