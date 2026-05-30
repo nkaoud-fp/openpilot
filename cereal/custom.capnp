@@ -353,8 +353,9 @@ struct CarParamsSP @0x80ae746ee2596b11 {
   enableGasInterceptor @5 :Bool;
 
   neuralNetworkLateralControl @2 :NeuralNetworkLateralControl;
-  toyotaAutoLockOnExit @6 :Bool;
-  toyotaAutoUnlockOnEntry @7 :Bool;
+  toyotaAutoLockOnExit    @6 :Bool;
+  toyotaCloseWindowsOnExit @7 :Bool;
+  toyotaFoldMirrorsOnExit  @8 :Bool;
 
   struct NeuralNetworkLateralControl {
     model @0 :Model;

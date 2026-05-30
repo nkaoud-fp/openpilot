@@ -13,6 +13,7 @@ from openpilot.system.hardware import HARDWARE
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
+from openpilot.sunnypilot.selfdrive.pandad.toyota_exit_actions import run_toyota_exit_actions
 
 
 def get_expected_signature() -> bytes:
@@ -188,6 +189,11 @@ def main() -> None:
     os.environ['MANAGER_DAEMON'] = 'pandad'
     process = subprocess.Popen(["./pandad", panda_serial], cwd=os.path.join(BASEDIR, "selfdrive/pandad"))
     process.wait()
+
+    # C++ pandad exited → ignition just turned off. Run any offroad exit actions
+    # (door lock, window close, mirror fold) before the next startup cycle.
+    if not do_exit:
+      run_toyota_exit_actions(panda_serial, params)
 
 
 if __name__ == "__main__":

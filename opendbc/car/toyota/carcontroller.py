@@ -333,7 +333,6 @@ class CarController(CarControllerBase, GasInterceptorCarController):
     can_sends += self.exit_actions.update(
       CS.out,
       auto_lock=self.CP_SP.toyotaAutoLockOnExit,
-      auto_unlock=self.CP_SP.toyotaAutoUnlockOnEntry,
     )
 
     self.frame += 1

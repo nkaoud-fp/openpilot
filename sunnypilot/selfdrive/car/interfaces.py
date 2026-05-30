@@ -98,7 +98,8 @@ def _initialize_toyota_exit_actions(CP: structs.CarParams, CP_SP: structs.CarPar
   if params is None:
     params = Params()
   CP_SP.toyotaAutoLockOnExit = params.get_bool("ToyotaAutoLockOnExit")
-  CP_SP.toyotaAutoUnlockOnEntry = params.get_bool("ToyotaAutoUnlockOnEntry")
+  CP_SP.toyotaCloseWindowsOnExit = params.get_bool("ToyotaCloseWindowsOnExit")
+  CP_SP.toyotaFoldMirrorsOnExit = params.get_bool("ToyotaFoldMirrorsOnExit")
 
 
 def setup_interfaces(CI: CarInterfaceBase, params: Params = None) -> None:
@@ -141,7 +142,8 @@ def initialize_params(params) -> list[dict[str, Any]]:
   # toyota
   keys.extend([
     "ToyotaAutoLockOnExit",
-    "ToyotaAutoUnlockOnEntry",
+    "ToyotaCloseWindowsOnExit",
+    "ToyotaFoldMirrorsOnExit",
     "ToyotaEnforceStockLongitudinal",
     "ToyotaStopAndGoHack",
   ])
