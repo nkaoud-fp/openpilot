@@ -1,0 +1,4666 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "panda",
+    "languages": [
+      "c",
+      "python",
+      "makefile",
+      "shell",
+      "dockerfile"
+    ],
+    "frameworks": [
+      "STM32",
+      "SConsruct"
+    ],
+    "description": "panda OBD-II adapter firmware and Python drivers. Safety-critical CAN/CAN FD communication interface for openpilot vehicle control.",
+    "analyzedAt": "2026-05-23T07:01:10.807726+00:00",
+    "gitCommitHash": "0a9ef7ab54224e0df79a77448eda67023b285406"
+  },
+  "nodes": [
+    {
+      "id": "config:.git",
+      "type": "config",
+      "name": ".git",
+      "summary": ".git (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": ".git",
+      "complexity": "simple"
+    },
+    {
+      "id": "pipeline:.github/workflows/jenkins-pr-trigger.yaml",
+      "type": "pipeline",
+      "name": "jenkins-pr-trigger.yaml",
+      "summary": "jenkins-pr-trigger.yaml (yaml)",
+      "tags": [
+        "component"
+      ],
+      "filePath": ".github/workflows/jenkins-pr-trigger.yaml",
+      "complexity": "simple"
+    },
+    {
+      "id": "pipeline:.github/workflows/test.yaml",
+      "type": "pipeline",
+      "name": "test.yaml",
+      "summary": "Tests for test.yaml",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": ".github/workflows/test.yaml",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.gitignore",
+      "type": "config",
+      "name": ".gitignore",
+      "summary": ".gitignore (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": ".gitignore",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:Dockerfile",
+      "type": "config",
+      "name": "Dockerfile",
+      "summary": "Dockerfile (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "Dockerfile",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:Jenkinsfile",
+      "type": "config",
+      "name": "Jenkinsfile",
+      "summary": "Jenkinsfile (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "Jenkinsfile",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:LICENSE",
+      "type": "document",
+      "name": "LICENSE",
+      "summary": "LICENSE (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "LICENSE",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:LICENSE.md",
+      "type": "document",
+      "name": "LICENSE.md",
+      "summary": "LICENSE.md (markdown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "LICENSE.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "README.md (markdown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "README.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:SConscript",
+      "type": "config",
+      "name": "SConscript",
+      "summary": "SConscript (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "SConscript",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:SConstruct",
+      "type": "config",
+      "name": "SConstruct",
+      "summary": "SConstruct (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "SConstruct",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for ",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:board/README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "README.md (markdown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/README.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for board",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/board/obj/body_h7bootstub.o",
+      "type": "file",
+      "name": "body_h7bootstub.o",
+      "summary": "body_h7bootstub.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/board/obj/body_h7bootstub.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/board/obj/panda_h7bootstub.o",
+      "type": "file",
+      "name": "panda_h7bootstub.o",
+      "summary": "panda_h7bootstub.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/board/obj/panda_h7bootstub.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/board/obj/panda_h7main.o",
+      "type": "file",
+      "name": "panda_h7main.o",
+      "summary": "panda_h7main.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/board/obj/panda_h7main.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/board/obj/panda_jungle_h7bootstub.o",
+      "type": "file",
+      "name": "panda_jungle_h7bootstub.o",
+      "summary": "panda_jungle_h7bootstub.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/board/obj/panda_jungle_h7bootstub.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/boards/board_declarations.h",
+      "type": "file",
+      "name": "board_declarations.h",
+      "summary": "Firmware code for STM32 board: board_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/boards/board_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/boards/cuatro.h",
+      "type": "file",
+      "name": "cuatro.h",
+      "summary": "Firmware code for STM32 board: cuatro.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/boards/cuatro.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/boards/red.h",
+      "type": "file",
+      "name": "red.h",
+      "summary": "Firmware code for STM32 board: red.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/boards/red.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/boards/tres.h",
+      "type": "file",
+      "name": "tres.h",
+      "summary": "Firmware code for STM32 board: tres.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/boards/tres.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/boards/unused_funcs.h",
+      "type": "file",
+      "name": "unused_funcs.h",
+      "summary": "Firmware code for STM32 board: unused_funcs.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/boards/unused_funcs.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for body",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/body/__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/bldc/BLDC_controller.c",
+      "type": "file",
+      "name": "BLDC_controller.c",
+      "summary": "Firmware code for STM32 board: BLDC_controller.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/BLDC_controller.c",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/body/bldc/BLDC_controller.h",
+      "type": "file",
+      "name": "BLDC_controller.h",
+      "summary": "Firmware code for STM32 board: BLDC_controller.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/BLDC_controller.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/body/bldc/BLDC_controller_data.c",
+      "type": "file",
+      "name": "BLDC_controller_data.c",
+      "summary": "Firmware code for STM32 board: BLDC_controller_data.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/BLDC_controller_data.c",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/body/bldc/bldc.h",
+      "type": "file",
+      "name": "bldc.h",
+      "summary": "Firmware code for STM32 board: bldc.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/bldc.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/body/bldc/bldc_defs.h",
+      "type": "file",
+      "name": "bldc_defs.h",
+      "summary": "Firmware code for STM32 board: bldc_defs.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/bldc_defs.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/bldc/rtwtypes.h",
+      "type": "file",
+      "name": "rtwtypes.h",
+      "summary": "Firmware code for STM32 board: rtwtypes.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/bldc/rtwtypes.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/board/obj/body_h7main.o",
+      "type": "file",
+      "name": "body_h7main.o",
+      "summary": "body_h7main.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/body/board/obj/body_h7main.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/body/boards/board_body.h",
+      "type": "file",
+      "name": "board_body.h",
+      "summary": "Firmware code for STM32 board: board_body.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/boards/board_body.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/boards/board_declarations.h",
+      "type": "file",
+      "name": "board_declarations.h",
+      "summary": "Firmware code for STM32 board: board_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/boards/board_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/can.h",
+      "type": "file",
+      "name": "can.h",
+      "summary": "Firmware code for STM32 board: can.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "can-bus"
+      ],
+      "filePath": "board/body/can.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/dotstar.h",
+      "type": "file",
+      "name": "dotstar.h",
+      "summary": "Firmware code for STM32 board: dotstar.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/dotstar.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/body/flash.py",
+      "type": "file",
+      "name": "flash.py",
+      "summary": "flash.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/body/flash.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/main.c",
+      "type": "file",
+      "name": "main.c",
+      "summary": "Firmware code for STM32 board: main.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/main.c",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/main_comms.h",
+      "type": "file",
+      "name": "main_comms.h",
+      "summary": "Firmware code for STM32 board: main_comms.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/main_comms.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/body/stm32h7/board.h",
+      "type": "file",
+      "name": "board.h",
+      "summary": "Main board hardware definitions and configuration",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/body/stm32h7/board.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/bootstub.c",
+      "type": "file",
+      "name": "bootstub.c",
+      "summary": "Firmware code for STM32 board: bootstub.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/bootstub.c",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/bootstub_declarations.h",
+      "type": "file",
+      "name": "bootstub_declarations.h",
+      "summary": "Firmware code for STM32 board: bootstub_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/bootstub_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/can.h",
+      "type": "file",
+      "name": "can.h",
+      "summary": "Firmware code for STM32 board: can.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "can-bus"
+      ],
+      "filePath": "board/can.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/can_comms.h",
+      "type": "file",
+      "name": "can_comms.h",
+      "summary": "Firmware code for STM32 board: can_comms.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "can-bus"
+      ],
+      "filePath": "board/can_comms.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/certs/debug",
+      "type": "file",
+      "name": "debug",
+      "summary": "debug (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/certs/debug",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/certs/debug.pub",
+      "type": "file",
+      "name": "debug.pub",
+      "summary": "debug.pub (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/certs/debug.pub",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/certs/release.pub",
+      "type": "file",
+      "name": "release.pub",
+      "summary": "release.pub (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/certs/release.pub",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/comms_definitions.h",
+      "type": "file",
+      "name": "comms_definitions.h",
+      "summary": "Firmware code for STM32 board: comms_definitions.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/comms_definitions.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/config.h",
+      "type": "file",
+      "name": "config.h",
+      "summary": "Firmware code for STM32 board: config.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/config.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crc.h",
+      "type": "file",
+      "name": "crc.h",
+      "summary": "Firmware code for STM32 board: crc.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crc.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/body_h7rsa.o",
+      "type": "file",
+      "name": "body_h7rsa.o",
+      "summary": "body_h7rsa.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/body_h7rsa.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/body_h7sha.o",
+      "type": "file",
+      "name": "body_h7sha.o",
+      "summary": "body_h7sha.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/body_h7sha.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/panda_h7rsa.o",
+      "type": "file",
+      "name": "panda_h7rsa.o",
+      "summary": "panda_h7rsa.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/panda_h7rsa.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/panda_h7sha.o",
+      "type": "file",
+      "name": "panda_h7sha.o",
+      "summary": "panda_h7sha.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/panda_h7sha.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/panda_jungle_h7rsa.o",
+      "type": "file",
+      "name": "panda_jungle_h7rsa.o",
+      "summary": "panda_jungle_h7rsa.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/panda_jungle_h7rsa.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/board/obj/panda_jungle_h7sha.o",
+      "type": "file",
+      "name": "panda_jungle_h7sha.o",
+      "summary": "panda_jungle_h7sha.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/crypto/board/obj/panda_jungle_h7sha.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/hash-internal.h",
+      "type": "file",
+      "name": "hash-internal.h",
+      "summary": "Firmware code for STM32 board: hash-internal.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crypto/hash-internal.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/rsa.c",
+      "type": "file",
+      "name": "rsa.c",
+      "summary": "Firmware code for STM32 board: rsa.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crypto/rsa.c",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/crypto/rsa.h",
+      "type": "file",
+      "name": "rsa.h",
+      "summary": "Firmware code for STM32 board: rsa.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crypto/rsa.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/sha.c",
+      "type": "file",
+      "name": "sha.c",
+      "summary": "Firmware code for STM32 board: sha.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crypto/sha.c",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/sha.h",
+      "type": "file",
+      "name": "sha.h",
+      "summary": "Firmware code for STM32 board: sha.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/crypto/sha.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/crypto/sign.py",
+      "type": "file",
+      "name": "sign.py",
+      "summary": "sign.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/crypto/sign.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:board/debug/README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "README.md (markdown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/debug/README.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/debug/debug_h7.sh",
+      "type": "file",
+      "name": "debug_h7.sh",
+      "summary": "debug_h7.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/debug/debug_h7.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/debug/dfu_util_h7.sh",
+      "type": "file",
+      "name": "dfu_util_h7.sh",
+      "summary": "dfu_util_h7.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/debug/dfu_util_h7.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/debug/gdb.sh",
+      "type": "file",
+      "name": "gdb.sh",
+      "summary": "gdb.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/debug/gdb.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/bootkick.h",
+      "type": "file",
+      "name": "bootkick.h",
+      "summary": "Firmware code for STM32 board: bootkick.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/bootkick.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/can_common.h",
+      "type": "file",
+      "name": "can_common.h",
+      "summary": "Firmware code for STM32 board: can_common.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "board/drivers/can_common.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/drivers/clock_source.h",
+      "type": "file",
+      "name": "clock_source.h",
+      "summary": "Firmware code for STM32 board: clock_source.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/clock_source.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/drivers.h",
+      "type": "file",
+      "name": "drivers.h",
+      "summary": "Firmware code for STM32 board: drivers.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/drivers.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/drivers/fake_siren.h",
+      "type": "file",
+      "name": "fake_siren.h",
+      "summary": "Firmware code for STM32 board: fake_siren.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/fake_siren.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/fan.h",
+      "type": "file",
+      "name": "fan.h",
+      "summary": "Firmware code for STM32 board: fan.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/fan.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/fdcan.h",
+      "type": "file",
+      "name": "fdcan.h",
+      "summary": "Firmware code for STM32 board: fdcan.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "board/drivers/fdcan.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/drivers/gpio.h",
+      "type": "file",
+      "name": "gpio.h",
+      "summary": "Firmware code for STM32 board: gpio.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/gpio.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/harness.h",
+      "type": "file",
+      "name": "harness.h",
+      "summary": "Firmware code for STM32 board: harness.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/harness.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/interrupts.h",
+      "type": "file",
+      "name": "interrupts.h",
+      "summary": "Firmware code for STM32 board: interrupts.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/interrupts.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/led.h",
+      "type": "file",
+      "name": "led.h",
+      "summary": "Firmware code for STM32 board: led.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/led.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/pwm.h",
+      "type": "file",
+      "name": "pwm.h",
+      "summary": "Firmware code for STM32 board: pwm.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/pwm.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/registers.h",
+      "type": "file",
+      "name": "registers.h",
+      "summary": "Firmware code for STM32 board: registers.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/registers.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/simple_watchdog.h",
+      "type": "file",
+      "name": "simple_watchdog.h",
+      "summary": "Firmware code for STM32 board: simple_watchdog.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/simple_watchdog.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/spi.h",
+      "type": "file",
+      "name": "spi.h",
+      "summary": "Firmware code for STM32 board: spi.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/spi.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/drivers/timers.h",
+      "type": "file",
+      "name": "timers.h",
+      "summary": "Firmware code for STM32 board: timers.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/timers.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/uart.h",
+      "type": "file",
+      "name": "uart.h",
+      "summary": "Firmware code for STM32 board: uart.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/uart.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/drivers/usb.h",
+      "type": "file",
+      "name": "usb.h",
+      "summary": "Firmware code for STM32 board: usb.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "driver"
+      ],
+      "filePath": "board/drivers/usb.h",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/early_init.h",
+      "type": "file",
+      "name": "early_init.h",
+      "summary": "Firmware code for STM32 board: early_init.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/early_init.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/fake_stm.h",
+      "type": "file",
+      "name": "fake_stm.h",
+      "summary": "Firmware code for STM32 board: fake_stm.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/fake_stm.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/flash.py",
+      "type": "file",
+      "name": "flash.py",
+      "summary": "flash.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/flash.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/flasher.h",
+      "type": "file",
+      "name": "flasher.h",
+      "summary": "Firmware code for STM32 board: flasher.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/flasher.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/health.h",
+      "type": "file",
+      "name": "health.h",
+      "summary": "Firmware code for STM32 board: health.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/health.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:board/jungle/README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "README.md (markdown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/jungle/README.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for jungle",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/board/obj/panda_jungle_h7main.o",
+      "type": "file",
+      "name": "panda_jungle_h7main.o",
+      "summary": "panda_jungle_h7main.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/jungle/board/obj/panda_jungle_h7main.o",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/jungle/boards/board_declarations.h",
+      "type": "file",
+      "name": "board_declarations.h",
+      "summary": "Firmware code for STM32 board: board_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/boards/board_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/boards/board_v2.h",
+      "type": "file",
+      "name": "board_v2.h",
+      "summary": "Firmware code for STM32 board: board_v2.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/boards/board_v2.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/jungle/flash.py",
+      "type": "file",
+      "name": "flash.py",
+      "summary": "flash.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/flash.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/jungle_health.h",
+      "type": "file",
+      "name": "jungle_health.h",
+      "summary": "Firmware code for STM32 board: jungle_health.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/jungle_health.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/main.c",
+      "type": "file",
+      "name": "main.c",
+      "summary": "Firmware code for STM32 board: main.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/main.c",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/jungle/main_comms.h",
+      "type": "file",
+      "name": "main_comms.h",
+      "summary": "Firmware code for STM32 board: main_comms.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/main_comms.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/jungle/recover.py",
+      "type": "file",
+      "name": "recover.py",
+      "summary": "recover.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/recover.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/can_health.py",
+      "type": "file",
+      "name": "can_health.py",
+      "summary": "can_health.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "board/jungle/scripts/can_health.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/can_printer.py",
+      "type": "file",
+      "name": "can_printer.py",
+      "summary": "can_printer.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "board/jungle/scripts/can_printer.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/debug_console.py",
+      "type": "file",
+      "name": "debug_console.py",
+      "summary": "debug_console.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/debug_console.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/echo_loopback_test.py",
+      "type": "file",
+      "name": "echo_loopback_test.py",
+      "summary": "Tests for echo_loopback_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/echo_loopback_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/get_version.py",
+      "type": "file",
+      "name": "get_version.py",
+      "summary": "get_version.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/get_version.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/health_test.py",
+      "type": "file",
+      "name": "health_test.py",
+      "summary": "Tests for health_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/health_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/loopback_test.py",
+      "type": "file",
+      "name": "loopback_test.py",
+      "summary": "Tests for loopback_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/loopback_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/spam_can.py",
+      "type": "file",
+      "name": "spam_can.py",
+      "summary": "spam_can.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "board/jungle/scripts/spam_can.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/scripts/start.py",
+      "type": "file",
+      "name": "start.py",
+      "summary": "start.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/jungle/scripts/start.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/jungle/stm32h7/board.h",
+      "type": "file",
+      "name": "board.h",
+      "summary": "Main board hardware definitions and configuration",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/jungle/stm32h7/board.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/libc.h",
+      "type": "file",
+      "name": "libc.h",
+      "summary": "Firmware code for STM32 board: libc.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/libc.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/main.c",
+      "type": "file",
+      "name": "main.c",
+      "summary": "Firmware code for STM32 board: main.c",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/main.c",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/main_comms.h",
+      "type": "file",
+      "name": "main_comms.h",
+      "summary": "Firmware code for STM32 board: main_comms.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/main_comms.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/main_declarations.h",
+      "type": "file",
+      "name": "main_declarations.h",
+      "summary": "Firmware code for STM32 board: main_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/main_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/main_definitions.h",
+      "type": "file",
+      "name": "main_definitions.h",
+      "summary": "Firmware code for STM32 board: main_definitions.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/main_definitions.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:board/obj/.placeholder",
+      "type": "config",
+      "name": ".placeholder",
+      "summary": ".placeholder (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/.placeholder",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/body_h7.bin.signed",
+      "type": "file",
+      "name": "body_h7.bin.signed",
+      "summary": "body_h7.bin.signed (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/body_h7.bin.signed",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/body_h7/bootstub.elf",
+      "type": "file",
+      "name": "bootstub.elf",
+      "summary": "bootstub.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/body_h7/bootstub.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/body_h7/main.bin",
+      "type": "file",
+      "name": "main.bin",
+      "summary": "main.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/body_h7/main.bin",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/body_h7/main.elf",
+      "type": "file",
+      "name": "main.elf",
+      "summary": "main.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/body_h7/main.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/bootstub.body_h7.bin",
+      "type": "file",
+      "name": "bootstub.body_h7.bin",
+      "summary": "bootstub.body_h7.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/bootstub.body_h7.bin",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/bootstub.panda_h7.bin",
+      "type": "file",
+      "name": "bootstub.panda_h7.bin",
+      "summary": "bootstub.panda_h7.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/bootstub.panda_h7.bin",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/bootstub.panda_jungle_h7.bin",
+      "type": "file",
+      "name": "bootstub.panda_jungle_h7.bin",
+      "summary": "bootstub.panda_jungle_h7.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/bootstub.panda_jungle_h7.bin",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/cert.h",
+      "type": "file",
+      "name": "cert.h",
+      "summary": "Firmware code for STM32 board: cert.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/obj/cert.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/gitversion.h",
+      "type": "file",
+      "name": "gitversion.h",
+      "summary": "Firmware code for STM32 board: gitversion.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/obj/gitversion.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/obj/panda_h7.bin.signed",
+      "type": "file",
+      "name": "panda_h7.bin.signed",
+      "summary": "panda_h7.bin.signed (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_h7.bin.signed",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/panda_h7/bootstub.elf",
+      "type": "file",
+      "name": "bootstub.elf",
+      "summary": "bootstub.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_h7/bootstub.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/panda_h7/main.bin",
+      "type": "file",
+      "name": "main.bin",
+      "summary": "main.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_h7/main.bin",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/panda_h7/main.elf",
+      "type": "file",
+      "name": "main.elf",
+      "summary": "main.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_h7/main.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/panda_jungle_h7.bin.signed",
+      "type": "file",
+      "name": "panda_jungle_h7.bin.signed",
+      "summary": "panda_jungle_h7.bin.signed (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_jungle_h7.bin.signed",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/panda_jungle_h7/bootstub.elf",
+      "type": "file",
+      "name": "bootstub.elf",
+      "summary": "bootstub.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_jungle_h7/bootstub.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/panda_jungle_h7/main.bin",
+      "type": "file",
+      "name": "main.bin",
+      "summary": "main.bin (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_jungle_h7/main.bin",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/obj/panda_jungle_h7/main.elf",
+      "type": "file",
+      "name": "main.elf",
+      "summary": "main.elf (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/panda_jungle_h7/main.elf",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/obj/version",
+      "type": "file",
+      "name": "version",
+      "summary": "version (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/obj/version",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/provision.h",
+      "type": "file",
+      "name": "provision.h",
+      "summary": "Firmware code for STM32 board: provision.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/provision.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/recover.py",
+      "type": "file",
+      "name": "recover.py",
+      "summary": "recover.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "board/recover.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/board.h",
+      "type": "file",
+      "name": "board.h",
+      "summary": "Main board hardware definitions and configuration",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/board.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/board/obj/body_h7startup_stm32h7x5xx.o",
+      "type": "file",
+      "name": "body_h7startup_stm32h7x5xx.o",
+      "summary": "body_h7startup_stm32h7x5xx.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/stm32h7/board/obj/body_h7startup_stm32h7x5xx.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/board/obj/panda_h7startup_stm32h7x5xx.o",
+      "type": "file",
+      "name": "panda_h7startup_stm32h7x5xx.o",
+      "summary": "panda_h7startup_stm32h7x5xx.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/stm32h7/board/obj/panda_h7startup_stm32h7x5xx.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/board/obj/panda_jungle_h7startup_stm32h7x5xx.o",
+      "type": "file",
+      "name": "panda_jungle_h7startup_stm32h7x5xx.o",
+      "summary": "panda_jungle_h7startup_stm32h7x5xx.o (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/stm32h7/board/obj/panda_jungle_h7startup_stm32h7x5xx.o",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/clock.h",
+      "type": "file",
+      "name": "clock.h",
+      "summary": "Firmware code for STM32 board: clock.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/clock.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/inc/cmsis_compiler.h",
+      "type": "file",
+      "name": "cmsis_compiler.h",
+      "summary": "Firmware code for STM32 board: cmsis_compiler.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/cmsis_compiler.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/inc/cmsis_gcc.h",
+      "type": "file",
+      "name": "cmsis_gcc.h",
+      "summary": "Firmware code for STM32 board: cmsis_gcc.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/cmsis_gcc.h",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/stm32h7/inc/cmsis_version.h",
+      "type": "file",
+      "name": "cmsis_version.h",
+      "summary": "Firmware code for STM32 board: cmsis_version.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/cmsis_version.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/inc/core_cm7.h",
+      "type": "file",
+      "name": "core_cm7.h",
+      "summary": "Firmware code for STM32 board: core_cm7.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/core_cm7.h",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/stm32h7/inc/mpu_armv7.h",
+      "type": "file",
+      "name": "mpu_armv7.h",
+      "summary": "Firmware code for STM32 board: mpu_armv7.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/mpu_armv7.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/inc/stm32h725xx.h",
+      "type": "file",
+      "name": "stm32h725xx.h",
+      "summary": "Firmware code for STM32 board: stm32h725xx.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/stm32h725xx.h",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/stm32h7/inc/stm32h735xx.h",
+      "type": "file",
+      "name": "stm32h735xx.h",
+      "summary": "Firmware code for STM32 board: stm32h735xx.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/stm32h735xx.h",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/stm32h7/inc/stm32h7xx.h",
+      "type": "file",
+      "name": "stm32h7xx.h",
+      "summary": "Firmware code for STM32 board: stm32h7xx.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/stm32h7xx.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/inc/stm32h7xx_hal_def.h",
+      "type": "file",
+      "name": "stm32h7xx_hal_def.h",
+      "summary": "Firmware code for STM32 board: stm32h7xx_hal_def.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/stm32h7xx_hal_def.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/inc/stm32h7xx_hal_gpio_ex.h",
+      "type": "file",
+      "name": "stm32h7xx_hal_gpio_ex.h",
+      "summary": "Firmware code for STM32 board: stm32h7xx_hal_gpio_ex.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/stm32h7xx_hal_gpio_ex.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/inc/system_stm32h7xx.h",
+      "type": "file",
+      "name": "system_stm32h7xx.h",
+      "summary": "Firmware code for STM32 board: system_stm32h7xx.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/inc/system_stm32h7xx.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/interrupt_handlers.h",
+      "type": "file",
+      "name": "interrupt_handlers.h",
+      "summary": "Firmware code for STM32 board: interrupt_handlers.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/interrupt_handlers.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/lladc.h",
+      "type": "file",
+      "name": "lladc.h",
+      "summary": "Firmware code for STM32 board: lladc.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/lladc.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/lladc_declarations.h",
+      "type": "file",
+      "name": "lladc_declarations.h",
+      "summary": "Firmware code for STM32 board: lladc_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/lladc_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llfan.h",
+      "type": "file",
+      "name": "llfan.h",
+      "summary": "Firmware code for STM32 board: llfan.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/llfan.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llfdcan.h",
+      "type": "file",
+      "name": "llfdcan.h",
+      "summary": "Firmware code for STM32 board: llfdcan.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "can-bus"
+      ],
+      "filePath": "board/stm32h7/llfdcan.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/llfdcan_declarations.h",
+      "type": "file",
+      "name": "llfdcan_declarations.h",
+      "summary": "Firmware code for STM32 board: llfdcan_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded",
+        "can-bus"
+      ],
+      "filePath": "board/stm32h7/llfdcan_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llflash.h",
+      "type": "file",
+      "name": "llflash.h",
+      "summary": "Firmware code for STM32 board: llflash.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/llflash.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/lli2c.h",
+      "type": "file",
+      "name": "lli2c.h",
+      "summary": "Firmware code for STM32 board: lli2c.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/lli2c.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llspi.h",
+      "type": "file",
+      "name": "llspi.h",
+      "summary": "Firmware code for STM32 board: llspi.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/llspi.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/lluart.h",
+      "type": "file",
+      "name": "lluart.h",
+      "summary": "Firmware code for STM32 board: lluart.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/lluart.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llusb.h",
+      "type": "file",
+      "name": "llusb.h",
+      "summary": "Firmware code for STM32 board: llusb.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/llusb.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/llusb_declarations.h",
+      "type": "file",
+      "name": "llusb_declarations.h",
+      "summary": "Firmware code for STM32 board: llusb_declarations.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/llusb_declarations.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/peripherals.h",
+      "type": "file",
+      "name": "peripherals.h",
+      "summary": "Firmware code for STM32 board: peripherals.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/peripherals.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/sound.h",
+      "type": "file",
+      "name": "sound.h",
+      "summary": "Firmware code for STM32 board: sound.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/sound.h",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/stm32h7/startup_stm32h7x5xx.s",
+      "type": "file",
+      "name": "startup_stm32h7x5xx.s",
+      "summary": "startup_stm32h7x5xx.s (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/stm32h7/startup_stm32h7x5xx.s",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:board/stm32h7/stm32h7_config.h",
+      "type": "file",
+      "name": "stm32h7_config.h",
+      "summary": "Firmware code for STM32 board: stm32h7_config.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/stm32h7/stm32h7_config.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/stm32h7/stm32h7x5_flash.ld",
+      "type": "file",
+      "name": "stm32h7x5_flash.ld",
+      "summary": "stm32h7x5_flash.ld (unknown)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "board/stm32h7/stm32h7x5_flash.ld",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:board/sys/critical.h",
+      "type": "file",
+      "name": "critical.h",
+      "summary": "Firmware code for STM32 board: critical.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/sys/critical.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/sys/faults.h",
+      "type": "file",
+      "name": "faults.h",
+      "summary": "Firmware code for STM32 board: faults.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/sys/faults.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/sys/power_saving.h",
+      "type": "file",
+      "name": "power_saving.h",
+      "summary": "Firmware code for STM32 board: power_saving.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/sys/power_saving.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/sys/sys.h",
+      "type": "file",
+      "name": "sys.h",
+      "summary": "Firmware code for STM32 board: sys.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/sys/sys.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:board/utils.h",
+      "type": "file",
+      "name": "utils.h",
+      "summary": "Firmware code for STM32 board: utils.h",
+      "tags": [
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "board/utils.h",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for examples",
+      "tags": [
+        "userspace",
+        "driver",
+        "example"
+      ],
+      "filePath": "examples/__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:examples/can_bit_transition.md",
+      "type": "document",
+      "name": "can_bit_transition.md",
+      "summary": "Example usage: can_bit_transition.md",
+      "tags": [
+        "can-bus",
+        "example"
+      ],
+      "filePath": "examples/can_bit_transition.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/can_bit_transition.py",
+      "type": "file",
+      "name": "can_bit_transition.py",
+      "summary": "Example usage: can_bit_transition.py",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus",
+        "example"
+      ],
+      "filePath": "examples/can_bit_transition.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/can_logger.py",
+      "type": "file",
+      "name": "can_logger.py",
+      "summary": "Example usage: can_logger.py",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus",
+        "example"
+      ],
+      "filePath": "examples/can_logger.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "document:examples/can_unique.md",
+      "type": "document",
+      "name": "can_unique.md",
+      "summary": "Example usage: can_unique.md",
+      "tags": [
+        "can-bus",
+        "example"
+      ],
+      "filePath": "examples/can_unique.md",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/can_unique.py",
+      "type": "file",
+      "name": "can_unique.py",
+      "summary": "Example usage: can_unique.py",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus",
+        "example"
+      ],
+      "filePath": "examples/can_unique.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/query_fw_versions.py",
+      "type": "file",
+      "name": "query_fw_versions.py",
+      "summary": "Example usage: query_fw_versions.py",
+      "tags": [
+        "userspace",
+        "driver",
+        "example"
+      ],
+      "filePath": "examples/query_fw_versions.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/query_vin_and_stats.py",
+      "type": "file",
+      "name": "query_vin_and_stats.py",
+      "summary": "Example usage: query_vin_and_stats.py",
+      "tags": [
+        "userspace",
+        "driver",
+        "example"
+      ],
+      "filePath": "examples/query_vin_and_stats.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/tesla_tester.py",
+      "type": "file",
+      "name": "tesla_tester.py",
+      "summary": "Tests for tesla_tester.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver",
+        "example"
+      ],
+      "filePath": "examples/tesla_tester.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:pyproject.toml",
+      "type": "config",
+      "name": "pyproject.toml",
+      "summary": "pyproject.toml (toml)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "pyproject.toml",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Package initialization for python",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/__init__.py",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:python/base.py",
+      "type": "file",
+      "name": "base.py",
+      "summary": "Python userspace library component: base.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/base.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/constants.py",
+      "type": "file",
+      "name": "constants.py",
+      "summary": "Python userspace library component: constants.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/constants.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/dfu.py",
+      "type": "file",
+      "name": "dfu.py",
+      "summary": "Python userspace library component: dfu.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/dfu.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/serial.py",
+      "type": "file",
+      "name": "serial.py",
+      "summary": "Python userspace library component: serial.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/serial.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/socketpanda.py",
+      "type": "file",
+      "name": "socketpanda.py",
+      "summary": "Python userspace library component: socketpanda.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/socketpanda.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/spi.py",
+      "type": "file",
+      "name": "spi.py",
+      "summary": "Python userspace library component: spi.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/spi.py",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:python/usb.py",
+      "type": "file",
+      "name": "usb.py",
+      "summary": "Python userspace library component: usb.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/usb.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:python/utils.py",
+      "type": "file",
+      "name": "utils.py",
+      "summary": "Python userspace library component: utils.py",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "python/utils.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/benchmark.py",
+      "type": "file",
+      "name": "benchmark.py",
+      "summary": "benchmark.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/benchmark.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/bulk_write_test.py",
+      "type": "file",
+      "name": "bulk_write_test.py",
+      "summary": "Tests for bulk_write_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/bulk_write_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/can_health.py",
+      "type": "file",
+      "name": "can_health.py",
+      "summary": "can_health.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "scripts/can_health.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/can_printer.py",
+      "type": "file",
+      "name": "can_printer.py",
+      "summary": "can_printer.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "scripts/can_printer.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/check_fw_size.py",
+      "type": "file",
+      "name": "check_fw_size.py",
+      "summary": "check_fw_size.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/check_fw_size.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/debug_console.py",
+      "type": "file",
+      "name": "debug_console.py",
+      "summary": "debug_console.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/debug_console.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/development/register_hashmap_spread.py",
+      "type": "file",
+      "name": "register_hashmap_spread.py",
+      "summary": "register_hashmap_spread.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/development/register_hashmap_spread.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/echo.py",
+      "type": "file",
+      "name": "echo.py",
+      "summary": "echo.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/echo.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/fan/fan_test.py",
+      "type": "file",
+      "name": "fan_test.py",
+      "summary": "Tests for fan_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/fan/fan_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/get_version.py",
+      "type": "file",
+      "name": "get_version.py",
+      "summary": "get_version.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/get_version.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/ir_test.py",
+      "type": "file",
+      "name": "ir_test.py",
+      "summary": "Tests for ir_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/ir_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/loopback_test.py",
+      "type": "file",
+      "name": "loopback_test.py",
+      "summary": "Tests for loopback_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/loopback_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/make_release.sh",
+      "type": "file",
+      "name": "make_release.sh",
+      "summary": "make_release.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "scripts/make_release.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/message_drop_test.py",
+      "type": "file",
+      "name": "message_drop_test.py",
+      "summary": "Tests for message_drop_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/message_drop_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/read_flash_spi.py",
+      "type": "file",
+      "name": "read_flash_spi.py",
+      "summary": "read_flash_spi.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/read_flash_spi.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/read_st_flash.sh",
+      "type": "file",
+      "name": "read_st_flash.sh",
+      "summary": "read_st_flash.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "scripts/read_st_flash.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/reflash_internal_panda.py",
+      "type": "file",
+      "name": "reflash_internal_panda.py",
+      "summary": "reflash_internal_panda.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/reflash_internal_panda.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/relay_test.py",
+      "type": "file",
+      "name": "relay_test.py",
+      "summary": "Tests for relay_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/relay_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/restore_flash_spi.py",
+      "type": "file",
+      "name": "restore_flash_spi.py",
+      "summary": "restore_flash_spi.py (python)",
+      "tags": [
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/restore_flash_spi.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/som_debug.sh",
+      "type": "file",
+      "name": "som_debug.sh",
+      "summary": "som_debug.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "scripts/som_debug.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/spam_can.py",
+      "type": "file",
+      "name": "spam_can.py",
+      "summary": "spam_can.py (python)",
+      "tags": [
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "scripts/spam_can.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/spi_test.py",
+      "type": "file",
+      "name": "spi_test.py",
+      "summary": "Tests for spi_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/spi_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/standalone_test.py",
+      "type": "file",
+      "name": "standalone_test.py",
+      "summary": "Tests for standalone_test.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "scripts/standalone_test.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/test_canfd.py",
+      "type": "file",
+      "name": "test_canfd.py",
+      "summary": "Tests for test_canfd.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "scripts/test_canfd.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:setup.sh",
+      "type": "file",
+      "name": "setup.sh",
+      "summary": "setup.sh (shell)",
+      "tags": [
+        "component"
+      ],
+      "filePath": "setup.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test.sh",
+      "type": "file",
+      "name": "test.sh",
+      "summary": "Tests for test.sh",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "test.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/1_program.py",
+      "type": "file",
+      "name": "1_program.py",
+      "summary": "Tests for 1_program.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/1_program.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/2_health.py",
+      "type": "file",
+      "name": "2_health.py",
+      "summary": "Tests for 2_health.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/2_health.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/3_usb.py",
+      "type": "file",
+      "name": "3_usb.py",
+      "summary": "Tests for 3_usb.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/3_usb.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/4_can_loopback.py",
+      "type": "file",
+      "name": "4_can_loopback.py",
+      "summary": "Tests for 4_can_loopback.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver",
+        "can-bus"
+      ],
+      "filePath": "tests/hitl/4_can_loopback.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/5_spi.py",
+      "type": "file",
+      "name": "5_spi.py",
+      "summary": "Tests for 5_spi.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/5_spi.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/6_safety.py",
+      "type": "file",
+      "name": "6_safety.py",
+      "summary": "Safety logic and verification for 6_safety.py",
+      "tags": [
+        "safety-critical",
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/6_safety.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/7_internal.py",
+      "type": "file",
+      "name": "7_internal.py",
+      "summary": "Tests for 7_internal.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/7_internal.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/8_misc.py",
+      "type": "file",
+      "name": "8_misc.py",
+      "summary": "Tests for 8_misc.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/8_misc.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/9_harness.py",
+      "type": "file",
+      "name": "9_harness.py",
+      "summary": "Tests for 9_harness.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/9_harness.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "summary": "Tests for __init__.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/__init__.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/conftest.py",
+      "type": "file",
+      "name": "conftest.py",
+      "summary": "Tests for conftest.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/conftest.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/helpers.py",
+      "type": "file",
+      "name": "helpers.py",
+      "summary": "Tests for helpers.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/helpers.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/known_bootstub/bootstub.panda_h7.bin",
+      "type": "file",
+      "name": "bootstub.panda_h7.bin",
+      "summary": "Tests for bootstub.panda_h7.bin",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/hitl/known_bootstub/bootstub.panda_h7.bin",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/hitl/reset_jungles.py",
+      "type": "file",
+      "name": "reset_jungles.py",
+      "summary": "Tests for reset_jungles.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/hitl/reset_jungles.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:tests/libpanda/SConscript",
+      "type": "config",
+      "name": "SConscript",
+      "summary": "Tests for SConscript",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/libpanda/SConscript",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/libpanda/libpanda.so",
+      "type": "file",
+      "name": "libpanda.so",
+      "summary": "Tests for libpanda.so",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/libpanda/libpanda.so",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:tests/libpanda/libpanda_py.py",
+      "type": "file",
+      "name": "libpanda_py.py",
+      "summary": "Tests for libpanda_py.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/libpanda/libpanda_py.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/libpanda/panda.c",
+      "type": "file",
+      "name": "panda.c",
+      "summary": "Tests for panda.c",
+      "tags": [
+        "testing",
+        "verification",
+        "firmware",
+        "embedded"
+      ],
+      "filePath": "tests/libpanda/panda.c",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/libpanda/panda.os",
+      "type": "file",
+      "name": "panda.os",
+      "summary": "Tests for panda.os",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/libpanda/panda.os",
+      "complexity": "complex"
+    },
+    {
+      "id": "file:tests/libs/resetter.py",
+      "type": "file",
+      "name": "resetter.py",
+      "summary": "Tests for resetter.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/libs/resetter.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "config:tests/misra/.gitignore",
+      "type": "config",
+      "name": ".gitignore",
+      "summary": "Tests for .gitignore",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/misra/.gitignore",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/misra/checkers.txt",
+      "type": "file",
+      "name": "checkers.txt",
+      "summary": "Tests for checkers.txt",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/misra/checkers.txt",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/misra/coverage_table",
+      "type": "file",
+      "name": "coverage_table",
+      "summary": "Tests for coverage_table",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/misra/coverage_table",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/misra/suppressions.txt",
+      "type": "file",
+      "name": "suppressions.txt",
+      "summary": "Tests for suppressions.txt",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/misra/suppressions.txt",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/misra/test_misra.sh",
+      "type": "file",
+      "name": "test_misra.sh",
+      "summary": "Tests for test_misra.sh",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/misra/test_misra.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/misra/test_mutation.py",
+      "type": "file",
+      "name": "test_mutation.py",
+      "summary": "Tests for test_mutation.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/misra/test_mutation.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/safety/mads_common.py",
+      "type": "file",
+      "name": "mads_common.py",
+      "summary": "Safety logic and verification for mads_common.py",
+      "tags": [
+        "safety-critical",
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/safety/mads_common.py",
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/setup_device_ci.sh",
+      "type": "file",
+      "name": "setup_device_ci.sh",
+      "summary": "Tests for setup_device_ci.sh",
+      "tags": [
+        "testing",
+        "verification"
+      ],
+      "filePath": "tests/setup_device_ci.sh",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/usbprotocol/test_comms.py",
+      "type": "file",
+      "name": "test_comms.py",
+      "summary": "Tests for test_comms.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/usbprotocol/test_comms.py",
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/usbprotocol/test_pandalib.py",
+      "type": "file",
+      "name": "test_pandalib.py",
+      "summary": "Tests for test_pandalib.py",
+      "tags": [
+        "testing",
+        "verification",
+        "userspace",
+        "driver"
+      ],
+      "filePath": "tests/usbprotocol/test_pandalib.py",
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:board/body/bldc/bldc.h",
+      "target": "file:board/body/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/bldc/bldc.h",
+      "target": "file:board/stm32h7/lladc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/bldc/bldc.h",
+      "target": "file:board/body/bldc/bldc_defs.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/boards/board_body.h",
+      "target": "file:board/body/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/boards/board_declarations.h",
+      "target": "file:board/body/bldc/bldc_defs.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/can.h",
+      "target": "file:board/can.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/can.h",
+      "target": "file:board/body/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/can.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/can.h",
+      "target": "file:board/body/bldc/bldc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/can.h",
+      "target": "file:board/health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/dotstar.h",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/dotstar.h",
+      "target": "file:board/body/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/drivers/usb.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/obj/gitversion.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/can_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/body/can.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/body/dotstar.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/drivers/led.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/drivers/can_common.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/body/main_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/drivers/pwm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/early_init.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/main.c",
+      "target": "file:board/drivers/fdcan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/stm32h7/board.h",
+      "target": "file:board/body/boards/board_body.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/body/stm32h7/board.h",
+      "target": "file:board/body/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/crypto/rsa.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/obj/cert.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/drivers/usb.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/obj/gitversion.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/crypto/sha.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/provision.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/drivers/led.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/drivers/pwm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/early_init.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/bootstub.c",
+      "target": "file:board/flasher.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/config.h",
+      "target": "file:board/stm32h7/stm32h7_config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/config.h",
+      "target": "file:board/fake_stm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/bootkick.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/can_common.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/clock_source.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/drivers.h",
+      "target": "file:board/health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/drivers.h",
+      "target": "file:board/can.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/drivers.h",
+      "target": "file:board/stm32h7/lladc_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/drivers.h",
+      "target": "file:board/crc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/fake_siren.h",
+      "target": "file:board/stm32h7/lli2c.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/fan.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/fdcan.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/harness.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/interrupts.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/registers.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/simple_watchdog.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/spi.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/uart.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/drivers/usb.h",
+      "target": "file:board/drivers/drivers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/fake_stm.h",
+      "target": "file:board/utils.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/drivers/usb.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/obj/gitversion.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/can_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/provision.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/drivers/led.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/drivers/can_common.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/drivers/pwm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/early_init.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/jungle/main_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/jungle/jungle_health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/main.c",
+      "target": "file:board/drivers/fdcan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/stm32h7/board.h",
+      "target": "file:board/jungle/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/stm32h7/board.h",
+      "target": "file:board/jungle/boards/board_v2.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/stm32h7/board.h",
+      "target": "file:board/stm32h7/lladc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/bootkick.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/usb.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/obj/gitversion.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/can_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/main_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/sys/power_saving.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/provision.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/led.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/simple_watchdog.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/can_common.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/pwm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/early_init.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main.c",
+      "target": "file:board/drivers/fdcan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/main_definitions.h",
+      "target": "file:board/main_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/boards/unused_funcs.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/drivers/fan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/drivers/fake_siren.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/drivers/harness.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/boards/cuatro.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/boards/tres.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/stm32h7/sound.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/boards/red.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/stm32h7/llfan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/drivers/clock_source.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/stm32h7/lladc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/board.h",
+      "target": "file:board/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/can.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/libc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/timers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/llflash.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/lluart.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/spi.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/main_definitions.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/sys/critical.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/board.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/registers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/clock.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/bootstub_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/llfdcan.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/interrupt_handlers.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/utils.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/peripherals.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/llspi.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/stm32h7/llusb.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/uart.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/body/stm32h7/board.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/interrupts.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/drivers/gpio.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/sys/faults.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/comms_definitions.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/stm32h7/stm32h7_config.h",
+      "target": "file:board/jungle/stm32h7/board.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/sys/critical.h",
+      "target": "file:board/sys/sys.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/sys/faults.h",
+      "target": "file:board/sys/sys.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/sys/power_saving.h",
+      "target": "file:board/sys/sys.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/can.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/can_comms.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/libc.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/main_definitions.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/sys/faults.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/config.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/drivers/can_common.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/health.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/comms_definitions.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/fake_stm.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:board/boards/board_declarations.h",
+      "type": "imports",
+      "weight": 0.7
+    },
+    {
+      "source": "file:board/jungle/scripts/echo_loopback_test.py",
+      "target": "file:board/jungle/scripts/echo_loopback_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:board/jungle/scripts/health_test.py",
+      "target": "file:board/jungle/scripts/health_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:board/jungle/scripts/loopback_test.py",
+      "target": "file:board/jungle/scripts/loopback_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:examples/tesla_tester.py",
+      "target": "file:examples/tesla_tester.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/bulk_write_test.py",
+      "target": "file:scripts/bulk_write_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/fan/fan_test.py",
+      "target": "file:scripts/fan/fan_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/ir_test.py",
+      "target": "file:scripts/ir_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/loopback_test.py",
+      "target": "file:scripts/loopback_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/message_drop_test.py",
+      "target": "file:scripts/message_drop_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/relay_test.py",
+      "target": "file:scripts/relay_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/spi_test.py",
+      "target": "file:scripts/spi_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/standalone_test.py",
+      "target": "file:scripts/standalone_test.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/test_canfd.py",
+      "target": "file:scripts/test_canfd.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test.sh",
+      "target": "file:test.sh",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/1_program.py",
+      "target": "file:tests/hitl/1_program.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/2_health.py",
+      "target": "file:tests/hitl/2_health.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/3_usb.py",
+      "target": "file:tests/hitl/3_usb.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/4_can_loopback.py",
+      "target": "file:tests/hitl/4_can_loopback.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/5_spi.py",
+      "target": "file:tests/hitl/5_spi.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/6_safety.py",
+      "target": "file:tests/hitl/6_safety.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/7_internal.py",
+      "target": "file:tests/hitl/7_internal.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/8_misc.py",
+      "target": "file:tests/hitl/8_misc.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/9_harness.py",
+      "target": "file:tests/hitl/9_harness.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/__init__.py",
+      "target": "file:tests/hitl/__init__.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/conftest.py",
+      "target": "file:tests/hitl/conftest.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/helpers.py",
+      "target": "file:tests/hitl/helpers.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/known_bootstub/bootstub.panda_h7.bin",
+      "target": "file:tests/hitl/known_bootstub/bootstub.panda_h7.bin",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/hitl/reset_jungles.py",
+      "target": "file:tests/hitl/reset_jungles.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/libpanda/libpanda.so",
+      "target": "file:tests/libpanda/libpanda.so",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/libpanda/libpanda_py.py",
+      "target": "file:tests/libpanda/libpanda_py.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/libpanda/panda.c",
+      "target": "file:tests/libpanda/panda.c",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/libpanda/panda.os",
+      "target": "file:tests/libpanda/panda.os",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/libs/resetter.py",
+      "target": "file:tests/libs/resetter.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/misra/checkers.txt",
+      "target": "file:tests/misra/checkers.txt",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/misra/coverage_table",
+      "target": "file:tests/misra/coverage_table",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/misra/suppressions.txt",
+      "target": "file:tests/misra/suppressions.txt",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/misra/test_misra.sh",
+      "target": "file:tests/misra/test_misra.sh",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/misra/test_mutation.py",
+      "target": "file:tests/misra/test_mutation.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/safety/mads_common.py",
+      "target": "file:tests/safety/mads_common.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/setup_device_ci.sh",
+      "target": "file:tests/setup_device_ci.sh",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/usbprotocol/test_comms.py",
+      "target": "file:tests/usbprotocol/test_comms.py",
+      "type": "tested_by",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/usbprotocol/test_pandalib.py",
+      "target": "file:tests/usbprotocol/test_pandalib.py",
+      "type": "tested_by",
+      "weight": 0.5
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:firmware-core",
+      "name": "Firmware Core (STM32)",
+      "description": "Low-level STM32H7 hardware abstraction, board initialization, and core firmware drivers.",
+      "nodeIds": [
+        "file:board/boards/board_declarations.h",
+        "file:board/boards/cuatro.h",
+        "file:board/boards/red.h",
+        "file:board/boards/tres.h",
+        "file:board/boards/unused_funcs.h",
+        "file:board/body/bldc/BLDC_controller.h",
+        "file:board/body/bldc/bldc.h",
+        "file:board/body/bldc/bldc_defs.h",
+        "file:board/body/bldc/rtwtypes.h",
+        "file:board/body/boards/board_body.h",
+        "file:board/body/boards/board_declarations.h",
+        "file:board/body/can.h",
+        "file:board/body/dotstar.h",
+        "file:board/body/main_comms.h",
+        "file:board/body/stm32h7/board.h",
+        "file:board/bootstub_declarations.h",
+        "file:board/can.h",
+        "file:board/can_comms.h",
+        "file:board/comms_definitions.h",
+        "file:board/config.h",
+        "file:board/crc.h",
+        "file:board/crypto/hash-internal.h",
+        "file:board/crypto/rsa.h",
+        "file:board/crypto/sha.h",
+        "file:board/drivers/bootkick.h",
+        "file:board/drivers/can_common.h",
+        "file:board/drivers/clock_source.h",
+        "file:board/drivers/drivers.h",
+        "file:board/drivers/fake_siren.h",
+        "file:board/drivers/fan.h",
+        "file:board/drivers/fdcan.h",
+        "file:board/drivers/gpio.h",
+        "file:board/drivers/harness.h",
+        "file:board/drivers/interrupts.h",
+        "file:board/drivers/led.h",
+        "file:board/drivers/pwm.h",
+        "file:board/drivers/registers.h",
+        "file:board/drivers/simple_watchdog.h",
+        "file:board/drivers/spi.h",
+        "file:board/drivers/timers.h",
+        "file:board/drivers/uart.h",
+        "file:board/drivers/usb.h",
+        "file:board/early_init.h",
+        "file:board/fake_stm.h",
+        "file:board/flasher.h",
+        "file:board/health.h",
+        "file:board/jungle/boards/board_declarations.h",
+        "file:board/jungle/boards/board_v2.h",
+        "file:board/jungle/jungle_health.h",
+        "file:board/jungle/main_comms.h",
+        "file:board/jungle/stm32h7/board.h",
+        "file:board/libc.h",
+        "file:board/main_comms.h",
+        "file:board/main_declarations.h",
+        "file:board/main_definitions.h",
+        "file:board/obj/cert.h",
+        "file:board/obj/gitversion.h",
+        "file:board/provision.h",
+        "file:board/stm32h7/board.h",
+        "file:board/stm32h7/clock.h",
+        "file:board/stm32h7/inc/cmsis_compiler.h",
+        "file:board/stm32h7/inc/cmsis_gcc.h",
+        "file:board/stm32h7/inc/cmsis_version.h",
+        "file:board/stm32h7/inc/core_cm7.h",
+        "file:board/stm32h7/inc/mpu_armv7.h",
+        "file:board/stm32h7/inc/stm32h725xx.h",
+        "file:board/stm32h7/inc/stm32h735xx.h",
+        "file:board/stm32h7/inc/stm32h7xx.h",
+        "file:board/stm32h7/inc/stm32h7xx_hal_def.h",
+        "file:board/stm32h7/inc/stm32h7xx_hal_gpio_ex.h",
+        "file:board/stm32h7/inc/system_stm32h7xx.h",
+        "file:board/stm32h7/interrupt_handlers.h",
+        "file:board/stm32h7/lladc.h",
+        "file:board/stm32h7/lladc_declarations.h",
+        "file:board/stm32h7/llfan.h",
+        "file:board/stm32h7/llfdcan.h",
+        "file:board/stm32h7/llfdcan_declarations.h",
+        "file:board/stm32h7/llflash.h",
+        "file:board/stm32h7/lli2c.h",
+        "file:board/stm32h7/llspi.h",
+        "file:board/stm32h7/lluart.h",
+        "file:board/stm32h7/llusb.h",
+        "file:board/stm32h7/llusb_declarations.h",
+        "file:board/stm32h7/peripherals.h",
+        "file:board/stm32h7/sound.h",
+        "file:board/stm32h7/stm32h7_config.h",
+        "file:board/sys/critical.h",
+        "file:board/sys/faults.h",
+        "file:board/sys/power_saving.h",
+        "file:board/sys/sys.h",
+        "file:board/utils.h"
+      ]
+    },
+    {
+      "id": "layer:safety",
+      "name": "Safety Layer",
+      "description": "Safety-critical logic and verification for vehicle control CAN messages. Enforces safety models from opendbc.",
+      "nodeIds": [
+        "file:tests/hitl/6_safety.py",
+        "file:tests/safety/mads_common.py"
+      ]
+    },
+    {
+      "id": "layer:can-drivers",
+      "name": "CAN Bus Drivers",
+      "description": "CAN/CAN FD drivers and hardware communication layer for STM32.",
+      "nodeIds": [
+        "file:board/boards/board_declarations.h",
+        "file:board/boards/cuatro.h",
+        "file:board/boards/red.h",
+        "file:board/boards/tres.h",
+        "file:board/boards/unused_funcs.h",
+        "file:board/body/bldc/BLDC_controller.c",
+        "file:board/body/bldc/BLDC_controller.h",
+        "file:board/body/bldc/BLDC_controller_data.c",
+        "file:board/body/bldc/bldc.h",
+        "file:board/body/bldc/bldc_defs.h",
+        "file:board/body/bldc/rtwtypes.h",
+        "file:board/body/boards/board_body.h",
+        "file:board/body/boards/board_declarations.h",
+        "file:board/body/can.h",
+        "file:board/body/dotstar.h",
+        "file:board/body/main.c",
+        "file:board/body/main_comms.h",
+        "file:board/body/stm32h7/board.h",
+        "file:board/bootstub.c",
+        "file:board/bootstub_declarations.h",
+        "file:board/can.h",
+        "file:board/can_comms.h",
+        "file:board/comms_definitions.h",
+        "file:board/config.h",
+        "file:board/crc.h",
+        "file:board/crypto/hash-internal.h",
+        "file:board/crypto/rsa.c",
+        "file:board/crypto/rsa.h",
+        "file:board/crypto/sha.c",
+        "file:board/crypto/sha.h",
+        "file:board/drivers/bootkick.h",
+        "file:board/drivers/can_common.h",
+        "file:board/drivers/clock_source.h",
+        "file:board/drivers/drivers.h",
+        "file:board/drivers/fake_siren.h",
+        "file:board/drivers/fan.h",
+        "file:board/drivers/fdcan.h",
+        "file:board/drivers/gpio.h",
+        "file:board/drivers/harness.h",
+        "file:board/drivers/interrupts.h",
+        "file:board/drivers/led.h",
+        "file:board/drivers/pwm.h",
+        "file:board/drivers/registers.h",
+        "file:board/drivers/simple_watchdog.h",
+        "file:board/drivers/spi.h",
+        "file:board/drivers/timers.h",
+        "file:board/drivers/uart.h",
+        "file:board/drivers/usb.h",
+        "file:board/early_init.h",
+        "file:board/fake_stm.h",
+        "file:board/flasher.h",
+        "file:board/health.h",
+        "file:board/jungle/boards/board_declarations.h",
+        "file:board/jungle/boards/board_v2.h",
+        "file:board/jungle/jungle_health.h",
+        "file:board/jungle/main.c",
+        "file:board/jungle/main_comms.h",
+        "file:board/jungle/stm32h7/board.h",
+        "file:board/libc.h",
+        "file:board/main.c",
+        "file:board/main_comms.h",
+        "file:board/main_declarations.h",
+        "file:board/main_definitions.h",
+        "file:board/obj/cert.h",
+        "file:board/obj/gitversion.h",
+        "file:board/provision.h",
+        "file:board/stm32h7/board.h",
+        "file:board/stm32h7/clock.h",
+        "file:board/stm32h7/inc/cmsis_compiler.h",
+        "file:board/stm32h7/inc/cmsis_gcc.h",
+        "file:board/stm32h7/inc/cmsis_version.h",
+        "file:board/stm32h7/inc/core_cm7.h",
+        "file:board/stm32h7/inc/mpu_armv7.h",
+        "file:board/stm32h7/inc/stm32h725xx.h",
+        "file:board/stm32h7/inc/stm32h735xx.h",
+        "file:board/stm32h7/inc/stm32h7xx.h",
+        "file:board/stm32h7/inc/stm32h7xx_hal_def.h",
+        "file:board/stm32h7/inc/stm32h7xx_hal_gpio_ex.h",
+        "file:board/stm32h7/inc/system_stm32h7xx.h",
+        "file:board/stm32h7/interrupt_handlers.h",
+        "file:board/stm32h7/lladc.h",
+        "file:board/stm32h7/lladc_declarations.h",
+        "file:board/stm32h7/llfan.h",
+        "file:board/stm32h7/llfdcan.h",
+        "file:board/stm32h7/llfdcan_declarations.h",
+        "file:board/stm32h7/llflash.h",
+        "file:board/stm32h7/lli2c.h",
+        "file:board/stm32h7/llspi.h",
+        "file:board/stm32h7/lluart.h",
+        "file:board/stm32h7/llusb.h",
+        "file:board/stm32h7/llusb_declarations.h",
+        "file:board/stm32h7/peripherals.h",
+        "file:board/stm32h7/sound.h",
+        "file:board/stm32h7/stm32h7_config.h",
+        "file:board/sys/critical.h",
+        "file:board/sys/faults.h",
+        "file:board/sys/power_saving.h",
+        "file:board/sys/sys.h",
+        "file:board/utils.h"
+      ]
+    },
+    {
+      "id": "layer:python-interface",
+      "name": "Python Userspace Interface",
+      "description": "Python library for host-side communication with panda. Provides userspace API for CAN operations.",
+      "nodeIds": [
+        "file:python/__init__.py",
+        "file:python/base.py",
+        "file:python/constants.py",
+        "file:python/dfu.py",
+        "file:python/serial.py",
+        "file:python/socketpanda.py",
+        "file:python/spi.py",
+        "file:python/usb.py",
+        "file:python/utils.py"
+      ]
+    },
+    {
+      "id": "layer:infrastructure",
+      "name": "Infrastructure & Build",
+      "description": "Build configuration, Docker, CI/CD pipelines, and build scripts (SConstructs, Makefiles).",
+      "nodeIds": [
+        "config:.git",
+        "pipeline:.github/workflows/jenkins-pr-trigger.yaml",
+        "pipeline:.github/workflows/test.yaml",
+        "config:.gitignore",
+        "config:Dockerfile",
+        "config:Jenkinsfile",
+        "config:SConscript",
+        "config:SConstruct",
+        "config:board/obj/.placeholder",
+        "config:pyproject.toml",
+        "config:tests/libpanda/SConscript",
+        "config:tests/misra/.gitignore"
+      ]
+    },
+    {
+      "id": "layer:testing",
+      "name": "Testing & Verification",
+      "description": "Unit tests, safety tests, integration tests, and test infrastructure.",
+      "nodeIds": [
+        "pipeline:.github/workflows/test.yaml",
+        "file:board/jungle/scripts/echo_loopback_test.py",
+        "file:board/jungle/scripts/health_test.py",
+        "file:board/jungle/scripts/loopback_test.py",
+        "file:examples/tesla_tester.py",
+        "file:scripts/bulk_write_test.py",
+        "file:scripts/fan/fan_test.py",
+        "file:scripts/ir_test.py",
+        "file:scripts/loopback_test.py",
+        "file:scripts/message_drop_test.py",
+        "file:scripts/relay_test.py",
+        "file:scripts/spi_test.py",
+        "file:scripts/standalone_test.py",
+        "file:scripts/test_canfd.py",
+        "file:test.sh",
+        "file:tests/hitl/1_program.py",
+        "file:tests/hitl/2_health.py",
+        "file:tests/hitl/3_usb.py",
+        "file:tests/hitl/4_can_loopback.py",
+        "file:tests/hitl/5_spi.py",
+        "file:tests/hitl/6_safety.py",
+        "file:tests/hitl/7_internal.py",
+        "file:tests/hitl/8_misc.py",
+        "file:tests/hitl/9_harness.py",
+        "file:tests/hitl/__init__.py",
+        "file:tests/hitl/conftest.py",
+        "file:tests/hitl/helpers.py",
+        "file:tests/hitl/known_bootstub/bootstub.panda_h7.bin",
+        "file:tests/hitl/reset_jungles.py",
+        "config:tests/libpanda/SConscript",
+        "file:tests/libpanda/libpanda.so",
+        "file:tests/libpanda/libpanda_py.py",
+        "file:tests/libpanda/panda.c",
+        "file:tests/libpanda/panda.os",
+        "file:tests/libs/resetter.py",
+        "config:tests/misra/.gitignore",
+        "file:tests/misra/checkers.txt",
+        "file:tests/misra/coverage_table",
+        "file:tests/misra/suppressions.txt",
+        "file:tests/misra/test_misra.sh",
+        "file:tests/misra/test_mutation.py",
+        "file:tests/safety/mads_common.py",
+        "file:tests/setup_device_ci.sh",
+        "file:tests/usbprotocol/test_comms.py",
+        "file:tests/usbprotocol/test_pandalib.py"
+      ]
+    },
+    {
+      "id": "layer:documentation",
+      "name": "Documentation",
+      "description": "Project documentation, README, and reference materials.",
+      "nodeIds": [
+        "document:LICENSE",
+        "document:LICENSE.md",
+        "document:README.md",
+        "document:board/README.md",
+        "document:board/debug/README.md",
+        "document:board/jungle/README.md",
+        "document:examples/can_bit_transition.md",
+        "document:examples/can_unique.md"
+      ]
+    },
+    {
+      "id": "layer:examples",
+      "name": "Examples & Utilities",
+      "description": "Example code, utility scripts, and development tools.",
+      "nodeIds": [
+        "config:SConscript",
+        "file:board/jungle/scripts/can_health.py",
+        "file:board/jungle/scripts/can_printer.py",
+        "file:board/jungle/scripts/debug_console.py",
+        "file:board/jungle/scripts/echo_loopback_test.py",
+        "file:board/jungle/scripts/get_version.py",
+        "file:board/jungle/scripts/health_test.py",
+        "file:board/jungle/scripts/loopback_test.py",
+        "file:board/jungle/scripts/spam_can.py",
+        "file:board/jungle/scripts/start.py",
+        "file:examples/__init__.py",
+        "document:examples/can_bit_transition.md",
+        "file:examples/can_bit_transition.py",
+        "file:examples/can_logger.py",
+        "document:examples/can_unique.md",
+        "file:examples/can_unique.py",
+        "file:examples/query_fw_versions.py",
+        "file:examples/query_vin_and_stats.py",
+        "file:examples/tesla_tester.py",
+        "file:scripts/benchmark.py",
+        "file:scripts/bulk_write_test.py",
+        "file:scripts/can_health.py",
+        "file:scripts/can_printer.py",
+        "file:scripts/check_fw_size.py",
+        "file:scripts/debug_console.py",
+        "file:scripts/development/register_hashmap_spread.py",
+        "file:scripts/echo.py",
+        "file:scripts/fan/fan_test.py",
+        "file:scripts/get_version.py",
+        "file:scripts/ir_test.py",
+        "file:scripts/loopback_test.py",
+        "file:scripts/make_release.sh",
+        "file:scripts/message_drop_test.py",
+        "file:scripts/read_flash_spi.py",
+        "file:scripts/read_st_flash.sh",
+        "file:scripts/reflash_internal_panda.py",
+        "file:scripts/relay_test.py",
+        "file:scripts/restore_flash_spi.py",
+        "file:scripts/som_debug.sh",
+        "file:scripts/spam_can.py",
+        "file:scripts/spi_test.py",
+        "file:scripts/standalone_test.py",
+        "file:scripts/test_canfd.py",
+        "config:tests/libpanda/SConscript"
+      ]
+    },
+    {
+      "id": "layer:utilities",
+      "name": "Utilities & Miscellaneous",
+      "description": "Additional utilities and miscellaneous project files.",
+      "nodeIds": [
+        "file:__init__.py",
+        "file:board/__init__.py",
+        "file:board/board/obj/body_h7bootstub.o",
+        "file:board/board/obj/panda_h7bootstub.o",
+        "file:board/board/obj/panda_h7main.o",
+        "file:board/board/obj/panda_jungle_h7bootstub.o",
+        "file:board/body/__init__.py",
+        "file:board/body/board/obj/body_h7main.o",
+        "file:board/body/flash.py",
+        "file:board/certs/debug",
+        "file:board/certs/debug.pub",
+        "file:board/certs/release.pub",
+        "file:board/crypto/board/obj/body_h7rsa.o",
+        "file:board/crypto/board/obj/body_h7sha.o",
+        "file:board/crypto/board/obj/panda_h7rsa.o",
+        "file:board/crypto/board/obj/panda_h7sha.o",
+        "file:board/crypto/board/obj/panda_jungle_h7rsa.o",
+        "file:board/crypto/board/obj/panda_jungle_h7sha.o",
+        "file:board/crypto/sign.py",
+        "file:board/debug/debug_h7.sh",
+        "file:board/debug/dfu_util_h7.sh",
+        "file:board/debug/gdb.sh",
+        "file:board/flash.py",
+        "file:board/jungle/__init__.py",
+        "file:board/jungle/board/obj/panda_jungle_h7main.o",
+        "file:board/jungle/flash.py",
+        "file:board/jungle/recover.py",
+        "file:board/obj/body_h7.bin.signed",
+        "file:board/obj/body_h7/bootstub.elf",
+        "file:board/obj/body_h7/main.bin",
+        "file:board/obj/body_h7/main.elf",
+        "file:board/obj/bootstub.body_h7.bin",
+        "file:board/obj/bootstub.panda_h7.bin",
+        "file:board/obj/bootstub.panda_jungle_h7.bin",
+        "file:board/obj/panda_h7.bin.signed",
+        "file:board/obj/panda_h7/bootstub.elf",
+        "file:board/obj/panda_h7/main.bin",
+        "file:board/obj/panda_h7/main.elf",
+        "file:board/obj/panda_jungle_h7.bin.signed",
+        "file:board/obj/panda_jungle_h7/bootstub.elf",
+        "file:board/obj/panda_jungle_h7/main.bin",
+        "file:board/obj/panda_jungle_h7/main.elf",
+        "file:board/obj/version",
+        "file:board/recover.py",
+        "file:board/stm32h7/board/obj/body_h7startup_stm32h7x5xx.o",
+        "file:board/stm32h7/board/obj/panda_h7startup_stm32h7x5xx.o",
+        "file:board/stm32h7/board/obj/panda_jungle_h7startup_stm32h7x5xx.o",
+        "file:board/stm32h7/startup_stm32h7x5xx.s",
+        "file:board/stm32h7/stm32h7x5_flash.ld",
+        "file:setup.sh"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Welcome to Panda",
+      "description": "Start with the project README to understand panda's role as a safety-critical CAN adapter for openpilot vehicle control. Panda speaks CAN/CAN FD on the STM32H725 microcontroller.",
+      "nodeIds": [
+        "document:README.md",
+        "document:board/README.md",
+        "document:board/debug/README.md",
+        "document:board/jungle/README.md"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Board Hardware Fundamentals",
+      "description": "Explore the board layer \u2014 hardware initialization and core STM32 definitions. Start with board.h to see the hardware abstractions.",
+      "nodeIds": [
+        "file:board/body/stm32h7/board.h",
+        "file:board/jungle/stm32h7/board.h",
+        "file:board/stm32h7/board.h"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "CAN Bus Implementation",
+      "description": "Understand the CAN driver architecture. The panda firmware handles both CAN and CAN FD communication for vehicle networks.",
+      "nodeIds": [
+        "file:board/body/can.h",
+        "file:board/can.h",
+        "file:board/can_comms.h",
+        "file:board/drivers/bootkick.h",
+        "file:board/drivers/can_common.h"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "Safety Layer",
+      "description": "Examine the safety-critical layer. This enforces vehicle-specific safety models from opendbc to protect against unsafe control commands.",
+      "nodeIds": [
+        "file:tests/hitl/6_safety.py",
+        "file:tests/safety/mads_common.py"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Python Userspace Library",
+      "description": "Learn how the Python userspace library interfaces with the panda firmware. This is how openpilot communicates with the hardware.",
+      "nodeIds": [
+        "file:python/__init__.py",
+        "file:python/base.py",
+        "file:python/constants.py",
+        "file:python/dfu.py",
+        "file:python/serial.py"
+      ]
+    },
+    {
+      "order": 6,
+      "title": "Build System",
+      "description": "Understand the build infrastructure. Panda uses SCons for C firmware builds and Python packaging for the userspace library.",
+      "nodeIds": [
+        "config:SConscript",
+        "config:SConstruct",
+        "config:pyproject.toml",
+        "config:tests/libpanda/SConscript"
+      ]
+    },
+    {
+      "order": 7,
+      "title": "Testing & Verification",
+      "description": "Review the comprehensive test suite. Safety testing includes unit tests for each vehicle variant and MISRA C:2012 compliance checks.",
+      "nodeIds": [
+        "pipeline:.github/workflows/test.yaml",
+        "file:board/jungle/scripts/echo_loopback_test.py",
+        "file:board/jungle/scripts/health_test.py",
+        "file:board/jungle/scripts/loopback_test.py",
+        "file:examples/tesla_tester.py",
+        "file:scripts/bulk_write_test.py",
+        "file:scripts/fan/fan_test.py",
+        "file:scripts/ir_test.py"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "Example Usage",
+      "description": "See practical examples of using panda in a vehicle. These examples show how to send and receive CAN messages.",
+      "nodeIds": [
+        "file:examples/__init__.py",
+        "document:examples/can_bit_transition.md",
+        "file:examples/can_bit_transition.py",
+        "file:examples/can_logger.py",
+        "document:examples/can_unique.md",
+        "file:examples/can_unique.py",
+        "file:examples/query_fw_versions.py",
+        "file:examples/query_vin_and_stats.py"
+      ]
+    },
+    {
+      "order": 9,
+      "title": "Development Workflow",
+      "description": "Explore the development tools, Docker environment, and CI infrastructure used to develop and test panda.",
+      "nodeIds": [
+        "config:.gitignore",
+        "config:Dockerfile",
+        "config:Jenkinsfile",
+        "config:tests/misra/.gitignore"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, # comments, ! negation, trailing / for dirs)
+# Lines below are suggestions — uncomment to activate.
+# Use ! prefix to force-include something excluded by defaults.
+#
+# Built-in defaults (always excluded unless negated):
+#   node_modules/, .git/, dist/, build/, obj/, *.lock, *.min.js, etc.
+#
+# --- From .gitignore (uncomment to exclude) ---
+
+# *.tmp
+# *.pyc
+# .*.swp
+# .*.swo
+# *.o
+# *.so
+# *.os
+# *.d
+# *.dump
+# a.out
+# *~
+# .#*
+# pandacan.egg-info/
+# examples/output.csv
+# .DS_Store
+# .vscode*
+# nosetests.xml
+# .mypy_cache/
+# .sconsign.dblite
+# uv.lock
+# compile_commands.json
+# *.*.ctu-info
+# cppcheck-addon-ctu-file-list
+# *.gcda
+# *.gcno
+# tests/safety/coverage-out
+# tests/safety/coverage.info
+# *.profraw
+# *.profdata
+# mull.yml
+# .claude/
+# TASK.md
+
+# --- Detected directories (uncomment to exclude) ---
+
+# tests/
+# examples/
+# scripts/
+
+# --- Test file patterns (uncomment to exclude) ---
+
+# *.test.*
+# *.spec.*
+# *.snap
