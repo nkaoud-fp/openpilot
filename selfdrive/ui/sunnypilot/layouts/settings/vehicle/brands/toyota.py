@@ -88,9 +88,9 @@ class ToyotaSettings(BrandSettings):
       title=lambda: tr("Driver Exit Wait Time"),
       param="ToyotaFaceClearTime",
       description=lambda: tr(DESCRIPTIONS["face_clear_time"]),
-      min_value=10,
+      min_value=1,
       max_value=120,
-      value_change_step=5,
+      value_change_step=2,
       label_callback=lambda x: f"{x}s",
     )
 
