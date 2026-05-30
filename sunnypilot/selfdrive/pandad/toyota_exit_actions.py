@@ -46,7 +46,6 @@ _WINDOW_CLOSE_RR = b"\x92\x04\x30\x01\x05\x20\x00\x00"
 
 _CMD_DELAY       = 0.15   # seconds between BCM commands (same as FrogPilot)
 _PHASE_TIMEOUT   = 120.0  # max seconds to wait in each phase before giving up
-FACE_CLEAR_TIME  = 30.0   # seconds of no face detected before we act
 
 
 def _is_toyota(params) -> bool:
@@ -85,7 +84,7 @@ def _wait_for_driver_exit(params) -> bool:
 
   Phase 1: Wait for dmonitoringd to stop (ignition off → driverview=False).
   Phase 2: Set IsDriverViewEnabled=True to restart dmonitoringd via the camera.
-  Phase 3: Wait FACE_CLEAR_TIME seconds with no face detected.
+  Phase 3: Wait ToyotaFaceClearTime seconds with no face detected.
 
   Returns True when safe to send BCM commands, False if ignition came back on
   or a phase timeout was reached.
@@ -128,9 +127,10 @@ def _wait_for_driver_exit(params) -> bool:
 
   cloudlog.info("toyota_exit_actions: dmonitoringd running, waiting for empty car")
 
-  # Phase 3 — wait until no face is detected for FACE_CLEAR_TIME seconds
+  # Phase 3 — wait until no face is detected for ToyotaFaceClearTime seconds
+  face_clear_secs = float(int(params.get("ToyotaFaceClearTime", return_default=True) or 30))
   deadline = time.monotonic() + _PHASE_TIMEOUT
-  face_clear_until = time.monotonic() + FACE_CLEAR_TIME
+  face_clear_until = time.monotonic() + face_clear_secs
 
   while True:
     sm.update(0)
@@ -147,7 +147,7 @@ def _wait_for_driver_exit(params) -> bool:
 
     # Face detected (or dmon state stale) → reset the clear timer
     if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
-      face_clear_until = time.monotonic() + FACE_CLEAR_TIME
+      face_clear_until = time.monotonic() + face_clear_secs
 
     if time.monotonic() >= face_clear_until:
       break

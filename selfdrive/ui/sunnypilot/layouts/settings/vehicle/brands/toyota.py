@@ -10,7 +10,7 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.widgets import DialogResult
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
-from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp, option_item_sp
 
 
 ONROAD_ONLY_DESCRIPTION = tr_noop("Start the vehicle to check vehicle compatibility.")
@@ -35,6 +35,10 @@ DESCRIPTIONS = {
   'fold_mirrors_on_exit': tr_noop(
     'Automatically fold both side mirrors after ignition turns off. ' +
     'Sent to the Body Control Module after the doors are locked.'
+  ),
+  'face_clear_time': tr_noop(
+    'How many consecutive seconds with no face detected before exit actions are triggered. '
+    'A longer delay gives more time to re-enter the car without triggering the commands.'
   ),
 }
 
@@ -80,12 +84,23 @@ class ToyotaSettings(BrandSettings):
       callback=lambda state: ui_state.params.put_bool("ToyotaFoldMirrorsOnExit", state),
     )
 
+    self.face_clear_time = option_item_sp(
+      title=lambda: tr("Driver Exit Wait Time"),
+      param="ToyotaFaceClearTime",
+      description=lambda: tr(DESCRIPTIONS["face_clear_time"]),
+      min_value=10,
+      max_value=120,
+      value_change_step=5,
+      label_callback=lambda x: f"{x}s",
+    )
+
     self.items = [
       self.enforce_stock_longitudinal,
       self.stop_and_go_hack,
       self.auto_lock_on_exit,
       self.close_windows_on_exit,
       self.fold_mirrors_on_exit,
+      self.face_clear_time,
     ]
 
   def _on_enable_enforce_stock_longitudinal(self, state: bool):
