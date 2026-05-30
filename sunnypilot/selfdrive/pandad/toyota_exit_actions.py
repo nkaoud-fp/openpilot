@@ -45,7 +45,8 @@ _WINDOW_CLOSE_RL = b"\x93\x04\x30\x01\x05\x20\x00\x00"
 _WINDOW_CLOSE_RR = b"\x92\x04\x30\x01\x05\x20\x00\x00"
 
 _CMD_DELAY       = 0.15   # seconds between BCM commands (same as FrogPilot)
-_PHASE_TIMEOUT   = 120.0  # max seconds to wait in each phase before giving up
+_PHASE_TIMEOUT   = 120.0  # max seconds for phases 1/2 (process start/stop)
+_STALE_TIMEOUT   = 60.0   # max seconds driverMonitoringState may be stale in phase 3
 
 
 def _is_toyota(params) -> bool:
@@ -127,10 +128,13 @@ def _wait_for_driver_exit(params) -> bool:
 
   cloudlog.info("toyota_exit_actions: dmonitoringd running, waiting for empty car")
 
-  # Phase 3 — wait until no face is detected for ToyotaFaceClearTime seconds
+  # Phase 3 — wait until no face is detected for ToyotaFaceClearTime seconds.
+  # No hard wall-clock deadline: waits as long as the driver stays in the seat.
+  # Aborts only if driverMonitoringState goes stale for _STALE_TIMEOUT seconds
+  # (camera/dmonitoringd died) or ignition comes back on.
   face_clear_secs = float(int(params.get("ToyotaFaceClearTime", return_default=True) or 30))
-  deadline = time.monotonic() + _PHASE_TIMEOUT
   face_clear_until = time.monotonic() + face_clear_secs
+  stale_since: float | None = None
 
   while True:
     sm.update(0)
@@ -140,14 +144,18 @@ def _wait_for_driver_exit(params) -> bool:
       params.remove("IsDriverViewEnabled")
       return False
 
-    if time.monotonic() > deadline:
-      cloudlog.warning("toyota_exit_actions: phase 3 timeout — car never confirmed empty")
-      params.remove("IsDriverViewEnabled")
-      return False
-
-    # Face detected (or dmon state stale) → reset the clear timer
-    if sm["driverMonitoringState"].faceDetected or not sm.alive["driverMonitoringState"]:
-      face_clear_until = time.monotonic() + face_clear_secs
+    if not sm.alive["driverMonitoringState"]:
+      if stale_since is None:
+        stale_since = time.monotonic()
+      elif time.monotonic() - stale_since > _STALE_TIMEOUT:
+        cloudlog.warning("toyota_exit_actions: phase 3 abort — driverMonitoringState stale for too long")
+        params.remove("IsDriverViewEnabled")
+        return False
+      face_clear_until = time.monotonic() + face_clear_secs  # stay conservative while stale
+    else:
+      stale_since = None
+      if sm["driverMonitoringState"].faceDetected:
+        face_clear_until = time.monotonic() + face_clear_secs
 
     if time.monotonic() >= face_clear_until:
       break
