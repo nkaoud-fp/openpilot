@@ -23,7 +23,15 @@ DESCRIPTIONS = {
   'stop_and_go_hack': tr_noop(
     'sunnypilot will allow some Toyota/Lexus cars to auto resume during stop and go traffic. ' +
     'This feature is only applicable to certain models that are able to use longitudinal control. This is an alpha feature. Use at your own risk.'
-  )
+  ),
+  'auto_lock_on_exit': tr_noop(
+    'Automatically lock the doors when the driver unlatches the seatbelt while parked. ' +
+    'Doors will unlock automatically when the driver buckles back in (if Auto-Unlock on Entry is also enabled).'
+  ),
+  'auto_unlock_on_entry': tr_noop(
+    'Automatically unlock the doors when the driver buckles the seatbelt while parked. ' +
+    'Requires Auto-Lock on Exit to be enabled for the full lock/unlock cycle.'
+  ),
 }
 
 
@@ -47,9 +55,27 @@ class ToyotaSettings(BrandSettings):
       enabled=lambda: not ui_state.engaged,
     )
 
+    self.auto_lock_on_exit = toggle_item_sp(
+      lambda: tr("Auto-Lock on Driver Exit"),
+      description=lambda: tr(DESCRIPTIONS["auto_lock_on_exit"]),
+      initial_state=ui_state.params.get_bool("ToyotaAutoLockOnExit"),
+      callback=self._on_auto_lock_on_exit,
+      enabled=lambda: not ui_state.engaged,
+    )
+
+    self.auto_unlock_on_entry = toggle_item_sp(
+      lambda: tr("Auto-Unlock on Driver Entry"),
+      description=lambda: tr(DESCRIPTIONS["auto_unlock_on_entry"]),
+      initial_state=ui_state.params.get_bool("ToyotaAutoUnlockOnEntry"),
+      callback=self._on_auto_unlock_on_entry,
+      enabled=lambda: not ui_state.engaged,
+    )
+
     self.items = [
       self.enforce_stock_longitudinal,
       self.stop_and_go_hack,
+      self.auto_lock_on_exit,
+      self.auto_unlock_on_entry,
     ]
 
   def _on_enable_enforce_stock_longitudinal(self, state: bool):
@@ -93,6 +119,14 @@ class ToyotaSettings(BrandSettings):
     else:
       ui_state.params.put_bool("ToyotaStopAndGoHack", False)
       ui_state.params.put_bool("OnroadCycleRequested", True)
+
+  def _on_auto_lock_on_exit(self, state: bool):
+    ui_state.params.put_bool("ToyotaAutoLockOnExit", state)
+    ui_state.params.put_bool("OnroadCycleRequested", True)
+
+  def _on_auto_unlock_on_entry(self, state: bool):
+    ui_state.params.put_bool("ToyotaAutoUnlockOnEntry", state)
+    ui_state.params.put_bool("OnroadCycleRequested", True)
 
   def update_settings(self):
     if ui_state.CP is not None:
