@@ -1,1 +1,1 @@
-../opendbc_repo/opendbc/car/car.capnp
+../opendbc/car/car.capnp
